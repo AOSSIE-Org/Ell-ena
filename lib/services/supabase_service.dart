@@ -724,11 +724,27 @@ class SupabaseService {
     }
   }
   
-// Resend verification email 
+// Resend verification email
 Future<Map<String, dynamic>> resendVerificationEmail(
   String email, {
-  dynamic type = OtpType.signup, 
+  dynamic type = OtpType.signup,
 }) async {
+  String _redactEmail(String email) {
+    if (email.isEmpty) return '[empty]';
+    final parts = email.split('@');
+    if (parts.length != 2) return '[invalid_format]';
+    
+    final username = parts[0];
+    final domain = parts[1];
+    
+    if (username.length <= 2) {
+      return '${username}@$domain';
+    } else {
+      final redactedUsername = username[0] + '*' * (username.length - 2) + username[username.length - 1];
+      return '$redactedUsername@$domain';
+    }
+  }
+
   try {
     if (!_isInitialized) {
       debugPrint('Supabase not initialized when resending verification email');
@@ -738,19 +754,19 @@ Future<Map<String, dynamic>> resendVerificationEmail(
       };
     }
     
-    // Optional email format validation
+    // Email format validation
     if (!_isValidEmail(email)) {
-      debugPrint('Invalid email format: $email');
+      debugPrint('Invalid email format: ${_redactEmail(email)}');
       return {
         'success': false,
         'error': 'Invalid email format',
       };
     }
     
-    debugPrint('Attempting to resend verification email to: $email');
+    final redactedEmail = _redactEmail(email);
+    debugPrint('Attempting to resend verification email to: $redactedEmail');
     debugPrint('Email type: $type');
     
-
     final OtpType otpType;
     if (type is OtpType) {
       otpType = type;
@@ -779,7 +795,7 @@ Future<Map<String, dynamic>> resendVerificationEmail(
           otpType = OtpType.signup;
       }
     } else {
-      debugPrint(' Unknown type: $type, defaulting to signup');
+      debugPrint('Unknown type: $type, defaulting to signup');
       otpType = OtpType.signup;
     }
     
@@ -790,27 +806,36 @@ Future<Map<String, dynamic>> resendVerificationEmail(
       email: email,
     );
     
-    debugPrint('Verification email resent successfully to: $email');
-    debugPrint('Response: ${response.toJson()}');
+    debugPrint('Verification email resent successfully to: $redactedEmail');
+    debugPrint('Response received successfully');
     
     return {
       'success': true,
       'message': 'Verification email sent successfully',
     };
   } catch (e, stackTrace) {
-
-    debugPrint('Error resending verification email: $e');
-    debugPrint('Stack trace: $stackTrace');
-    debugPrint('Error details:');
-    debugPrint('  - Email: $email');
-    debugPrint('  - Type: $type');
+    
+    final redactedEmail = _redactEmail(email);
+    
+    debugPrint('Error resending verification email');
+    if (kDebugMode) {
+      
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      debugPrint('Debug details:');
+      debugPrint('  - Email: $redactedEmail');
+      debugPrint('  - Type: $type');
+    } else {
+      // Production logging
+      debugPrint('Error type: ${e.runtimeType}');
+    }
+    
     debugPrint('  - Timestamp: ${DateTime.now()}');
     
     return {
       'success': false,
-      'error': e.toString(),
+      'error': 'Failed to send verification email',
       'details': {
-        'email': email,
         'type': type.toString(),
         'timestamp': DateTime.now().toIso8601String(),
       },
@@ -821,59 +846,22 @@ Future<Map<String, dynamic>> resendVerificationEmail(
 bool _isValidEmail(String email) {
   if (email.isEmpty) return false;
   
+  final trimmedEmail = email.trim();
+  if (trimmedEmail.isEmpty) return false;
+  
+
   final emailRegex = RegExp(
-    r'^[a-zA-Z0-9.a-zA-Z0-9.!#$%&"*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
+    r'^[a-zA-Z0-9]([a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$'
   );
   
-  final isValid = emailRegex.hasMatch(email);
+  final isValid = emailRegex.hasMatch(trimmedEmail);
   
   if (!isValid) {
-    debugPrint('Email validation failed for: $email');
+    debugPrint('Email validation failed for: ${_redactEmail(trimmedEmail)}');
   }
   
   return isValid;
 }
-  
-  // Get all members of a specific team
-  Future<List<Map<String, dynamic>>> getTeamMembers(String teamIdOrCode) async {
-    try {
-      if (!_isInitialized) return [];
-      
-      final user = _client.auth.currentUser;
-      if (user == null) return [];
-      
-      String teamIdUuid;
-      
-      // Check if the input is already a UUID
-      final uuidPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
-      if (uuidPattern.hasMatch(teamIdOrCode)) {
-        teamIdUuid = teamIdOrCode;
-      } else {
-        // First, get the UUID of the team from the team code
-        final teamResponse = await _client
-            .from('teams')
-            .select('id')
-            .eq('team_code', teamIdOrCode)
-            .limit(1);
-        
-        if (teamResponse.isEmpty) return [];
-        
-        teamIdUuid = teamResponse[0]['id'];
-      }
-      
-      // Then get all users in that team
-      final response = await _client
-          .from('users')
-          .select('*')
-          .eq('team_id', teamIdUuid)
-          .order('role', ascending: false); // Put admins first
-          
-      return List<Map<String, dynamic>>.from(response);
-    } catch (e) {
-      debugPrint('Error getting team members: $e');
-      return [];
-    }
-  }
   
   // Task-related methods
   
