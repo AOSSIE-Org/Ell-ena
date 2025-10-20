@@ -724,40 +724,115 @@ class SupabaseService {
     }
   }
   
-  // Resend verification email
-  Future<Map<String, dynamic>> resendVerificationEmail(String email, {String type = 'signup'}) async {
-    try {
-      if (!_isInitialized) {
-        return {
-          'success': false, 
-          'error': 'Supabase is not initialized',
-        };
-      }
-      
-      final OtpType otpType;
-      if (type == 'reset_password') {
-        // For password reset, we need to call resetPasswordForEmail instead of resend
-        await _client.auth.resetPasswordForEmail(email);
-      } else {
-        // For signup and other types, use the resend method
-        otpType = type == 'signup' ? OtpType.signup : OtpType.email;
-        await _client.auth.resend(
-          type: otpType,
-          email: email,
-        );
-      }
-      
+// Resend verification email 
+Future<Map<String, dynamic>> resendVerificationEmail(
+  String email, {
+  dynamic type = OtpType.signup, 
+}) async {
+  try {
+    if (!_isInitialized) {
+      debugPrint('Supabase not initialized when resending verification email');
       return {
-        'success': true,
-      };
-    } catch (e) {
-      debugPrint('Error resending verification email: $e');
-      return {
-        'success': false,
-        'error': e.toString(),
+        'success': false, 
+        'error': 'Supabase is not initialized',
       };
     }
+    
+    // Optional email format validation
+    if (!_isValidEmail(email)) {
+      debugPrint('Invalid email format: $email');
+      return {
+        'success': false,
+        'error': 'Invalid email format',
+      };
+    }
+    
+    debugPrint('Attempting to resend verification email to: $email');
+    debugPrint('Email type: $type');
+    
+
+    final OtpType otpType;
+    if (type is OtpType) {
+      otpType = type;
+    } else if (type is String) {
+      switch (type) {
+        case 'signup':
+          otpType = OtpType.signup;
+          break;
+        case 'invite':
+          otpType = OtpType.invite;
+          break;
+        case 'magiclink':
+          otpType = OtpType.magiclink;
+          break;
+        case 'recovery':
+          otpType = OtpType.recovery;
+          break;
+        case 'email_change':
+          otpType = OtpType.emailChange;
+          break;
+        case 'email':
+          otpType = OtpType.email;
+          break;
+        default:
+          debugPrint('Unknown type string: $type, defaulting to signup');
+          otpType = OtpType.signup;
+      }
+    } else {
+      debugPrint(' Unknown type: $type, defaulting to signup');
+      otpType = OtpType.signup;
+    }
+    
+    debugPrint('Using OTP type: $otpType');
+    
+    final response = await _client.auth.resend(
+      type: otpType,
+      email: email,
+    );
+    
+    debugPrint('Verification email resent successfully to: $email');
+    debugPrint('Response: ${response.toJson()}');
+    
+    return {
+      'success': true,
+      'message': 'Verification email sent successfully',
+    };
+  } catch (e, stackTrace) {
+
+    debugPrint('Error resending verification email: $e');
+    debugPrint('Stack trace: $stackTrace');
+    debugPrint('Error details:');
+    debugPrint('  - Email: $email');
+    debugPrint('  - Type: $type');
+    debugPrint('  - Timestamp: ${DateTime.now()}');
+    
+    return {
+      'success': false,
+      'error': e.toString(),
+      'details': {
+        'email': email,
+        'type': type.toString(),
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    };
   }
+}
+
+bool _isValidEmail(String email) {
+  if (email.isEmpty) return false;
+  
+  final emailRegex = RegExp(
+    r'^[a-zA-Z0-9.a-zA-Z0-9.!#$%&"*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
+  );
+  
+  final isValid = emailRegex.hasMatch(email);
+  
+  if (!isValid) {
+    debugPrint('Email validation failed for: $email');
+  }
+  
+  return isValid;
+}
   
   // Get all members of a specific team
   Future<List<Map<String, dynamic>>> getTeamMembers(String teamIdOrCode) async {
