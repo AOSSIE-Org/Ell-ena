@@ -1,9 +1,3 @@
--- Add required columns to meetings table
-ALTER TABLE meetings 
-  ADD COLUMN IF NOT EXISTS duration_minutes INT DEFAULT 60,
-  ADD COLUMN IF NOT EXISTS bot_started_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS transcription_attempted_at TIMESTAMPTZ;
-
 -- Enable required extensions if not already enabled
 CREATE EXTENSION IF NOT EXISTS pg_net;
 CREATE EXTENSION IF NOT EXISTS pg_cron;
@@ -62,6 +56,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Scheduled jobs
-SELECT cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
-SELECT cron.schedule('fetch-transcript', '* * * * *', 'SELECT fetch_meeting_transcript()'); 
+DO $$
+BEGIN
+  PERFORM cron.unschedule('start-bot');
+  PERFORM cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
+
+  PERFORM cron.unschedule('fetch-transcript');
+  PERFORM cron.schedule('fetch-transcript', '* * * * *', 'SELECT fetch_meeting_transcript()');
+END $$;

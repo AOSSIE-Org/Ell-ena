@@ -1,4 +1,9 @@
--- Meetings table
+-- Enable required extensions for bot functionality
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Meetings table with all required columns for transcription
 CREATE TABLE meetings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     meeting_number TEXT NOT NULL,
@@ -8,11 +13,20 @@ CREATE TABLE meetings (
     meeting_url TEXT,
     transcription TEXT DEFAULT NULL,
     ai_summary TEXT DEFAULT NULL,
+    
+    -- New columns for transcription bot functionality
+    duration_minutes INT DEFAULT 60,
+    bot_started_at TIMESTAMP WITH TIME ZONE,
+    transcription_attempted_at TIMESTAMP WITH TIME ZONE,
+    transcription_error TEXT DEFAULT NULL,  -- Stores error messages when transcription processing fails
+    
     created_by UUID REFERENCES auth.users(id),
     team_id UUID REFERENCES teams(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+COMMENT ON COLUMN meetings.transcription_error IS 'Stores error messages when transcription processing fails';
 
 CREATE OR REPLACE FUNCTION generate_meeting_number()
 RETURNS TRIGGER AS $$
@@ -89,9 +103,73 @@ CREATE POLICY meetings_update_policy ON meetings
 CREATE TRIGGER update_meetings_updated_at
 BEFORE UPDATE ON meetings
 FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column(); 
+EXECUTE FUNCTION update_updated_at_column();
 
+-- Function to start bots
+CREATE OR REPLACE FUNCTION start_meeting_bot()
+RETURNS void AS $$
+DECLARE
+  meeting_record RECORD;
+BEGIN
+  FOR meeting_record IN
+    SELECT id, meeting_url
+    FROM meetings
+    WHERE 
+      meeting_url LIKE '%meet.google.com%' AND
+      meeting_date <= NOW() + INTERVAL '5 minutes' AND
+      meeting_date > NOW() - INTERVAL '5 minutes' AND
+      bot_started_at IS NULL
+  LOOP
+    PERFORM net.http_post(
+      url:='https://' || current_setting('request.headers')::json->>'host' || '/functions/v1/start-bot',
+      headers:='{"Content-Type": "application/json", "Authorization": "Bearer ' || current_setting('supabase.anon_key') || '"}'::jsonb,
+      body:=jsonb_build_object(
+        'meeting_url', meeting_record.meeting_url,
+        'meeting_id', meeting_record.id
+      )
+    );
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
 
+-- Function to fetch transcripts
+CREATE OR REPLACE FUNCTION fetch_meeting_transcript()
+RETURNS void AS $$
+DECLARE
+  meeting_record RECORD;
+BEGIN
+  FOR meeting_record IN
+    SELECT id, meeting_url
+    FROM meetings
+    WHERE 
+      meeting_url LIKE '%meet.google.com%' AND
+      meeting_date + ((COALESCE(duration_minutes, 60)) * INTERVAL '1 minute') <= NOW() AND
+      bot_started_at IS NOT NULL AND
+      transcription_attempted_at IS NULL
+  LOOP
+    PERFORM net.http_post(
+      url:='https://' || current_setting('request.headers')::json->>'host' || '/functions/v1/fetch-transcript',
+      headers:='{"Content-Type": "application/json", "Authorization": "Bearer ' || current_setting('supabase.anon_key') || '"}'::jsonb,
+      body:=jsonb_build_object(
+        'meeting_url', meeting_record.meeting_url,
+        'meeting_id', meeting_record.id
+      )
+    );
+  END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Scheduled jobs for bot automation (idempotent version)
+DO $$
+BEGIN
+  PERFORM cron.unschedule('start-bot');
+  PERFORM cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
+  
+  PERFORM cron.unschedule('fetch-transcript');
+  PERFORM cron.schedule('fetch-transcript', '* * * * *', 'SELECT fetch_meeting_transcript()');
+END $$;
+
+-- Function to delete old meetings
 CREATE OR REPLACE FUNCTION delete_old_meetings()
 RETURNS void AS $$
 BEGIN
@@ -100,4 +178,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-SELECT cron.schedule('30 2 * * *', 'SELECT delete_old_meetings();');
+-- Idempotent cron job for cleanup
+DO $$
+BEGIN
+  PERFORM cron.unschedule('delete-old-meetings');
+  PERFORM cron.schedule('delete-old-meetings', '30 2 * * *', 'SELECT delete_old_meetings()');
+END $$;
