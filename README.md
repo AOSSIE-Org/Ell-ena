@@ -150,6 +150,18 @@ I’ve made demo videos for Ell-ena and separated them by features. So, we can d
 3. Set up frontend (Flutter)
    - Follow instructions in [FRONTEND.md](FRONTEND.md)
 
+   
+## 🔧 Environment Configuration
+
+### Frontend Environment Variables
+Create a `.env` file in your Flutter project root:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+VEXA_API_KEY=your_vexa_api_key_here
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
 ## 📁 Project Structure
 
 ### Backend Structure
