@@ -144,7 +144,7 @@ I’ve made demo videos for Ell-ena and separated them by features. So, we can d
    cd Ell-ena
    ```
 
-2. 2. Set up backend (Supabase)
+2. Set up backend (Supabase)
    - Follow instructions in [BACKEND.md](BACKEND.md)
 
    > **Note:** When running Deno functions (like `start-bot`), ensure you include the `--allow-env` flag.
