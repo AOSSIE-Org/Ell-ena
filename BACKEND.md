@@ -314,8 +314,6 @@ supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 ### Deploy All Functions
 ```bash
    supabase functions deploy
-   ```
-```bash
    supabase functions deploy fetch-transcript
    supabase functions deploy generate-embeddings
    supabase functions deploy get-embedding
@@ -323,6 +321,40 @@ supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
    supabase functions deploy start-bot
    supabase functions deploy summarize-transcription
    ```
+### Verify Deployment
+
+After deploying your Supabase Edge Functions, you can check that they are running correctly both locally and remotely.
+
+#### 1. List Deployed Functions
+To see all functions deployed to your Supabase project:
+
+```bash
+   supabase functions list
+   ```
+   This will display the function names, their status, and the deployment URL.
+
+#### 2. Test Functions Locally
+   To run a specific function locally for testing:
+```bash
+   supabase functions serve <function-name>
+   ```
+
+   Replace <function-name> with the name of the function you want to test, for example:
+
+```bash
+   supabase functions serve fetch-transcript
+   ```
+
+The CLI will start a local server, usually on http://localhost:54321/functions/v1/<function-name>. You can make HTTP requests to this endpoint to test your function.
+
+3. Invoke Functions Directly (Optional)
+
+You can also invoke a deployed function directly:
+```bash
+   supabase functions invoke <function-name>
+   ```
+
+   This is useful for quick testing of your production deployment.
    
 
 
