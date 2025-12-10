@@ -334,7 +334,7 @@ To see all functions deployed to your Supabase project:
    This will display the function names, their status, and the deployment URL.
 
 #### 2. Test Functions Locally
-   To run a specific function locally for testing:
+   To run a specific function for testing:
 ```bash
    supabase functions serve <function-name>
    ```
@@ -345,7 +345,7 @@ To see all functions deployed to your Supabase project:
    supabase functions serve fetch-transcript
    ```
 
-The CLI will start a local server, usually on http://localhost:54321/functions/v1/<function-name>. You can make HTTP requests to this endpoint to test your function.
+The CLI will start a local server, usually on `http://localhost:54321/functions/v1/<function-name>`. You can make HTTP requests to this endpoint to test your function.
 
 3. Invoke Functions Directly (Optional)
 
