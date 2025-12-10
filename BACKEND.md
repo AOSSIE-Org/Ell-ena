@@ -27,26 +27,32 @@ The Supabase CLI is essential for managing your Supabase projects locally and de
 
 ### For Windows (using Scoop)
 
-1. If you don't have Scoop installed, install it first:
-   ```powershell
+1. Allow scripts to run
+```powershell
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+2. Install Scoop if not installed
+```powershell
    irm get.scoop.sh | iex
    ```
-
-2. Add the Supabase bucket and install the CLI:
-   ```powershell
+3. Add the Supabase bucket 
+```powershell
    scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+   ```
+
+4. Install Supabase CLI
+```powershell
    scoop install supabase
    ```
 
-3. Verify the installation:
+5. Verify the installation:
    ```powershell
    supabase --version
    ```
 
 ### For macOS (using Homebrew)
 
-1. If you don't have Homebrew installed, install it first:
+1. Install Homebrew (if not installed)
    ```bash
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
@@ -65,6 +71,7 @@ The Supabase CLI is essential for managing your Supabase projects locally and de
 
 ```bash
 npm install -g supabase
+supabase --version
 ```
 
 ## Setting Up Supabase Project
@@ -90,17 +97,20 @@ The project creation will take a few minutes. Once completed, you'll be redirect
    ```bash
    supabase login
    ```
-   This will open a browser window where you need to authorize the CLI.
+   This opens a browser for authorization, Once authorized, your CLI is ready to link projects.
 
 2. Navigate to your project directory:
    ```bash
    cd path/to/Ell-ena
    ```
+   Replace path/to/Ell-ena with the actual path to your project folder.
 
 3. Initialize Supabase in your project (if not already initialized):
    ```bash
    supabase init
    ```
+   This creates a .supabase folder in your project directory.
+   Important: If .supabase already exists, skip this step to avoid error.
 
 4. Link your local project to the remote Supabase project:
    ```bash
@@ -114,6 +124,7 @@ The project creation will take a few minutes. Once completed, you'll be redirect
    ```bash
    cp .env.example .env
    ```
+   This copies the example environment variables to a new file you can safely edit.
 
 2. Get your Supabase credentials from the project dashboard:
    - Go to Settings > API in your Supabase dashboard
@@ -285,27 +296,8 @@ supabase secrets set SUPABASE_DB_URL=your-db-url
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 supabase secrets set VEXA_API_KEY=your-vexa-api-key
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
-
-
-
-## Deploying Edge Functions
-
-The project uses Supabase Edge Functions for serverless functionality. Deploy them using the CLI:
-
-```bash
-# Deploy all functions
-supabase functions deploy
-
-
-# Or deploy specific functions
-supabase functions deploy fetch-transcript
-supabase functions deploy generate-embeddings
-supabase functions deploy get-embedding
-supabase functions deploy search-meetings
-supabase functions deploy start-bot
-supabase functions deploy summarize-transcription
-```
-
+ ```
+ 
 ### Function Descriptions
 
 - **fetch-transcript**: Retrieves meeting transcriptions
@@ -314,6 +306,25 @@ supabase functions deploy summarize-transcription
 - **search-meetings**: Performs semantic search across meeting transcriptions
 - **start-bot**: Initializes the AI assistant
 - **summarize-transcription**: Generates AI summaries of meeting transcriptions
+
+## Deploying Edge Functions
+
+   Supabase Edge Functions enable serverless functionality. Deploy them using the CLI.
+
+### Deploy All Functions
+```bash
+   supabase functions deploy
+   ```
+```bash
+   supabase functions deploy fetch-transcript
+   supabase functions deploy generate-embeddings
+   supabase functions deploy get-embedding
+   supabase functions deploy search-meetings
+   supabase functions deploy start-bot
+   supabase functions deploy summarize-transcription
+   ```
+   
+
 
 ## Troubleshooting
 
