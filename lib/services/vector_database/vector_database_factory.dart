@@ -194,6 +194,7 @@ class VectorDatabaseFactory extends ChangeNotifier {
 
   /// Load preferences from SharedPreferences and secure storage
   Future<void> _loadPreferences() async {
+    // Load non-sensitive config from SharedPreferences with granular error handling
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -203,22 +204,31 @@ class VectorDatabaseFactory extends ChangeNotifier {
         _currentProvider = VectorDbProvider.values[providerIndex];
       }
 
-      // Load non-sensitive Couchbase config from SharedPreferences
+      // Load non-sensitive Couchbase config
       _couchbaseUrl = prefs.getString(_couchbaseUrlKey) ?? '';
       _couchbaseBucket = prefs.getString(_couchbaseBucketKey) ?? 'ell-ena';
 
-      // Load sensitive credentials from secure storage
+      debugPrint('📱 Loaded non-sensitive config - Provider: ${_currentProvider.displayName}');
+    } catch (e) {
+      debugPrint('⚠️  Error loading SharedPreferences: $e');
+      // Only reset non-sensitive config on SharedPreferences error
+      _couchbaseUrl = '';
+      _couchbaseBucket = 'ell-ena';
+      // Keep current provider as-is (don't reset to default)
+    }
+
+    // Load sensitive credentials from secure storage with separate error handling
+    try {
       _couchbaseUsername = await _secureStorage.read(key: _secureUsernameKey) ?? '';
       _couchbasePassword = await _secureStorage.read(key: _securePasswordKey) ?? '';
 
-      debugPrint('📱 Loaded vector DB provider: ${_currentProvider.displayName}');
+      debugPrint('🔐 Loaded secure credentials from encrypted storage');
     } catch (e) {
-      debugPrint('⚠️  Error loading preferences: $e');
-      // Set safe defaults on error
-      _couchbaseUrl = '';
+      debugPrint('⚠️  Error loading secure storage credentials: $e');
+      // Only reset credentials on secure storage error
       _couchbaseUsername = '';
       _couchbasePassword = '';
-      _couchbaseBucket = 'ell-ena';
+      // Non-sensitive config remains intact
     }
   }
 
