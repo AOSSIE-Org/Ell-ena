@@ -34,6 +34,7 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final String effectiveHintText = label ?? hintText;
     final IconData? effectivePrefixIcon = icon ?? prefixIcon;
     final bool effectiveObscureText = isPassword ?? obscureText;
@@ -45,28 +46,28 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       enabled: enabled,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: scheme.onSurface),
       decoration: InputDecoration(
         hintText: effectiveHintText,
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        hintStyle: const TextStyle(color: Colors.grey),
+        labelStyle: TextStyle(color: scheme.onSurface.withOpacity(0.7)),
+        hintStyle: TextStyle(color: scheme.onSurface.withOpacity(0.6)),
         prefixIcon: effectivePrefixIcon != null
-            ? Icon(effectivePrefixIcon, color: Colors.grey)
+            ? Icon(effectivePrefixIcon, color: scheme.onSurface.withOpacity(0.7))
             : null,
         filled: true,
-        fillColor: const Color(0xFF2D2D2D),
+        fillColor: scheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade800),
+          borderSide: BorderSide(color: scheme.outlineVariant ?? scheme.outline.withOpacity(0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.green.shade400),
+          borderSide: BorderSide(color: scheme.primary),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -93,21 +94,19 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isOutlined ? Colors.transparent : Colors.green.shade400,
-          foregroundColor: Colors.white,
+          backgroundColor: isOutlined ? Colors.transparent : scheme.primary,
+          foregroundColor: scheme.onPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side:
-                isOutlined
-                    ? BorderSide(color: Colors.green.shade400)
-                    : BorderSide.none,
+                isOutlined ? BorderSide(color: scheme.primary) : BorderSide.none,
           ),
         ),
         child:
@@ -146,8 +145,10 @@ class AuthScreenWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -157,16 +158,16 @@ class AuthScreenWrapper extends StatelessWidget {
               const SizedBox(height: 40),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: scheme.onBackground,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
+                style: TextStyle(fontSize: 16, color: scheme.onBackground.withOpacity(0.7)),
               ),
               const SizedBox(height: 40),
               ...children,
@@ -190,6 +191,7 @@ class CustomLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: LoadingAnimationWidget.stretchedDots(
         color: color,
@@ -205,20 +207,21 @@ class DashboardLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Skeletonizer(
       enabled: true,
       effect: ShimmerEffect(
-        baseColor: const Color(0xFF2D2D2D),
-        highlightColor: const Color(0xFF3D3D3D),
+        baseColor: scheme.surfaceVariant.withOpacity(0.5),
+        highlightColor: scheme.surfaceVariant,
       ),
       child: Column(
         children: [
           // Header with gradient
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
@@ -229,26 +232,26 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Dashboard',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: scheme.onSurface,
                       ),
                     ),
                     CircleAvatar(
-                      backgroundColor: Colors.grey.shade800,
+                      backgroundColor: scheme.onSurface.withOpacity(0.1),
                       radius: 20,
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Welcome back, User!',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white70,
+                    color: scheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -269,7 +272,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: _buildStatCard(),
+                          child: _buildStatCard(context),
                         ),
                       ),
                     ),
@@ -277,26 +280,26 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   const SizedBox(height: 24),
                   
                   // Tasks section
-                  const Text(
+                  Text(
                     'Recent Tasks',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: scheme.onBackground,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...List.generate(3, (index) => _buildTaskItem()),
+                  ...List.generate(3, (index) => _buildTaskItem(context)),
                   
                   const SizedBox(height: 24),
                   
                   // Calendar section
-                  const Text(
+                  Text(
                     'Upcoming Events',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: scheme.onBackground,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -305,16 +308,16 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   const SizedBox(height: 24),
                   
                   // Activity section
-                  const Text(
+                  Text(
                     'Team Activity',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: scheme.onBackground,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...List.generate(2, (index) => _buildActivityItem()),
+                  ...List.generate(2, (index) => _buildActivityItem(context)),
                 ],
               ),
             ),
@@ -324,33 +327,34 @@ class DashboardLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildStatCard() {
+  Widget _buildStatCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       height: 80,
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             '12',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Tasks',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white70,
+              color: scheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
@@ -358,12 +362,13 @@ class DashboardLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildTaskItem() {
+  Widget _buildTaskItem(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -372,13 +377,13 @@ class DashboardLoadingSkeleton extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.2),
+              color: scheme.primary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.task_alt, color: Colors.green),
+            child: Icon(Icons.task_alt, color: scheme.primary),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -386,15 +391,15 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   'Task Title Goes Here',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: scheme.onSurface,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Due tomorrow',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: scheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -450,81 +455,85 @@ class DashboardLoadingSkeleton extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          
+          // Weekday headers
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (index) {
-              return const Column(
-                children: [
-                  Text(
-                    'M',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Colors.transparent,
-                    child: Text(
-                      '12',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
+            children: const [
+              Text('M', style: TextStyle(color: Colors.white70)),
+              Text('T', style: TextStyle(color: Colors.white70)),
+              Text('W', style: TextStyle(color: Colors.white70)),
+              Text('T', style: TextStyle(color: Colors.white70)),
+              Text('F', style: TextStyle(color: Colors.white70)),
+              Text('S', style: TextStyle(color: Colors.white70)),
+              Text('S', style: TextStyle(color: Colors.white70)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          
+          // Calendar grid (4 weeks)
+          for (int week = 0; week < 4; week++)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(7, (day) {
+                  // Highlight a random day to simulate selected day
+                  final isSelected = week == 1 && day == 3;
+                  final hasEvents = (week + day) % 3 == 0;
+                  
+                  return Column(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.green.withOpacity(0.2) : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${week * 7 + day + 1}',
+                          style: TextStyle(
+                            color: isSelected ? Colors.green : Colors.white,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              );
-            }),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+                      if (hasEvents)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  );
+                }),
+              ),
             ),
-            child: const Row(
-              children: [
-                Icon(Icons.event, color: Colors.green, size: 16),
-                SizedBox(width: 8),
-                Text(
-                  'Team Meeting',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white,
-                  ),
-                ),
-                Spacer(),
-                Text(
-                  '10:00 AM',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
   
-  Widget _buildActivityItem() {
+  Widget _buildActivityItem(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: Colors.grey.shade700,
+            backgroundColor: scheme.onSurface.withOpacity(0.1),
           ),
           const SizedBox(width: 16),
           const Expanded(
@@ -535,7 +544,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   'User Name',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: scheme.onSurface,
                   ),
                 ),
                 SizedBox(height: 4),
@@ -543,7 +552,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   'Completed a task: Task Name',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: scheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -568,20 +577,21 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Skeletonizer(
       enabled: true,
       effect: ShimmerEffect(
-        baseColor: const Color(0xFF2D2D2D),
-        highlightColor: const Color(0xFF3D3D3D),
+        baseColor: scheme.surfaceVariant.withOpacity(0.5),
+        highlightColor: scheme.surfaceVariant,
       ),
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
@@ -667,7 +677,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: 5,
               itemBuilder: (context, index) {
-                return _buildWorkspaceItem();
+                return _buildWorkspaceItem(context);
               },
             ),
           ),
@@ -677,12 +687,13 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
   }
   
   Widget _buildTab(String title, bool isSelected) {
+    final scheme = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withOpacity(0.2) : const Color(0xFF2D2D2D),
+          color: isSelected ? scheme.primary.withOpacity(0.2) : scheme.surface,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,
@@ -690,19 +701,20 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
           title,
           style: TextStyle(
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.green : Colors.white,
+            color: isSelected ? scheme.primary : scheme.onSurface,
           ),
         ),
       ),
     );
   }
   
-  Widget _buildWorkspaceItem() {
+  Widget _buildWorkspaceItem(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -755,7 +767,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 12,
-                backgroundColor: Colors.grey.shade700,
+                backgroundColor: scheme.onSurface.withOpacity(0.1),
               ),
               const SizedBox(width: 8),
               const Text(
@@ -789,20 +801,21 @@ class CalendarLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Skeletonizer(
       enabled: true,
       effect: ShimmerEffect(
-        baseColor: const Color(0xFF2D2D2D),
-        highlightColor: const Color(0xFF3D3D3D),
+        baseColor: scheme.surfaceVariant.withOpacity(0.5),
+        highlightColor: scheme.surfaceVariant,
       ),
       child: Column(
         children: [
           // Calendar header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
