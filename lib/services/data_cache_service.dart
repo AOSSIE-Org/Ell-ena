@@ -28,6 +28,8 @@ class DataCacheService {
   
   // Request locks to prevent simultaneous duplicate requests
   final Map<String, Completer<List<Map<String, dynamic>>>> _pendingRequests = {};
+  // Separate map for user teams (returns Map, not List)
+  final Map<String, Completer<Map<String, dynamic>>> _pendingUserTeamsRequests = {};
   
   /// Get tasks with optional caching
   /// 
@@ -197,19 +199,19 @@ class DataCacheService {
     required String email,
   }) async {
     final cacheKey = 'user_teams_$email';
+    final storageKey = '${_userTeamsKey}_$email'; // Email-specific storage key
     
     // Check if there's already a pending request for this data
-    if (_pendingRequests.containsKey(cacheKey) && !forceRefresh) {
+    if (_pendingUserTeamsRequests.containsKey(cacheKey)) {
       debugPrint('Waiting for pending user teams request...');
-      // Need to cast since _pendingRequests stores List type
-      return await _pendingRequests[cacheKey]!.future as Map<String, dynamic>;
+      return await _pendingUserTeamsRequests[cacheKey]!.future;
     }
     
     // Check cache validity
     if (!forceRefresh && await _isCacheValid(_userTeamsTimestampKey)) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final cachedJson = prefs.getString(_userTeamsKey);
+        final cachedJson = prefs.getString(storageKey);
         if (cachedJson != null) {
           final cached = jsonDecode(cachedJson) as Map<String, dynamic>;
           debugPrint('Returning cached user teams');
@@ -221,27 +223,27 @@ class DataCacheService {
     }
     
     // Create a completer for request deduplication
-    final completer = Completer<List<Map<String, dynamic>>>();
-    _pendingRequests[cacheKey] = completer;
+    final completer = Completer<Map<String, dynamic>>();
+    _pendingUserTeamsRequests[cacheKey] = completer;
     
     try {
       debugPrint('Fetching fresh user teams from Supabase...');
       final result = await _supabaseService.getUserTeams(email);
       
-      // Save to cache
+      // Save to cache with email-specific key
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userTeamsKey, jsonEncode(result));
+      await prefs.setString(storageKey, jsonEncode(result));
       await _saveTimestamp(_userTeamsTimestampKey);
       
       // Complete and remove from pending
-      completer.complete([result as Map<String, dynamic>]);
-      _pendingRequests.remove(cacheKey);
+      completer.complete(result);
+      _pendingUserTeamsRequests.remove(cacheKey);
       
       return result;
     } catch (e) {
       debugPrint('Error fetching user teams: $e');
       completer.completeError(e);
-      _pendingRequests.remove(cacheKey);
+      _pendingUserTeamsRequests.remove(cacheKey);
       rethrow;
     }
   }
