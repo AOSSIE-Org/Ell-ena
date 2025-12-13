@@ -22,6 +22,20 @@ class SupabaseService {
   final _ticketsStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
   final _meetingsStreamController = StreamController<List<Map<String, dynamic>>>.broadcast();
   
+  // Data caching with TTL (5 minutes)
+  List<Map<String, dynamic>>? _tasksCache;
+  List<Map<String, dynamic>>? _ticketsCache;
+  List<Map<String, dynamic>>? _meetingsCache;
+  DateTime? _tasksCacheTime;
+  DateTime? _ticketsCacheTime;
+  DateTime? _meetingsCacheTime;
+  final Duration _cacheDuration = const Duration(minutes: 5);
+  
+  // Request deduplication - track in-flight requests
+  Future<List<Map<String, dynamic>>>? _tasksRequest;
+  Future<List<Map<String, dynamic>>>? _ticketsRequest;
+  Future<List<Map<String, dynamic>>>? _meetingsRequest;
+  
   Stream<List<Map<String, dynamic>>> get tasksStream => _tasksStreamController.stream;
   Stream<List<Map<String, dynamic>>> get ticketsStream => _ticketsStreamController.stream;
   Stream<List<Map<String, dynamic>>> get meetingsStream => _meetingsStreamController.stream;
@@ -805,16 +819,47 @@ class SupabaseService {
   // Task-related methods
   
   // Get tasks for the current user's team
+  // Helper to check if cache is valid
+  bool _isCacheValid(DateTime? cacheTime) {
+    if (cacheTime == null) return false;
+    return DateTime.now().difference(cacheTime) < _cacheDuration;
+  }
+  
+  // Helper to invalidate all caches
+  void invalidateCache() {
+    _tasksCache = null;
+    _ticketsCache = null;
+    _meetingsCache = null;
+    _tasksCacheTime = null;
+    _ticketsCacheTime = null;
+    _meetingsCacheTime = null;
+    debugPrint('Cache invalidated');
+  }
+  
   Future<List<Map<String, dynamic>>> getTasks({
     bool filterByAssignment = false,
     String? filterByStatus,
     String? filterByDueDate,
+    bool forceRefresh = false,
   }) async {
     try {
       if (!_isInitialized) return [];
       
       final user = _client.auth.currentUser;
       if (user == null) return [];
+      
+      // Return cached data if valid and no filters (filters bypass cache)
+      final hasFilters = filterByAssignment || filterByStatus != null || filterByDueDate != null;
+      if (!forceRefresh && !hasFilters && _isCacheValid(_tasksCacheTime) && _tasksCache != null) {
+        debugPrint('Returning cached tasks (${_tasksCache!.length} items)');
+        return _tasksCache!;
+      }
+      
+      // If there's an in-flight request for unfiltered tasks, return it
+      if (!hasFilters && _tasksRequest != null) {
+        debugPrint('Returning in-flight tasks request (deduplication)');
+        return await _tasksRequest!;
+      }
       
       // Get the user's team ID
       final userProfile = await getCurrentUserProfile();
@@ -824,11 +869,49 @@ class SupabaseService {
       final userId = user.id;
       final isAdmin = userProfile['role'] == 'admin';
       
-      // Create base query
-      final query = _client
-          .from('tasks')
-          .select('*')
-          .eq('team_id', teamId);
+      // Create the fetch future
+      final fetchFuture = _fetchTasks(teamId, userId, isAdmin, filterByAssignment, filterByStatus, filterByDueDate);
+      
+      // Store in-flight request for deduplication (only for unfiltered)
+      if (!hasFilters) {
+        _tasksRequest = fetchFuture;
+      }
+      
+      final result = await fetchFuture;
+      
+      // Clear in-flight request
+      if (!hasFilters) {
+        _tasksRequest = null;
+      }
+      
+      // Cache the result if no filters
+      if (!hasFilters) {
+        _tasksCache = result;
+        _tasksCacheTime = DateTime.now();
+        debugPrint('Tasks cached (${result.length} items)');
+      }
+      
+      return result;
+    } catch (e) {
+      debugPrint('Error getting tasks: $e');
+      _tasksRequest = null;
+      return [];
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> _fetchTasks(
+    String teamId,
+    String userId,
+    bool isAdmin,
+    bool filterByAssignment,
+    String? filterByStatus,
+    String? filterByDueDate,
+  ) async {
+    // Create base query
+    final query = _client
+        .from('tasks')
+        .select('*')
+        .eq('team_id', teamId);
       
       // Filter by assignment if requested and user is not admin
       if (filterByAssignment && !isAdmin) {
@@ -857,37 +940,33 @@ class SupabaseService {
         }
       }
       
-      final response = await query.order('created_at', ascending: false);
-          
-      // Process the response to make it compatible with existing code
-      final List<Map<String, dynamic>> processedTasks = [];
-      for (var task in response) {
-        final Map<String, dynamic> processedTask = {...task};
+    final response = await query.order('created_at', ascending: false);
         
-        // Add creator info
-        if (task['created_by'] != null) {
-          final creatorInfo = await _getUserInfo(task['created_by']);
-          if (creatorInfo != null) {
-            processedTask['creator'] = creatorInfo;
-          }
+    // Process the response to make it compatible with existing code
+    final List<Map<String, dynamic>> processedTasks = [];
+    for (var task in response) {
+      final Map<String, dynamic> processedTask = {...task};
+      
+      // Add creator info
+      if (task['created_by'] != null) {
+        final creatorInfo = await _getUserInfo(task['created_by']);
+        if (creatorInfo != null) {
+          processedTask['creator'] = creatorInfo;
         }
-        
-        // Add assignee info
-        if (task['assigned_to'] != null) {
-          final assigneeInfo = await _getUserInfo(task['assigned_to']);
-          if (assigneeInfo != null) {
-            processedTask['assignee'] = assigneeInfo;
-          }
-        }
-        
-        processedTasks.add(processedTask);
       }
-          
-      return processedTasks;
-    } catch (e) {
-      debugPrint('Error getting tasks: $e');
-      return [];
+      
+      // Add assignee info
+      if (task['assigned_to'] != null) {
+        final assigneeInfo = await _getUserInfo(task['assigned_to']);
+        if (assigneeInfo != null) {
+          processedTask['assignee'] = assigneeInfo;
+        }
+      }
+      
+      processedTasks.add(processedTask);
     }
+        
+    return processedTasks;
   }
   
   // Create a new task
@@ -954,6 +1033,10 @@ class SupabaseService {
         };
       }
       
+      // Invalidate tasks cache
+      _tasksCache = null;
+      _tasksCacheTime = null;
+      
       return {
         'success': true,
         'task': response[0],
@@ -993,6 +1076,10 @@ class SupabaseService {
           .from('tasks')
           .update({'status': status})
           .eq('id', taskId);
+      
+      // Invalidate tasks cache
+      _tasksCache = null;
+      _tasksCacheTime = null;
           
       return {
         'success': true,
@@ -1041,6 +1128,10 @@ class SupabaseService {
           .from('tasks')
           .update({'approval_status': approvalStatus})
           .eq('id', taskId);
+      
+      // Invalidate tasks cache
+      _tasksCache = null;
+      _tasksCacheTime = null;
           
       return {
         'success': true,
@@ -1222,12 +1313,26 @@ class SupabaseService {
     bool filterByAssignment = false,
     String? filterByStatus,
     String? filterByPriority,
+    bool forceRefresh = false,
   }) async {
     try {
       if (!_isInitialized) return [];
       
       final user = _client.auth.currentUser;
       if (user == null) return [];
+      
+      // Return cached data if valid and no filters
+      final hasFilters = filterByAssignment || filterByStatus != null || filterByPriority != null;
+      if (!forceRefresh && !hasFilters && _isCacheValid(_ticketsCacheTime) && _ticketsCache != null) {
+        debugPrint('Returning cached tickets (${_ticketsCache!.length} items)');
+        return _ticketsCache!;
+      }
+      
+      // If there's an in-flight request for unfiltered tickets, return it
+      if (!hasFilters && _ticketsRequest != null) {
+        debugPrint('Returning in-flight tickets request (deduplication)');
+        return await _ticketsRequest!;
+      }
       
       // Get the user's team ID
       final userProfile = await getCurrentUserProfile();
@@ -1237,11 +1342,49 @@ class SupabaseService {
       final userId = user.id;
       final isAdmin = userProfile['role'] == 'admin';
       
-      // Create base query
-      final query = _client
-          .from('tickets')
-          .select('*')
-          .eq('team_id', teamId);
+      // Create the fetch future
+      final fetchFuture = _fetchTickets(teamId, userId, isAdmin, filterByAssignment, filterByStatus, filterByPriority);
+      
+      // Store in-flight request for deduplication (only for unfiltered)
+      if (!hasFilters) {
+        _ticketsRequest = fetchFuture;
+      }
+      
+      final result = await fetchFuture;
+      
+      // Clear in-flight request
+      if (!hasFilters) {
+        _ticketsRequest = null;
+      }
+      
+      // Cache the result if no filters
+      if (!hasFilters) {
+        _ticketsCache = result;
+        _ticketsCacheTime = DateTime.now();
+        debugPrint('Tickets cached (${result.length} items)');
+      }
+      
+      return result;
+    } catch (e) {
+      debugPrint('Error getting tickets: $e');
+      _ticketsRequest = null;
+      return [];
+    }
+  }
+  
+  Future<List<Map<String, dynamic>>> _fetchTickets(
+    String teamId,
+    String userId,
+    bool isAdmin,
+    bool filterByAssignment,
+    String? filterByStatus,
+    String? filterByPriority,
+  ) async {
+    // Create base query
+    final query = _client
+        .from('tickets')
+        .select('*')
+        .eq('team_id', teamId);
       
       // Filter by assignment if requested and user is not admin
       if (filterByAssignment && !isAdmin) {
@@ -1261,37 +1404,33 @@ class SupabaseService {
         query.eq('priority', filterByPriority);
       }
       
-      final response = await query.order('created_at', ascending: false);
-          
-      // Process the response to add creator and assignee info
-      final List<Map<String, dynamic>> processedTickets = [];
-      for (var ticket in response) {
-        final Map<String, dynamic> processedTicket = {...ticket};
+    final response = await query.order('created_at', ascending: false);
         
-        // Add creator info
-        if (ticket['created_by'] != null) {
-          final creatorInfo = await _getUserInfo(ticket['created_by']);
-          if (creatorInfo != null) {
-            processedTicket['creator'] = creatorInfo;
-          }
+    // Process the response to add creator and assignee info
+    final List<Map<String, dynamic>> processedTickets = [];
+    for (var ticket in response) {
+      final Map<String, dynamic> processedTicket = {...ticket};
+      
+      // Add creator info
+      if (ticket['created_by'] != null) {
+        final creatorInfo = await _getUserInfo(ticket['created_by']);
+        if (creatorInfo != null) {
+          processedTicket['creator'] = creatorInfo;
         }
-        
-        // Add assignee info
-        if (ticket['assigned_to'] != null) {
-          final assigneeInfo = await _getUserInfo(ticket['assigned_to']);
-          if (assigneeInfo != null) {
-            processedTicket['assignee'] = assigneeInfo;
-          }
-        }
-        
-        processedTickets.add(processedTicket);
       }
-          
-      return processedTickets;
-    } catch (e) {
-      debugPrint('Error getting tickets: $e');
-      return [];
+      
+      // Add assignee info
+      if (ticket['assigned_to'] != null) {
+        final assigneeInfo = await _getUserInfo(ticket['assigned_to']);
+        if (assigneeInfo != null) {
+          processedTicket['assignee'] = assigneeInfo;
+        }
+      }
+      
+      processedTickets.add(processedTicket);
     }
+        
+    return processedTickets;
   }
   
   // Helper method to get user info
@@ -1396,8 +1535,9 @@ class SupabaseService {
         };
       }
       
-      // Refresh tickets
-      await getTickets();
+      // Invalidate tickets cache
+      _ticketsCache = null;
+      _ticketsCacheTime = null;
       
       return {
         'success': true,
@@ -1438,9 +1578,10 @@ class SupabaseService {
           .from('tickets')
           .update({'status': status})
           .eq('id', ticketId);
-          
-      // Refresh tickets
-      await getTickets();
+      
+      // Invalidate tickets cache
+      _ticketsCache = null;
+      _ticketsCacheTime = null;
       
       return {
         'success': true,
@@ -1480,9 +1621,10 @@ class SupabaseService {
           .from('tickets')
           .update({'priority': priority})
           .eq('id', ticketId);
-          
-      // Refresh tickets
-      await getTickets();
+      
+      // Invalidate tickets cache
+      _ticketsCache = null;
+      _ticketsCacheTime = null;
       
       return {
         'success': true,
@@ -1531,9 +1673,10 @@ class SupabaseService {
           .from('tickets')
           .update({'approval_status': approvalStatus})
           .eq('id', ticketId);
-          
-      // Refresh tickets
-      await getTickets();
+      
+      // Invalidate tickets cache
+      _ticketsCache = null;
+      _ticketsCacheTime = null;
       
       return {
         'success': true,
@@ -1720,7 +1863,33 @@ class SupabaseService {
   // Meetings-related methods
   
   // Get meetings for the current user's team
-  Future<List<Map<String, dynamic>>> getMeetings() async {
+  Future<List<Map<String, dynamic>>> getMeetings({bool forceRefresh = false}) async {
+    // Return cached data if valid and not forcing refresh
+    if (!forceRefresh && _isCacheValid(_meetingsCacheTime)) {
+      debugPrint('Returning cached meetings (${_meetingsCache!.length} items)');
+      return _meetingsCache!;
+    }
+
+    // If there's already a request in flight, return it
+    if (_meetingsRequest != null) {
+      debugPrint('Reusing in-flight meetings request');
+      return _meetingsRequest!;
+    }
+
+    // Start new request
+    _meetingsRequest = _fetchMeetings();
+    
+    try {
+      final result = await _meetingsRequest!;
+      _meetingsCache = result;
+      _meetingsCacheTime = DateTime.now();
+      return result;
+    } finally {
+      _meetingsRequest = null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchMeetings() async {
     try {
       if (!_isInitialized) return [];
       
@@ -1830,8 +1999,9 @@ class SupabaseService {
         };
       }
       
-      // Refresh meetings
-      await getMeetings();
+      // Invalidate meetings cache
+      _meetingsCache = null;
+      _meetingsCacheTime = null;
       
       return {
         'success': true,
@@ -1943,8 +2113,9 @@ class SupabaseService {
         };
       }
       
-      // Refresh meetings
-      await getMeetings();
+      // Invalidate meetings cache
+      _meetingsCache = null;
+      _meetingsCacheTime = null;
       
       return {
         'success': true,
@@ -1982,9 +2153,10 @@ class SupabaseService {
           .from('meetings')
           .delete()
           .eq('id', meetingId);
-          
-      // Refresh meetings
-      await getMeetings();
+      
+      // Invalidate meetings cache
+      _meetingsCache = null;
+      _meetingsCacheTime = null;
       
       return {
         'success': true,
