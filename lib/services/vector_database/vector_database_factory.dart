@@ -84,6 +84,10 @@ class VectorDatabaseFactory extends ChangeNotifier {
       return;
     }
 
+    // Save original state for rollback
+    final originalProvider = _currentProvider;
+    final originalDatabase = _currentDatabase;
+
     // Close current connection
     await _currentDatabase?.close();
     _currentDatabase = null;
@@ -97,13 +101,28 @@ class VectorDatabaseFactory extends ChangeNotifier {
       await createDatabase(supabaseClient);
       debugPrint('✅ Switched to ${provider.displayName}');
       notifyListeners();
-    } catch (e) {
-      debugPrint('❌ Failed to switch to ${provider.displayName}: $e');
-      // Rollback to pgvector on failure
-      _currentProvider = VectorDbProvider.pgvector;
-      await _savePreferences();
-      await createDatabase(supabaseClient);
-      notifyListeners();
+    } catch (originalError) {
+      debugPrint('❌ Failed to switch to ${provider.displayName}: $originalError');
+      
+      // Rollback to original provider on failure
+      try {
+        debugPrint('🔄 Attempting rollback to ${originalProvider.displayName}...');
+        _currentProvider = originalProvider;
+        _currentDatabase = null;
+        await _savePreferences();
+        
+        await createDatabase(supabaseClient);
+        debugPrint('✅ Rollback to ${originalProvider.displayName} successful');
+        notifyListeners();
+      } catch (rollbackError) {
+        debugPrint('❌ Rollback failed: $rollbackError');
+        // Restore previous database instance if rollback failed completely
+        _currentDatabase = originalDatabase;
+        debugPrint('⚠️  Restored previous database connection');
+        notifyListeners();
+      }
+      
+      // Always rethrow the original error
       rethrow;
     }
   }
