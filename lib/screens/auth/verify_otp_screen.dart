@@ -77,27 +77,6 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
     });
   }
 
-  void _startResendTimer() {
-    setState(() {
-      _canResend = false;
-      _resendCountdown = 60;
-    });
-
-    _resendTimer?.cancel();
-    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_resendCountdown > 0) {
-        setState(() {
-          _resendCountdown--;
-        });
-      } else {
-        setState(() {
-          _canResend = true;
-        });
-        timer.cancel();
-      }
-    });
-  }
-
   Future<void> _handleVerification() async {
     String otp = _controllers.map((c) => c.text).join();
     if (otp.length == 6) {
