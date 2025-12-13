@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -49,6 +50,11 @@ class CouchbaseVectorDatabase implements VectorDatabase {
       final response = await _httpClient.get(
         Uri.parse('$clusterUrl/pools/default'),
         headers: {'Authorization': _authHeader},
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Connection to Couchbase cluster timed out');
+        },
       );
 
       if (response.statusCode == 200) {
@@ -60,6 +66,10 @@ class CouchbaseVectorDatabase implements VectorDatabase {
       } else {
         throw Exception('Failed to connect: ${response.statusCode}');
       }
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Couchbase initialization timeout: $e');
+      _isInitialized = false;
+      rethrow;
     } catch (e) {
       debugPrint('❌ Couchbase initialization failed: $e');
       _isInitialized = false;
@@ -73,6 +83,11 @@ class CouchbaseVectorDatabase implements VectorDatabase {
       final response = await _httpClient.get(
         Uri.parse('$clusterUrl/api/index/$searchIndexName'),
         headers: {'Authorization': _authHeader},
+      ).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Search index verification timed out');
+        },
       );
 
       if (response.statusCode == 200) {
@@ -81,6 +96,8 @@ class CouchbaseVectorDatabase implements VectorDatabase {
         debugPrint('⚠️  Search index "$searchIndexName" not found');
         debugPrint('   Please create the index using Couchbase Web UI');
       }
+    } on TimeoutException catch (e) {
+      debugPrint('⚠️  Search index verification timeout: $e');
     } catch (e) {
       debugPrint('⚠️  Could not verify search index: $e');
     }
@@ -110,6 +127,11 @@ class CouchbaseVectorDatabase implements VectorDatabase {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(document),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Store embedding request timed out');
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -119,6 +141,9 @@ class CouchbaseVectorDatabase implements VectorDatabase {
         debugPrint('❌ Failed to store: ${response.statusCode} - ${response.body}');
         return false;
       }
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Store embedding timeout: $e');
+      return false;
     } catch (e) {
       debugPrint('❌ Error storing embedding in Couchbase: $e');
       return false;
@@ -150,6 +175,11 @@ class CouchbaseVectorDatabase implements VectorDatabase {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(searchQuery),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('Vector search request timed out');
+        },
       );
 
       if (response.statusCode == 200) {
@@ -182,6 +212,9 @@ class CouchbaseVectorDatabase implements VectorDatabase {
         debugPrint('❌ Search failed: ${response.statusCode} - ${response.body}');
         return [];
       }
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Vector search timeout: $e');
+      return [];
     } catch (e) {
       debugPrint('❌ Error searching in Couchbase: $e');
       return [];
@@ -195,6 +228,11 @@ class CouchbaseVectorDatabase implements VectorDatabase {
       final response = await _httpClient.delete(
         Uri.parse('$clusterUrl/pools/default/buckets/$keyPath'),
         headers: {'Authorization': _authHeader},
+      ).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Delete embedding request timed out');
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -204,6 +242,9 @@ class CouchbaseVectorDatabase implements VectorDatabase {
         debugPrint('❌ Failed to delete: ${response.statusCode}');
         return false;
       }
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Delete embedding timeout: $e');
+      return false;
     } catch (e) {
       debugPrint('❌ Error deleting from Couchbase: $e');
       return false;
@@ -232,9 +273,17 @@ class CouchbaseVectorDatabase implements VectorDatabase {
       final response = await _httpClient.get(
         Uri.parse('$clusterUrl/pools/default'),
         headers: {'Authorization': _authHeader},
+      ).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Health check request timed out');
+        },
       );
 
       return response.statusCode == 200;
+    } on TimeoutException catch (e) {
+      debugPrint('❌ Health check timeout: $e');
+      return false;
     } catch (e) {
       debugPrint('❌ Health check failed: $e');
       return false;
