@@ -43,6 +43,7 @@ dependencies:
   
   # Local storage
   shared_preferences: ^2.5.3
+  flutter_secure_storage: ^9.2.2
   
   # URL handling
   url_launcher: ^6.2.5

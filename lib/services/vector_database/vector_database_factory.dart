@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'vector_database_interface.dart';
 import 'pgvector_database.dart';
@@ -22,11 +23,21 @@ enum VectorDbProvider {
 /// - Provider switching
 /// - Persistent settings
 class VectorDatabaseFactory extends ChangeNotifier {
+  // SharedPreferences keys (non-sensitive)
   static const String _prefKey = 'vector_db_provider';
   static const String _couchbaseUrlKey = 'couchbase_url';
-  static const String _couchbaseUsernameKey = 'couchbase_username';
-  static const String _couchbasePasswordKey = 'couchbase_password';
   static const String _couchbaseBucketKey = 'couchbase_bucket';
+  
+  // FlutterSecureStorage keys (sensitive)
+  static const String _secureUsernameKey = 'secure_couchbase_username';
+  static const String _securePasswordKey = 'secure_couchbase_password';
+  
+  // Legacy keys for migration
+  static const String _legacyUsernameKey = 'couchbase_username';
+  static const String _legacyPasswordKey = 'couchbase_password';
+
+  // Secure storage with platform-specific options
+  late final FlutterSecureStorage _secureStorage;
 
   VectorDbProvider _currentProvider = VectorDbProvider.pgvector;
   VectorDatabase? _currentDatabase;
@@ -47,7 +58,18 @@ class VectorDatabaseFactory extends ChangeNotifier {
 
   /// Initialize the factory and load saved preferences
   Future<void> initialize() async {
+    // Initialize secure storage with platform-specific options
+    _secureStorage = FlutterSecureStorage(
+      aOptions: AndroidOptions(
+        encryptedSharedPreferences: true,
+      ),
+      iOptions: IOSOptions(
+        accessibility: KeychainAccessibility.first_unlock,
+      ),
+    );
+    
     await _loadPreferences();
+    await _migrateCredentials();
     debugPrint('✅ VectorDatabaseFactory initialized with provider: ${_currentProvider.displayName}');
   }
 
@@ -170,36 +192,108 @@ class VectorDatabaseFactory extends ChangeNotifier {
     }
   }
 
-  /// Load preferences from SharedPreferences
+  /// Load preferences from SharedPreferences and secure storage
   Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    // Load provider
-    final providerIndex = prefs.getInt(_prefKey);
-    if (providerIndex != null && providerIndex < VectorDbProvider.values.length) {
-      _currentProvider = VectorDbProvider.values[providerIndex];
+      // Load provider (non-sensitive)
+      final providerIndex = prefs.getInt(_prefKey);
+      if (providerIndex != null && providerIndex < VectorDbProvider.values.length) {
+        _currentProvider = VectorDbProvider.values[providerIndex];
+      }
+
+      // Load non-sensitive Couchbase config from SharedPreferences
+      _couchbaseUrl = prefs.getString(_couchbaseUrlKey) ?? '';
+      _couchbaseBucket = prefs.getString(_couchbaseBucketKey) ?? 'ell-ena';
+
+      // Load sensitive credentials from secure storage
+      _couchbaseUsername = await _secureStorage.read(key: _secureUsernameKey) ?? '';
+      _couchbasePassword = await _secureStorage.read(key: _securePasswordKey) ?? '';
+
+      debugPrint('📱 Loaded vector DB provider: ${_currentProvider.displayName}');
+    } catch (e) {
+      debugPrint('⚠️  Error loading preferences: $e');
+      // Set safe defaults on error
+      _couchbaseUrl = '';
+      _couchbaseUsername = '';
+      _couchbasePassword = '';
+      _couchbaseBucket = 'ell-ena';
     }
-
-    // Load Couchbase config
-    _couchbaseUrl = prefs.getString(_couchbaseUrlKey) ?? '';
-    _couchbaseUsername = prefs.getString(_couchbaseUsernameKey) ?? '';
-    _couchbasePassword = prefs.getString(_couchbasePasswordKey) ?? '';
-    _couchbaseBucket = prefs.getString(_couchbaseBucketKey) ?? 'ell-ena';
-
-    debugPrint('📱 Loaded vector DB provider: ${_currentProvider.displayName}');
   }
 
-  /// Save preferences to SharedPreferences
+  /// Migrate credentials from plain SharedPreferences to secure storage
+  Future<void> _migrateCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Check if legacy credentials exist in SharedPreferences
+      final legacyUsername = prefs.getString(_legacyUsernameKey);
+      final legacyPassword = prefs.getString(_legacyPasswordKey);
+
+      if (legacyUsername != null || legacyPassword != null) {
+        debugPrint('🔄 Migrating credentials to secure storage...');
+
+        // Migrate username
+        if (legacyUsername != null && legacyUsername.isNotEmpty) {
+          await _secureStorage.write(
+            key: _secureUsernameKey,
+            value: legacyUsername,
+          );
+          _couchbaseUsername = legacyUsername;
+          await prefs.remove(_legacyUsernameKey);
+          debugPrint('✅ Migrated username to secure storage');
+        }
+
+        // Migrate password
+        if (legacyPassword != null && legacyPassword.isNotEmpty) {
+          await _secureStorage.write(
+            key: _securePasswordKey,
+            value: legacyPassword,
+          );
+          _couchbasePassword = legacyPassword;
+          await prefs.remove(_legacyPasswordKey);
+          debugPrint('✅ Migrated password to secure storage');
+        }
+
+        debugPrint('✅ Credential migration completed');
+      }
+    } catch (e) {
+      debugPrint('⚠️  Error during credential migration: $e');
+      // Non-fatal error, continue with existing credentials
+    }
+  }
+
+  /// Save preferences to SharedPreferences and secure storage
   Future<void> _savePreferences() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setInt(_prefKey, _currentProvider.index);
-    await prefs.setString(_couchbaseUrlKey, _couchbaseUrl);
-    await prefs.setString(_couchbaseUsernameKey, _couchbaseUsername);
-    await prefs.setString(_couchbasePasswordKey, _couchbasePassword);
-    await prefs.setString(_couchbaseBucketKey, _couchbaseBucket);
+      // Save non-sensitive config to SharedPreferences
+      await prefs.setInt(_prefKey, _currentProvider.index);
+      await prefs.setString(_couchbaseUrlKey, _couchbaseUrl);
+      await prefs.setString(_couchbaseBucketKey, _couchbaseBucket);
 
-    debugPrint('💾 Saved vector DB preferences');
+      // Save sensitive credentials to secure storage
+      if (_couchbaseUsername.isNotEmpty) {
+        await _secureStorage.write(
+          key: _secureUsernameKey,
+          value: _couchbaseUsername,
+        );
+      }
+
+      if (_couchbasePassword.isNotEmpty) {
+        await _secureStorage.write(
+          key: _securePasswordKey,
+          value: _couchbasePassword,
+        );
+      }
+
+      debugPrint('💾 Saved vector DB preferences securely');
+    } catch (e) {
+      debugPrint('❌ Error saving preferences: $e');
+      rethrow;
+    }
   }
 
   /// Check if current provider is healthy
@@ -212,5 +306,32 @@ class VectorDatabaseFactory extends ChangeNotifier {
   Future<void> close() async {
     await _currentDatabase?.close();
     _currentDatabase = null;
+  }
+
+  /// Clear stored Couchbase credentials securely
+  Future<void> clearCouchbaseCredentials() async {
+    try {
+      await _secureStorage.delete(key: _secureUsernameKey);
+      await _secureStorage.delete(key: _securePasswordKey);
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_couchbaseUrlKey);
+      await prefs.remove(_couchbaseBucketKey);
+      
+      // Also remove any legacy keys if they exist
+      await prefs.remove(_legacyUsernameKey);
+      await prefs.remove(_legacyPasswordKey);
+      
+      _couchbaseUrl = '';
+      _couchbaseUsername = '';
+      _couchbasePassword = '';
+      _couchbaseBucket = 'ell-ena';
+      
+      debugPrint('✅ Cleared Couchbase credentials securely');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error clearing credentials: $e');
+      rethrow;
+    }
   }
 }
