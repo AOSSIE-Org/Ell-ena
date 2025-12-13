@@ -1998,6 +1998,86 @@ class SupabaseService {
     }
   }
   
+  // Vector search: Get similar tasks based on query
+  Future<List<Map<String, dynamic>>> searchSimilarTasks({
+    required String query,
+    int matchCount = 5,
+    double similarityThreshold = 0.0,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        await initialize();
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      debugPrint('Searching for similar tasks with query: $query');
+      
+      final response = await _client.rpc(
+        'search_tasks_by_query',
+        params: {
+          'query_text': query,
+          'match_count': matchCount,
+          'similarity_threshold': similarityThreshold,
+        },
+      );
+      
+      if (response is List) {
+        final tasks = List<Map<String, dynamic>>.from(response);
+        debugPrint('Found ${tasks.length} similar tasks');
+        return tasks;
+      }
+      
+      return [];
+    } catch (e) {
+      debugPrint('Error searching similar tasks: $e');
+      return [];
+    }
+  }
+  
+  // Vector search: Get similar tickets based on query
+  Future<List<Map<String, dynamic>>> searchSimilarTickets({
+    required String query,
+    int matchCount = 5,
+    double similarityThreshold = 0.0,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        await initialize();
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+      
+      debugPrint('Searching for similar tickets with query: $query');
+      
+      final response = await _client.rpc(
+        'search_tickets_by_query',
+        params: {
+          'query_text': query,
+          'match_count': matchCount,
+          'similarity_threshold': similarityThreshold,
+        },
+      );
+      
+      if (response is List) {
+        final tickets = List<Map<String, dynamic>>.from(response);
+        debugPrint('Found ${tickets.length} similar tickets');
+        return tickets;
+      }
+      
+      return [];
+    } catch (e) {
+      debugPrint('Error searching similar tickets: $e');
+      return [];
+    }
+  }
+
   // Clean up resources
   void dispose() {
     _tasksStreamController.close();
