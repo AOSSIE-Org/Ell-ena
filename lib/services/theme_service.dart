@@ -54,6 +54,7 @@ class ThemeService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error initializing theme service: $e');
       _isInitialized = true;
+      notifyListeners();
     }
   }
 
