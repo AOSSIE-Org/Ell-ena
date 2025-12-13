@@ -64,20 +64,19 @@ class DataCacheService {
     
     try {
       debugPrint('Fetching fresh tasks from Supabase...');
-      final tasks = await _supabaseService.getTasks(
-        filterByAssignment: filterByAssignment,
-        filterByStatus: filterByStatus,
-        filterByDueDate: filterByDueDate,
-      );
+      // Always fetch unfiltered data to cache; apply filters client-side
+      final tasks = await _supabaseService.getTasks();
       
       // Save to cache
       await _saveToCache(_tasksKey, tasks);
       await _saveTimestamp(_tasksTimestampKey);
       
-      completer.complete(tasks);
+      // Apply filters to the full dataset
+      final filtered = _applyTaskFilters(tasks, filterByAssignment, filterByStatus, filterByDueDate);
+      completer.complete(filtered);
       _pendingRequests.remove(cacheKey);
       
-      return tasks;
+      return filtered;
     } catch (e) {
       debugPrint('Error fetching tasks: $e');
       completer.completeError(e);
@@ -121,20 +120,19 @@ class DataCacheService {
     
     try {
       debugPrint('Fetching fresh tickets from Supabase...');
-      final tickets = await _supabaseService.getTickets(
-        filterByAssignment: filterByAssignment,
-        filterByStatus: filterByStatus,
-        filterByPriority: filterByPriority,
-      );
+      // Always fetch unfiltered data to cache; apply filters client-side
+      final tickets = await _supabaseService.getTickets();
       
       // Save to cache
       await _saveToCache(_ticketsKey, tickets);
       await _saveTimestamp(_ticketsTimestampKey);
       
-      completer.complete(tickets);
+      // Apply filters to the full dataset
+      final filtered = _applyTicketFilters(tickets, filterByAssignment, filterByStatus, filterByPriority);
+      completer.complete(filtered);
       _pendingRequests.remove(cacheKey);
       
-      return tickets;
+      return filtered;
     } catch (e) {
       debugPrint('Error fetching tickets: $e');
       completer.completeError(e);
@@ -200,6 +198,13 @@ class DataCacheService {
   }) async {
     final cacheKey = 'user_teams_$email';
     
+    // Check if there's already a pending request for this data
+    if (_pendingRequests.containsKey(cacheKey) && !forceRefresh) {
+      debugPrint('Waiting for pending user teams request...');
+      // Need to cast since _pendingRequests stores List type
+      return await _pendingRequests[cacheKey]!.future as Map<String, dynamic>;
+    }
+    
     // Check cache validity
     if (!forceRefresh && await _isCacheValid(_userTeamsTimestampKey)) {
       try {
@@ -215,6 +220,10 @@ class DataCacheService {
       }
     }
     
+    // Create a completer for request deduplication
+    final completer = Completer<List<Map<String, dynamic>>>();
+    _pendingRequests[cacheKey] = completer;
+    
     try {
       debugPrint('Fetching fresh user teams from Supabase...');
       final result = await _supabaseService.getUserTeams(email);
@@ -224,9 +233,15 @@ class DataCacheService {
       await prefs.setString(_userTeamsKey, jsonEncode(result));
       await _saveTimestamp(_userTeamsTimestampKey);
       
+      // Complete and remove from pending
+      completer.complete([result as Map<String, dynamic>]);
+      _pendingRequests.remove(cacheKey);
+      
       return result;
     } catch (e) {
       debugPrint('Error fetching user teams: $e');
+      completer.completeError(e);
+      _pendingRequests.remove(cacheKey);
       rethrow;
     }
   }
