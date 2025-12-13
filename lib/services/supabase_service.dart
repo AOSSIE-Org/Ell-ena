@@ -1235,13 +1235,12 @@ class SupabaseService {
             .eq('id', taskId)
             .maybeSingle();
 
-        if (checkTask != null) {
-          return {
-            'success': false,
-            'error':
-                'Permission denied: You can only delete tasks you created or if you are an admin',
-          };
-        }
+        return {
+          'success': false,
+          'error': checkTask != null
+              ? 'Permission denied: You can only delete tasks you created or if you are an admin'
+              : 'Task not found or permission denied',
+        };
       }
 
       return {
@@ -1750,13 +1749,12 @@ class SupabaseService {
             .eq('id', ticketId)
             .maybeSingle();
 
-        if (checkTicket != null) {
-          return {
-            'success': false,
-            'error':
-                'Permission denied: You can only delete tickets you created or if you are an admin',
-          };
-        }
+        return {
+          'success': false,
+          'error': checkTicket != null
+              ? 'Permission denied: You can only delete tickets you created or if you are an admin'
+              : 'Ticket not found or permission denied',
+        };
       }
 
       return {
