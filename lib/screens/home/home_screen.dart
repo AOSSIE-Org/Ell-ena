@@ -63,8 +63,30 @@ class _HomeScreenState extends State<HomeScreen>
       }
     });
   }
+
+  @override
+  void didUpdateWidget(HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Detect if initial_message argument changed
+    final oldMessage = oldWidget.arguments?['initial_message'];
+    final newMessage = widget.arguments?['initial_message'];
+    
+    if (oldMessage != newMessage) {
+      // Clear ChatScreen cache to force recreation with new argument
+      _screenCache.remove(3);
+    }
+  }
   
   Widget _getScreen(int index) {
+    // Special case: Don't cache ChatScreen if it has initial_message argument
+    // This ensures fresh instances with the latest arguments
+    if (index == 3 && widget.arguments?.containsKey('initial_message') == true) {
+      return ChatScreen(
+        arguments: {'initial_message': widget.arguments!['initial_message']}
+      );
+    }
+    
     // Return cached screen if exists
     if (_screenCache.containsKey(index)) {
       return _screenCache[index]!;
@@ -83,14 +105,7 @@ class _HomeScreenState extends State<HomeScreen>
         screen = const WorkspaceScreen();
         break;
       case 3:
-        // Check for initial message argument
-        if (widget.arguments?.containsKey('initial_message') == true) {
-          screen = ChatScreen(
-            arguments: {'initial_message': widget.arguments!['initial_message']}
-          );
-        } else {
-          screen = const ChatScreen();
-        }
+        screen = const ChatScreen();
         break;
       case 4:
         screen = const ProfileScreen();
