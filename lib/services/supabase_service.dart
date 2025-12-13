@@ -1865,7 +1865,7 @@ class SupabaseService {
   // Get meetings for the current user's team
   Future<List<Map<String, dynamic>>> getMeetings({bool forceRefresh = false}) async {
     // Return cached data if valid and not forcing refresh
-    if (!forceRefresh && _isCacheValid(_meetingsCacheTime)) {
+    if (!forceRefresh && _isCacheValid(_meetingsCacheTime) && _meetingsCache != null) {
       debugPrint('Returning cached meetings (${_meetingsCache!.length} items)');
       return _meetingsCache!;
     }
