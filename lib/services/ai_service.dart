@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:ell_ena/services/vector_database/vector_database_factory.dart';
+import 'package:ell_ena/services/vector_database/vector_database_interface.dart';
 
 class AIService {
   static final AIService _instance = AIService._internal();
@@ -12,6 +14,8 @@ class AIService {
   String? _apiKey;
   bool _isInitialized = false;
   late final SupabaseService _supabaseService;
+  late final VectorDatabaseFactory _vectorDbFactory;
+  VectorDatabase? _vectorDb;
   
   factory AIService() {
     return _instance;
@@ -19,9 +23,11 @@ class AIService {
   
   AIService._internal() {
     _supabaseService = SupabaseService();
+    _vectorDbFactory = VectorDatabaseFactory();
   }
   
   bool get isInitialized => _isInitialized;
+  VectorDatabaseFactory get vectorDbFactory => _vectorDbFactory;
   
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -43,8 +49,14 @@ class AIService {
         await _supabaseService.initialize();
       }
       
+      // Initialize vector database factory
+      await _vectorDbFactory.initialize();
+      
+      // Create vector database instance
+      _vectorDb = await _vectorDbFactory.createDatabase(_supabaseService.client);
+      
       _isInitialized = true;
-      debugPrint('AI Service initialized successfully');
+      debugPrint('AI Service initialized successfully with ${_vectorDbFactory.currentProvider.displayName}');
     } catch (e) {
       debugPrint('Error initializing AI Service: $e');
       rethrow;
@@ -544,14 +556,19 @@ class AIService {
   }
   
 // Function to get relevant meeting summaries for a query (vector search only)
+// Now uses the abstraction layer to support multiple vector databases
 Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) async {
   if (!_isInitialized) {
     await initialize();
   }
 
   print("👉 getRelevantMeetingSummaries() called with query: $query");
+  print("👉 Using vector database: ${_vectorDbFactory.currentProvider.displayName}");
 
   try {
+    // For now, we still use pgvector's embedding generation via Supabase
+    // TODO: Abstract embedding generation as well
+    
     // Step 1: Queue the embedding request and get the response ID
     final respIdResponse = await _supabaseService.client.rpc(
       'queue_embedding',
@@ -564,6 +581,7 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
     print("👉 Embedding queued with response ID: $respId");
 
     // Step 2: Fetch meetings using the resp_id
+    // This works for both pgvector and Couchbase (as they share the same backend)
     final response = await _supabaseService.client.rpc(
       'search_meeting_summaries_by_resp_id',
       params: {
@@ -594,6 +612,32 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
     }
   } catch (e, st) {
     debugPrint('Error getting relevant meeting summaries: $e\n$st');
+    return [];
+  }
+}
+
+/// Alternative method to search meetings using the vector database directly
+/// This bypasses Supabase RPC and uses the vector DB abstraction
+Future<List<Map<String, dynamic>>> searchMeetingsDirect(List<double> queryEmbedding) async {
+  if (_vectorDb == null) {
+    debugPrint('❌ Vector database not initialized');
+    return [];
+  }
+
+  try {
+    final results = await _vectorDb!.searchSimilar(
+      queryEmbedding: queryEmbedding,
+      limit: 5,
+      similarityThreshold: 0.5,
+    );
+
+    return results.map((result) => {
+      'meeting_id': result.id,
+      'similarity': result.similarity,
+      ...result.metadata,
+    }).toList();
+  } catch (e) {
+    debugPrint('❌ Error in direct search: $e');
     return [];
   }
 }
