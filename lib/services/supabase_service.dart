@@ -1210,6 +1210,44 @@ class SupabaseService {
     }
   }
   
+  // Delete a task (creator or admin only)
+  Future<Map<String, dynamic>> deleteTask({
+    required String taskId,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+      
+      // Delete the task (RLS will handle permissions)
+      await _client
+          .from('tasks')
+          .delete()
+          .eq('id', taskId);
+          
+      return {
+        'success': true,
+      };
+    } catch (e) {
+      debugPrint('Error deleting task: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
   // Ticket-related methods
   
   // Get predefined ticket categories
@@ -1710,6 +1748,47 @@ class SupabaseService {
       };
     } catch (e) {
       debugPrint('Error assigning ticket: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Delete a ticket (creator or admin only)
+  Future<Map<String, dynamic>> deleteTicket({
+    required String ticketId,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+      
+      // Delete the ticket (RLS will handle permissions)
+      await _client
+          .from('tickets')
+          .delete()
+          .eq('id', ticketId);
+          
+      // Refresh tickets
+      await getTickets();
+      
+      return {
+        'success': true,
+      };
+    } catch (e) {
+      debugPrint('Error deleting ticket: $e');
       return {
         'success': false,
         'error': e.toString(),
