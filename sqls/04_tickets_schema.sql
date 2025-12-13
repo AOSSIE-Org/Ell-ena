@@ -23,6 +23,83 @@ CREATE TABLE ticket_comments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Create indexes for performance optimization
+-- These indexes improve RLS policy checks and query performance
+CREATE INDEX idx_tickets_team_id ON tickets(team_id);
+CREATE INDEX idx_tickets_created_by ON tickets(created_by);
+CREATE INDEX idx_tickets_assigned_to ON tickets(assigned_to);
+CREATE INDEX idx_tickets_status ON tickets(status);
+CREATE INDEX idx_tickets_approval_status ON tickets(approval_status);
+CREATE INDEX idx_ticket_comments_ticket_id ON ticket_comments(ticket_id);
+CREATE INDEX idx_ticket_comments_user_id ON ticket_comments(user_id);
+
+-- Function to validate that assigned_to user belongs to the same team
+CREATE OR REPLACE FUNCTION validate_ticket_assignment()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If assigned_to is NULL, skip validation
+    IF NEW.assigned_to IS NULL THEN
+        RETURN NEW;
+    END IF;
+    
+    -- Check if assigned_to user belongs to the same team
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.assigned_to 
+        AND team_id = NEW.team_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot assign ticket to user outside the team';
+    END IF;
+    
+    -- Check if created_by user belongs to the same team
+    IF NEW.created_by IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.created_by 
+        AND team_id = NEW.team_id
+    ) THEN
+        RAISE EXCEPTION 'Creator must belong to the ticket team';
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to enforce team consistency for ticket assignments
+CREATE TRIGGER validate_ticket_assignment_trigger
+BEFORE INSERT OR UPDATE ON tickets
+FOR EACH ROW
+EXECUTE FUNCTION validate_ticket_assignment();
+
+-- Function to validate that comment user belongs to the ticket's team
+CREATE OR REPLACE FUNCTION validate_comment_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    ticket_team_id UUID;
+BEGIN
+    -- Get the team_id of the ticket
+    SELECT team_id INTO ticket_team_id
+    FROM tickets
+    WHERE id = NEW.ticket_id;
+    
+    -- Check if user belongs to the same team
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.user_id 
+        AND team_id = ticket_team_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot add comment from user outside the ticket team';
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to enforce team consistency for comments
+CREATE TRIGGER validate_comment_user_trigger
+BEFORE INSERT OR UPDATE ON ticket_comments
+FOR EACH ROW
+EXECUTE FUNCTION validate_comment_user();
+
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
