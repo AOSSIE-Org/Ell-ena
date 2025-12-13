@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
@@ -31,9 +32,21 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   final _supabaseService = SupabaseService();
+  
+  // Resend timer state
+  int _resendCountdown = 60;
+  bool _canResend = false;
+  Timer? _resendTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startResendTimer();
+  }
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     for (var controller in _controllers) {
       controller.dispose();
     }
@@ -41,6 +54,48 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       node.dispose();
     }
     super.dispose();
+  }
+
+  void _startResendTimer() {
+    setState(() {
+      _canResend = false;
+      _resendCountdown = 60;
+    });
+
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCountdown > 0) {
+        setState(() {
+          _resendCountdown--;
+        });
+      } else {
+        setState(() {
+          _canResend = true;
+        });
+        timer.cancel();
+      }
+    });
+  }
+
+  void _startResendTimer() {
+    setState(() {
+      _canResend = false;
+      _resendCountdown = 60;
+    });
+
+    _resendTimer?.cancel();
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCountdown > 0) {
+        setState(() {
+          _resendCountdown--;
+        });
+      } else {
+        setState(() {
+          _canResend = true;
+        });
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _handleVerification() async {
@@ -116,6 +171,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   }
   
   Future<void> _resendCode() async {
+    if (!_canResend) return;
+    
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -128,9 +185,11 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       );
       
       if (result['success']) {
+        _startResendTimer();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification code resent successfully'),
+            content: Text('Verification code resent successfully! Check your email.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -307,7 +366,31 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade900.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.blue.shade700.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue.shade300, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Check your spam/junk folder if you don\'t see the email',
+                  style: TextStyle(color: Colors.blue.shade200, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
         CustomButton(
           text: 'Verify Code',
           onPressed: _isLoading ? null : _handleVerification,
@@ -322,11 +405,13 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
               style: TextStyle(color: Colors.grey.shade400),
             ),
             TextButton(
-              onPressed: _isLoading ? null : _resendCode,
+              onPressed: (_isLoading || !_canResend) ? null : _resendCode,
               child: Text(
-                'Resend',
+                _canResend ? 'Resend' : 'Resend in ${_resendCountdown}s',
                 style: TextStyle(
-                  color: Colors.green.shade400,
+                  color: _canResend 
+                    ? Colors.green.shade400 
+                    : Colors.grey.shade600,
                   fontWeight: FontWeight.w600,
                 ),
               ),
