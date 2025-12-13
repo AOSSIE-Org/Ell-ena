@@ -52,6 +52,11 @@
             font-size: 0.95rem;
         }
 
+        /* Dimmed label for disabled email field */
+        .form-label.label-disabled {
+            color: #6c757d;  /* Dimmed label color */
+        }
+
         .form-control {
             padding: 12px 16px;
             border: 2px solid #dee2e6;
@@ -67,7 +72,7 @@
             outline: none;
         }
 
-        /* Disabled Email Field - Visually distinct but not dimmed */
+        /* Disabled Email Field - Dimmed appearance */
         .email-field-wrapper {
             position: relative;
         }
@@ -75,7 +80,7 @@
         .form-control.email-disabled {
             background: #f8f9fa;
             border: 2px solid #e9ecef;
-            color: #495057;
+            color: #6c757d;  /* Dimmed text color */
             cursor: not-allowed;
             padding-right: 40px;
         }
@@ -231,7 +236,7 @@
             </div>
         </div>
 
-        <form id="profileForm">
+        <div id="profileForm">
             <div class="form-group">
                 <label class="form-label">Full Name</label>
                 <input 
@@ -243,7 +248,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">
+                <label class="form-label label-disabled">
                     Email Address
                 </label>
                 <div class="email-field-wrapper tooltip-wrapper">
@@ -292,43 +297,27 @@
                 >Software developer and tech enthusiast</textarea>
             </div>
 
-            <button type="submit" class="btn-save">
+            <button type="button" class="btn-save" onclick="handleSubmit()">
                 <i class="fas fa-save"></i> Save Changes
             </button>
-            <button type="button" class="btn-cancel">
+            <button type="button" class="btn-cancel" onclick="handleCancel()">
                 Cancel
             </button>
-        </form>
+        </div>
     </div>
 
     <script>
-        // Prevent any attempt to edit the email field
-        const emailField = document.querySelector('.email-disabled');
-        
-        emailField.addEventListener('click', function(e) {
-            e.preventDefault();
-        });
-
-        emailField.addEventListener('keydown', function(e) {
-            e.preventDefault();
-        });
-
-        emailField.addEventListener('paste', function(e) {
-            e.preventDefault();
-        });
-
-        // Form submission
-        document.getElementById('profileForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Form submission - readonly attribute handles input prevention
+        function handleSubmit() {
             alert('Profile updated successfully! (Email remains unchanged)');
-        });
+        }
 
         // Cancel button
-        document.querySelector('.btn-cancel').addEventListener('click', function() {
+        function handleCancel() {
             if (confirm('Are you sure you want to discard changes?')) {
                 window.history.back();
             }
-        });
+        }
     </script>
 </body>
 </html>
