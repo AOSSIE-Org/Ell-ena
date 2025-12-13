@@ -284,12 +284,15 @@ class VectorDatabaseFactory extends ChangeNotifier {
       await prefs.setString(_couchbaseUrlKey, _couchbaseUrl);
       await prefs.setString(_couchbaseBucketKey, _couchbaseBucket);
 
-      // Save sensitive credentials to secure storage
+      // Save or delete sensitive credentials in secure storage
+      // Use explicit deletion when empty to properly clear credentials
       if (_couchbaseUsername.isNotEmpty) {
         await _secureStorage.write(
           key: _secureUsernameKey,
           value: _couchbaseUsername,
         );
+      } else {
+        await _secureStorage.delete(key: _secureUsernameKey);
       }
 
       if (_couchbasePassword.isNotEmpty) {
@@ -297,6 +300,8 @@ class VectorDatabaseFactory extends ChangeNotifier {
           key: _securePasswordKey,
           value: _couchbasePassword,
         );
+      } else {
+        await _secureStorage.delete(key: _securePasswordKey);
       }
 
       debugPrint('💾 Saved vector DB preferences securely');
