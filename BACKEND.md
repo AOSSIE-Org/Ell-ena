@@ -297,6 +297,8 @@ supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 supabase secrets set VEXA_API_KEY=your-vexa-api-key
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
  ```
+
+> **Note:** Secrets set via `supabase secrets set` are automatically injected into deployed Edge Functions. However, for local testing, secrets must be loaded from your `.env` file using the `--env-file .env` flag combined with `--allow-env` to grant Deno permission to access environment variables.
  
 ### Function Descriptions
 
@@ -334,27 +336,32 @@ To see all functions deployed to your Supabase project:
    This will display the function names, their status, and the deployment URL.
 
 #### 2. Test Functions Locally
-   To run a specific function for testing:
-```bash
-   supabase functions serve <function-name>
-   ```
 
-   Replace <function-name> with the name of the function you want to test, for example:
+To run a specific function locally for testing:
 
 ```bash
-   supabase functions serve fetch-transcript
-   ```
+supabase functions serve <function-name> --allow-env --env-file .env
+```
+
+Replace `<function-name>` with the name of the function you want to test, for example:
+
+```bash
+supabase functions serve fetch-transcript --allow-env --env-file .env
+```
+
+**Important:** Deno (the runtime for Edge Functions) blocks access to environment variables by default for security. The `--allow-env` flag grants permission to access environment variables, and `--env-file .env` loads your secrets from the `.env` file. Both flags are required for local development.
 
 The CLI will start a local server, usually on `http://localhost:54321/functions/v1/<function-name>`. You can make HTTP requests to this endpoint to test your function.
 
-3. Invoke Functions Directly (Optional)
+#### 3. Invoke Functions Directly (Optional)
 
 You can also invoke a deployed function directly:
-```bash
-   supabase functions invoke <function-name>
-   ```
 
-   This is useful for quick testing of your production deployment.
+```bash
+supabase functions invoke <function-name>
+```
+
+This is useful for quick testing of your production deployment.
    
 
 
@@ -398,4 +405,4 @@ After setting up your backend:
 
 ---
 
-This guide should help you get started with the Ell-ena backend. 
+This guide should help you get started with the Ell-ena backend.
