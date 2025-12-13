@@ -1235,6 +1235,9 @@ class SupabaseService {
           .from('tasks')
           .delete()
           .eq('id', taskId);
+      
+      // Refresh tasks cache
+      await getTasks();
           
       return {
         'success': true,
