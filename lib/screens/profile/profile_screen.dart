@@ -715,6 +715,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Push Notifications',
                 isSwitch: true,
                 iconColor: Colors.red.shade400,
+                switchValue: false,
+                onSwitchChanged: (value) {
+                  // TODO: Implement push notification toggle
+                },
               ),
               const Divider(color: Colors.grey),
               _buildPreferenceItem(
@@ -805,7 +809,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       trailing:
           isSwitch
               ? Switch(
-                value: switchValue ?? true,
+                value: switchValue ?? false,
                 onChanged: onSwitchChanged ?? (value) {
                   // Default implementation if no callback provided
                 },
