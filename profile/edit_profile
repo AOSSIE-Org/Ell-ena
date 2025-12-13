@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px 20px;
+        }
+
+        .profile-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 40px;
+        }
+
+        .profile-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .profile-header h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 5px;
+        }
+
+        .profile-header p {
+            color: #6c757d;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            padding: 12px 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .form-control:focus {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+            outline: none;
+        }
+
+        /* Disabled Email Field - Visually distinct but not dimmed */
+        .email-field-wrapper {
+            position: relative;
+        }
+
+        .form-control.email-disabled {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            color: #495057;
+            cursor: not-allowed;
+            padding-right: 40px;
+        }
+
+        .form-control.email-disabled:focus {
+            border-color: #e9ecef;
+            box-shadow: none;
+        }
+
+        .lock-icon {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1rem;
+        }
+
+        .field-info {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .field-info i {
+            margin-right: 6px;
+            color: #0d6efd;
+        }
+
+        .btn-save {
+            background: #0d6efd;
+            color: white;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .btn-save:hover {
+            background: #0b5ed7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: #6c757d;
+            padding: 12px 32px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .btn-cancel:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
+
+        /* Tooltip on hover */
+        .tooltip-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            background-color: #212529;
+            color: white;
+            text-align: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #212529 transparent transparent transparent;
+        }
+
+        .email-field-wrapper:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .avatar-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .change-photo {
+            color: #0d6efd;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .change-photo:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-header">
+            <h2>Edit Profile</h2>
+            <p>Update your personal information</p>
+        </div>
+
+        <div class="avatar-section">
+            <div class="avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <a href="#" class="change-photo">Change Photo</a>
+            </div>
+        </div>
+
+        <form id="profileForm">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    value="John Doe"
+                    placeholder="Enter your full name"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    Email Address
+                </label>
+                <div class="email-field-wrapper tooltip-wrapper">
+                    <input 
+                        type="email" 
+                        class="form-control email-disabled" 
+                        value="john.doe@example.com"
+                        readonly
+                        title="Email cannot be changed"
+                    >
+                    <i class="fas fa-lock lock-icon"></i>
+                    <span class="tooltip-text">Email cannot be changed</span>
+                </div>
+                <div class="field-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Your email address is permanent and cannot be modified</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    value="johndoe123"
+                    placeholder="Enter your username"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input 
+                    type="tel" 
+                    class="form-control" 
+                    value="+1 234 567 8900"
+                    placeholder="Enter your phone number"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Bio</label>
+                <textarea 
+                    class="form-control" 
+                    rows="4"
+                    placeholder="Tell us about yourself"
+                >Software developer and tech enthusiast</textarea>
+            </div>
+
+            <button type="submit" class="btn-save">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+            <button type="button" class="btn-cancel">
+                Cancel
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Prevent any attempt to edit the email field
+        const emailField = document.querySelector('.email-disabled');
+        
+        emailField.addEventListener('click', function(e) {
+            e.preventDefault();
+        });
+
+        emailField.addEventListener('keydown', function(e) {
+            e.preventDefault();
+        });
+
+        emailField.addEventListener('paste', function(e) {
+            e.preventDefault();
+        });
+
+        // Form submission
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Profile updated successfully! (Email remains unchanged)');
+        });
+
+        // Cancel button
+        document.querySelector('.btn-cancel').addEventListener('click', function() {
+            if (confirm('Are you sure you want to discard changes?')) {
+                window.history.back();
+            }
+        });
+    </script>
+</body>
+</html>
