@@ -40,7 +40,7 @@ class SupabaseService {
 
   List<Map<String, dynamic>> get teamMembersCache => _teamMembersCache;
 
-  User? get currentUser => _client.auth.currentUser;
+  User? get currentUser => _isInitialized ? _client.auth.currentUser : null;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -1223,9 +1223,7 @@ class SupabaseService {
 
       // Delete the task (RLS will handle authorization)
       final response =
-          await _client.from('tasks').delete().eq('id', taskId).select();
-
-      debugPrint('Delete task response: $response');
+          await _client.from('tasks').delete().eq('id', taskId).select('id');
 
       // Verify the task was actually deleted
       if (response.isEmpty) {
@@ -1736,10 +1734,11 @@ class SupabaseService {
       }
 
       // Delete the ticket (RLS will handle authorization)
-      final response =
-          await _client.from('tickets').delete().eq('id', ticketId).select();
-
-      debugPrint('Delete ticket response: $response');
+      final response = await _client
+          .from('tickets')
+          .delete()
+          .eq('id', ticketId)
+          .select('id');
 
       // Verify the ticket was actually deleted
       if (response.isEmpty) {

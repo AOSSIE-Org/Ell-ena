@@ -126,13 +126,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
       if (mounted) {
         if (result['success']) {
-          Navigator.of(context).pop(true); // Return true to trigger refresh
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Ticket deleted successfully'),
               backgroundColor: Colors.green,
             ),
           );
+          Navigator.of(context).pop(true); // Return true to trigger refresh
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

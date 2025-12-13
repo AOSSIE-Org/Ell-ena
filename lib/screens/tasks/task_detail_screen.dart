@@ -5,10 +5,7 @@ import '../../widgets/custom_widgets.dart';
 class TaskDetailScreen extends StatefulWidget {
   final String taskId;
 
-  const TaskDetailScreen({
-    super.key,
-    required this.taskId,
-  });
+  const TaskDetailScreen({super.key, required this.taskId});
 
   @override
   State<TaskDetailScreen> createState() => _TaskDetailScreenState();
@@ -86,8 +83,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           await _loadTaskDetails();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  Text('Task status updated to ${_getStatusLabel(status)}'),
+              content: Text(
+                'Task status updated to ${_getStatusLabel(status)}',
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -128,7 +126,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Task ${approvalStatus == 'approved' ? 'approved' : 'rejected'}'),
+              'Task ${approvalStatus == 'approved' ? 'approved' : 'rejected'}',
+            ),
             backgroundColor:
                 approvalStatus == 'approved' ? Colors.green : Colors.red,
           ),
@@ -169,9 +168,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Delete'),
             ),
           ],
@@ -186,13 +183,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
       if (mounted) {
         if (result['success']) {
-          Navigator.of(context).pop(true); // Return true to trigger refresh
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Task deleted successfully'),
               backgroundColor: Colors.green,
             ),
           );
+          Navigator.of(context).pop(true); // Return true to trigger refresh
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -310,11 +307,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 80,
-                color: Colors.red.shade400,
-              ),
+              Icon(Icons.error_outline, size: 80, color: Colors.red.shade400),
               const SizedBox(height: 16),
               const Text(
                 'Task not found',
@@ -327,10 +320,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 'The task may have been deleted',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade400,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
             ],
           ),
@@ -408,7 +398,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(20),
@@ -420,8 +412,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     status == 'todo'
                                         ? Icons.assignment_outlined
                                         : status == 'in_progress'
-                                            ? Icons.pending_actions_outlined
-                                            : Icons.task_alt_outlined,
+                                        ? Icons.pending_actions_outlined
+                                        : Icons.task_alt_outlined,
                                     color: statusColor,
                                     size: 16,
                                   ),
@@ -438,7 +430,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: approvalColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(20),
@@ -564,57 +558,81 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             children: [
                               if (status == 'todo')
                                 ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _updateTaskStatus('in_progress'),
-                                  icon: const Icon(Icons.play_arrow,
-                                      color: Colors.white),
-                                  label: const Text('Start',
-                                      style: TextStyle(color: Colors.white)),
+                                  onPressed:
+                                      () => _updateTaskStatus('in_progress'),
+                                  icon: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Start',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.orange.shade600,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                   ),
                                 ),
                               if (status == 'in_progress')
                                 ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _updateTaskStatus('completed'),
-                                  icon: const Icon(Icons.check_circle,
-                                      color: Colors.white),
-                                  label: const Text('Complete',
-                                      style: TextStyle(color: Colors.white)),
+                                  onPressed:
+                                      () => _updateTaskStatus('completed'),
+                                  icon: const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Complete',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green.shade600,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                   ),
                                 ),
                               if (_isAdmin && approvalStatus == 'pending') ...[
                                 ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _updateTaskApproval('approved'),
-                                  icon: const Icon(Icons.check,
-                                      color: Colors.white),
-                                  label: const Text('Approve',
-                                      style: TextStyle(color: Colors.white)),
+                                  onPressed:
+                                      () => _updateTaskApproval('approved'),
+                                  icon: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Approve',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green.shade600,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                   ),
                                 ),
                                 ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _updateTaskApproval('rejected'),
-                                  icon: const Icon(Icons.close,
-                                      color: Colors.white),
-                                  label: const Text('Reject',
-                                      style: TextStyle(color: Colors.white)),
+                                  onPressed:
+                                      () => _updateTaskApproval('rejected'),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                  ),
+                                  label: const Text(
+                                    'Reject',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.red.shade600,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -698,8 +716,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               final userName =
                                   comment['user']?['full_name'] ?? 'Unknown';
                               final content = comment['content'] ?? '';
-                              final createdAt =
-                                  DateTime.parse(comment['created_at']);
+                              final createdAt = DateTime.parse(
+                                comment['created_at'],
+                              );
 
                               // Format date
                               final now = DateTime.now();
@@ -811,7 +830,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       filled: true,
                       fillColor: const Color(0xFF1A1A1A),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     style: const TextStyle(color: Colors.white),
                     maxLines: 3,
