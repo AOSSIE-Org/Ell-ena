@@ -349,21 +349,21 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.green.shade900.withOpacity(0.15),
+            color: Colors.blue.shade900.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.green.shade700.withOpacity(0.3),
+              color: Colors.blue.shade700.withOpacity(0.3),
               width: 1,
             ),
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.green.shade400, size: 20),
+              Icon(Icons.info_outline, color: Colors.blue.shade400, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Check your spam/junk folder if you don\'t see the email',
-                  style: TextStyle(color: Colors.green.shade300, fontSize: 13),
+                  style: TextStyle(color: Colors.blue.shade300, fontSize: 13),
                 ),
               ),
             ],
