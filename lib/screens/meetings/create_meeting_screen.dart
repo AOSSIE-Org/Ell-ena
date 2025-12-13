@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../services/data_cache_service.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
   const CreateMeetingScreen({super.key});
@@ -115,6 +116,8 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       
       if (mounted) {
         if (result['success']) {
+          // Invalidate meetings cache to force refresh on next load
+          await DataCacheService().invalidateCache('meetings');
           Navigator.pop(context, true);
         } else {
           setState(() {

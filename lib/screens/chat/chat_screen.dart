@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:ell_ena/services/ai_service.dart';
 import 'package:ell_ena/services/supabase_service.dart';
+import 'package:ell_ena/services/data_cache_service.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../tasks/task_detail_screen.dart';
@@ -140,9 +141,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   
   Future<void> _loadUserTasksAndTickets() async {
     try {
-      final tasks = await _supabaseService.getTasks(filterByAssignment: true);
+      final cacheService = DataCacheService();
+      final tasks = await cacheService.getTasks(filterByAssignment: true);
       
-      final tickets = await _supabaseService.getTickets(filterByAssignment: true);
+      final tickets = await cacheService.getTickets(filterByAssignment: true);
       
       if (mounted) {
         setState(() {

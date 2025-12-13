@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../services/data_cache_service.dart';
 import '../../services/navigation_service.dart';
 import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
@@ -35,7 +36,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Also load all teams associated with the user's email
       if (profile != null && profile['email'] != null) {
         try {
-          final teamsResponse = await _supabaseService.getUserTeams(profile['email']);
+          final cacheService = DataCacheService();
+          final teamsResponse = await cacheService.getUserTeams(
+            email: profile['email'],
+            forceRefresh: false,
+          );
           if (teamsResponse['success'] == true && teamsResponse['teams'] != null) {
             _userTeams = List<Map<String, dynamic>>.from(teamsResponse['teams']);
           }
@@ -522,7 +527,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 20),
           FutureBuilder<List<Map<String, dynamic>>>(
-            future: SupabaseService().getTasks(),
+            future: DataCacheService().getTasks(),
             builder: (context, snapshot) {
               final tasks = snapshot.data ?? const <Map<String, dynamic>>[];
               final completed = tasks.where((t) => t['status'] == 'completed').length;

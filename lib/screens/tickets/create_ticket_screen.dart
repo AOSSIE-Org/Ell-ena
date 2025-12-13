@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../services/data_cache_service.dart';
 
 class CreateTicketScreen extends StatefulWidget {
   const CreateTicketScreen({super.key});
@@ -85,6 +86,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       );
       
       if (result['success']) {
+        // Invalidate tickets cache to force refresh on next load
+        await DataCacheService().invalidateCache('tickets');
         if (mounted) {
           Navigator.pop(context, true);
         }

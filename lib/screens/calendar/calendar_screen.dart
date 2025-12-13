@@ -8,6 +8,7 @@ import '../tasks/create_task_screen.dart';
 import '../tickets/create_ticket_screen.dart';
 import '../meetings/create_meeting_screen.dart';
 import '../../services/supabase_service.dart';
+import '../../services/data_cache_service.dart';
 import '../../widgets/custom_widgets.dart';
 import '../meetings/meeting_detail_screen.dart';
 import '../tasks/task_detail_screen.dart';
@@ -28,18 +29,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   TimeOfDay? _selectedTime;
   final Map<DateTime, List<CalendarEvent>> _events = {};
   final _supabaseService = SupabaseService();
+  final _cacheService = DataCacheService();
   bool _isLoading = true;
   String? _currentUserId;
   bool _isAdmin = false;
-  
-  // Cache keys
-  static const String _tasksKey = 'calendar_tasks';
-  static const String _ticketsKey = 'calendar_tickets';
-  static const String _meetingsKey = 'calendar_meetings';
-  static const String _lastFetchTimeKey = 'calendar_last_fetch_time';
-  
-  // Cache duration (5 minutes)
-  static const Duration _cacheDuration = Duration(minutes: 5);
 
   @override
   void initState() {
@@ -71,26 +64,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
   
-  // Check if cache is valid
-  Future<bool> _isCacheValid() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final lastFetchTimeStr = prefs.getString(_lastFetchTimeKey);
-      
-      if (lastFetchTimeStr == null) return false;
-      
-      final lastFetchTime = DateTime.parse(lastFetchTimeStr);
-      final now = DateTime.now();
-      
-      return now.difference(lastFetchTime) < _cacheDuration;
-    } catch (e) {
-      debugPrint('Error checking cache validity: $e');
-      return false;
-    }
-  }
-  
-  // Load events from cache or network
-  Future<void> _loadEventsWithCache() async {
+  // Load events using DataCacheService
+  Future<void> _loadEventsWithCache({bool forceRefresh = false}) async {
     try {
       if (!mounted) return;
       
@@ -101,23 +76,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       // Clear existing events
       _events.clear();
       
-      // Check if cache is valid
-      final isCacheValid = await _isCacheValid();
-      
-      if (isCacheValid) {
-        // Load from cache
-        await _loadEventsFromCache();
-      } else {
-        // Load from network
-        await _loadEventsFromNetwork();
-        
-        // Save to cache
-        await _saveEventsToCache();
-      }
+      // Load data using cache service
+      await _loadEventsFromNetwork(forceRefresh: forceRefresh);
     } catch (e) {
       debugPrint('Error loading events with cache: $e');
-      // Fallback to network if cache fails
-      await _loadEventsFromNetwork();
     } finally {
       if (mounted) {
         setState(() {
@@ -127,80 +89,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
   
-  // Load events from SharedPreferences cache
-  Future<void> _loadEventsFromCache() async {
+  // Load events from network (via DataCacheService)
+  Future<void> _loadEventsFromNetwork({bool forceRefresh = false}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Load tasks
-      final tasksJson = prefs.getString(_tasksKey);
-      if (tasksJson != null) {
-        final tasks = List<Map<String, dynamic>>.from(
-          jsonDecode(tasksJson).map((x) => Map<String, dynamic>.from(x))
-        );
-        _processTasksData(tasks);
-      }
-      
-      // Load tickets
-      final ticketsJson = prefs.getString(_ticketsKey);
-      if (ticketsJson != null) {
-        final tickets = List<Map<String, dynamic>>.from(
-          jsonDecode(ticketsJson).map((x) => Map<String, dynamic>.from(x))
-        );
-        _processTicketsData(tickets);
-      }
-      
-      // Load meetings
-      final meetingsJson = prefs.getString(_meetingsKey);
-      if (meetingsJson != null) {
-        final meetings = List<Map<String, dynamic>>.from(
-          jsonDecode(meetingsJson).map((x) => Map<String, dynamic>.from(x))
-        );
-        _processMeetingsData(meetings);
-      }
-      
-      debugPrint('Events loaded from cache');
-    } catch (e) {
-      debugPrint('Error loading events from cache: $e');
-      // If cache loading fails, fall back to network
-      await _loadEventsFromNetwork();
-    }
-  }
-  
-  // Save events to SharedPreferences cache
-  Future<void> _saveEventsToCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Save last fetch time
-      await prefs.setString(_lastFetchTimeKey, DateTime.now().toIso8601String());
-      
-      // Tasks, tickets, and meetings are saved in their respective methods
-    } catch (e) {
-      debugPrint('Error saving events to cache: $e');
-    }
-  }
-  
-  // Load events from network
-  Future<void> _loadEventsFromNetwork() async {
-    try {
-      // Load tasks, tickets, and meetings in parallel
+      // Load tasks, tickets, and meetings in parallel using cache service
       final results = await Future.wait([
-        _loadTasks(),
-        _loadTickets(),
-        _loadMeetings(),
+        _loadTasks(forceRefresh: forceRefresh),
+        _loadTickets(forceRefresh: forceRefresh),
+        _loadMeetings(forceRefresh: forceRefresh),
       ]);
       
-      debugPrint('Events loaded from network');
+      debugPrint('Events loaded from ${forceRefresh ? "network" : "cache/network"}');
     } catch (e) {
       debugPrint('Error loading events from network: $e');
     }
   }
   
-  // Load tasks
-  Future<void> _loadTasks() async {
+  // Load tasks using DataCacheService
+  Future<void> _loadTasks({bool forceRefresh = false}) async {
     try {
-      final tasks = await _supabaseService.getTasks();
+      final tasks = await _cacheService.getTasks(forceRefresh: forceRefresh);
       
       // Filter tasks for current user (created by or assigned to)
       final filteredTasks = tasks.where((task) {
@@ -214,11 +122,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       
       // Process tasks data
       _processTasksData(filteredTasks);
-      
-      // Save to cache
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tasksKey, jsonEncode(filteredTasks));
-      
     } catch (e) {
       debugPrint('Error loading tasks: $e');
     }
@@ -246,10 +149,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
   
-  // Load tickets
-  Future<void> _loadTickets() async {
+  // Load tickets using DataCacheService
+  Future<void> _loadTickets({bool forceRefresh = false}) async {
     try {
-      final tickets = await _supabaseService.getTickets();
+      final tickets = await _cacheService.getTickets(forceRefresh: forceRefresh);
       
       // Filter tickets for current user (created by or assigned to)
       final filteredTickets = tickets.where((ticket) {
@@ -263,11 +166,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       
       // Process tickets data
       _processTicketsData(filteredTickets);
-      
-      // Save to cache
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_ticketsKey, jsonEncode(filteredTickets));
-      
     } catch (e) {
       debugPrint('Error loading tickets: $e');
     }
@@ -295,18 +193,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
   
-  // Load meetings
-  Future<void> _loadMeetings() async {
+  // Load meetings using DataCacheService
+  Future<void> _loadMeetings({bool forceRefresh = false}) async {
     try {
-      final meetings = await _supabaseService.getMeetings();
+      final meetings = await _cacheService.getMeetings(forceRefresh: forceRefresh);
       
       // Process meetings data (all meetings are visible to everyone)
       _processMeetingsData(meetings);
-      
-      // Save to cache
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_meetingsKey, jsonEncode(meetings));
-      
     } catch (e) {
       debugPrint('Error loading meetings: $e');
     }
@@ -596,7 +489,7 @@ Widget _buildCalendar() {
     
     // Refresh events if something was updated
     if (result == true) {
-      await _loadEventsWithCache(); // Use cache loading
+      await _loadEventsWithCache(forceRefresh: true); // Force refresh after mutations
     }
   }
 
@@ -728,7 +621,7 @@ Widget _buildCalendar() {
     
     // Refresh events if something was created
     if (result == true) {
-      await _loadEventsWithCache(); // Use cache loading
+      await _loadEventsWithCache(forceRefresh: true); // Force refresh after mutations
     }
   }
 

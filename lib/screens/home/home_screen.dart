@@ -28,7 +28,8 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
 
-  List<Widget> _screens = [];
+  // Cache for initialized screens to avoid rebuilding
+  final Map<int, Widget> _screenCache = {};
 
   @override
   void initState() {
@@ -43,9 +44,6 @@ class _HomeScreenState extends State<HomeScreen>
       reverseCurve: Curves.easeIn,
     );
     
-    // Initialize screens
-    _initializeScreens();
-    
     // Handle initial arguments if provided
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.arguments != null) {
@@ -59,25 +57,53 @@ class _HomeScreenState extends State<HomeScreen>
         if (widget.arguments!.containsKey('initial_message') && 
             widget.arguments!['initial_message'] is String && 
             _selectedIndex == 3) {
-          // Update the chat screen with the initial message
-          setState(() {
-            _screens[3] = ChatScreen(
-              arguments: {'initial_message': widget.arguments!['initial_message']}
-            );
-          });
+          // The chat screen will be built with arguments when accessed
         }
       }
     });
   }
   
-  void _initializeScreens() {
-    _screens = [
-      const DashboardScreen(),
-      const CalendarScreen(),
-      const WorkspaceScreen(),
-      const ChatScreen(),
-      const ProfileScreen(),
-    ];
+  /// Get screen widget for the given index with lazy initialization
+  Widget _getScreen(int index) {
+    // Return cached screen if available
+    if (_screenCache.containsKey(index)) {
+      return _screenCache[index]!;
+    }
+    
+    // Build screen on first access
+    Widget screen;
+    switch (index) {
+      case 0:
+        screen = const DashboardScreen();
+        break;
+      case 1:
+        screen = const CalendarScreen();
+        break;
+      case 2:
+        screen = const WorkspaceScreen();
+        break;
+      case 3:
+        // Check if we need to pass initial message argument
+        if (widget.arguments != null && 
+            widget.arguments!.containsKey('initial_message') &&
+            index == _selectedIndex) {
+          screen = ChatScreen(
+            arguments: {'initial_message': widget.arguments!['initial_message']}
+          );
+        } else {
+          screen = const ChatScreen();
+        }
+        break;
+      case 4:
+        screen = const ProfileScreen();
+        break;
+      default:
+        screen = const DashboardScreen();
+    }
+    
+    // Cache the screen
+    _screenCache[index] = screen;
+    return screen;
   }
 
   @override
@@ -140,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: _getScreen(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
