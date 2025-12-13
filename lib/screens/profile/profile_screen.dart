@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
+import '../../services/theme_service.dart';
+import '../../main.dart';
 import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
@@ -17,11 +19,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _userProfile;
   List<Map<String, dynamic>> _userTeams = [];
+  late ThemeService _themeService;
 
   @override
   void initState() {
     super.initState();
     _loadUserProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _themeService = _ThemeServiceProvider.of(context);
   }
 
   Future<void> _loadUserProfile() async {
@@ -139,7 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Dot pattern background
                       CustomPaint(
                         painter: DotPatternPainter(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
                         ),
                         size: MediaQuery.of(context).size,
                       ),
@@ -156,8 +165,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   height: 100,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white,
-                                    border: Border.all(color: Colors.white, width: 3),
+                                    color: Theme.of(context).colorScheme.surface,
+                                    border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.2),
@@ -166,10 +175,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.person,
                                     size: 50,
-                                    color: Color(0xFF1A1A1A),
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 // Role badge
@@ -180,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ? Colors.orange.shade400 
                                         : Colors.blue.shade400,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white, width: 2),
+                                    border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
                                   ),
                                   child: Text(
                                     role == 'admin' ? 'ADMIN' : 'MEMBER',
@@ -196,17 +205,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 16),
                             Text(
                               fullName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: Theme.of(context).textTheme.displayMedium?.color,
                               ),
                             ),
                             Text(
                               roleDisplay,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white70,
+                                color: Theme.of(context).textTheme.bodyMedium?.color,
                               ),
                             ),
                           ],
@@ -693,6 +702,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Dark Mode',
                 isSwitch: true,
                 iconColor: Colors.purple.shade400,
+                switchValue: _themeService.isDarkMode(context),
+                onSwitchChanged: (value) async {
+                  await _themeService.setTheme(
+                    value ? ThemeType.dark : ThemeType.light,
+                  );
+                },
               ),
               const Divider(color: Colors.grey),
               _buildPreferenceItem(
@@ -733,13 +748,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Theme.of(context).textTheme.bodyLarge?.color,
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade400)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white70),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Theme.of(context).textTheme.bodyMedium?.color,
+      ),
       onTap: onTap ?? () {
         // Default implementation if no specific onTap is provided
         // TODO: Implement settings navigation
@@ -753,6 +774,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? subtitle,
     required Color iconColor,
     bool isSwitch = false,
+    bool? switchValue,
+    void Function(bool)? onSwitchChanged,
   }) {
     return ListTile(
       leading: Container(
@@ -765,25 +788,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white,
           fontWeight: FontWeight.bold,
         ),
       ),
       subtitle:
           subtitle != null
-              ? Text(subtitle, style: TextStyle(color: Colors.grey.shade400))
+              ? Text(
+                subtitle,
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey.shade400,
+                ),
+              )
               : null,
       trailing:
           isSwitch
               ? Switch(
-                value: true,
-                onChanged: (value) {
-                  // TODO: Implement preference toggle
+                value: switchValue ?? true,
+                onChanged: onSwitchChanged ?? (value) {
+                  // Default implementation if no callback provided
                 },
-                activeColor: Colors.green.shade400,
+                activeColor: Theme.of(context).colorScheme.primary,
               )
-              : const Icon(Icons.chevron_right, color: Colors.white70),
+              : Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).textTheme.bodyMedium?.color ?? Colors.white70,
+              ),
       onTap:
           isSwitch
               ? null
