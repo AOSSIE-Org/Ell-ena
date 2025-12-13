@@ -159,13 +159,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Scheduled jobs for bot automation (idempotent version)
+-- Scheduled jobs for bot automation
+-- Note: IF EXISTS checks allow safe re-running during development/debugging
 DO $$
 BEGIN
-  PERFORM cron.unschedule('start-bot');
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'start-bot') THEN
+    PERFORM cron.unschedule('start-bot');
+  END IF;
   PERFORM cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
   
-  PERFORM cron.unschedule('fetch-transcript');
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'fetch-transcript') THEN
+    PERFORM cron.unschedule('fetch-transcript');
+  END IF;
   PERFORM cron.schedule('fetch-transcript', '* * * * *', 'SELECT fetch_meeting_transcript()');
 END $$;
 
@@ -178,9 +183,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Idempotent cron job for cleanup
+-- Cleanup cron job
+-- Note: IF EXISTS check allows safe re-running during development/debugging
 DO $$
 BEGIN
-  PERFORM cron.unschedule('delete-old-meetings');
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'delete-old-meetings') THEN
+    PERFORM cron.unschedule('delete-old-meetings');
+  END IF;
   PERFORM cron.schedule('delete-old-meetings', '30 2 * * *', 'SELECT delete_old_meetings()');
 END $$;
