@@ -165,7 +165,7 @@ _buildPreferenceItem(
 ## 🎨 Theme Comparison
 
 ### Light Theme
-```
+```text
 Background:     #F5F5F5 (Light Gray)
 Surface:        #FFFFFF (White)
 Primary:        Green shade 600
@@ -175,7 +175,7 @@ Cards:          White with subtle shadow
 ```
 
 ### Dark Theme  
-```
+```text
 Background:     #1A1A1A (Very Dark Gray)
 Surface:        #2A2A2A (Dark Gray)
 Primary:        Green shade 400
@@ -226,7 +226,7 @@ Cards:          Dark gray with elevation
 ## 🔧 Technical Architecture
 
 ### Theme Flow
-```
+```text
 1. App Launch
    ↓
 2. ThemeService.initialize()
@@ -371,7 +371,7 @@ For developers maintaining this code:
 ## 📸 Visual Demo
 
 ### Theme Toggle in Action
-```
+```text
 Profile Screen → Settings Section → Dark Mode Toggle
 [OFF] Light Theme → Instant transition → [ON] Dark Theme
 ```
