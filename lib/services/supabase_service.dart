@@ -549,6 +549,247 @@ class SupabaseService {
     _currentTeamId = null;
   }
   
+  // Sign in with Google OAuth
+  Future<Map<String, dynamic>> signInWithGoogle() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+      
+      // Start Google OAuth flow
+      final response = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.ell-ena.app://callback', // Deep link for mobile
+        scopes: 'openid email profile https://www.googleapis.com/auth/calendar',
+      );
+      
+      if (response) {
+        return {
+          'success': true,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Failed to initiate Google sign-in',
+        };
+      }
+    } catch (e) {
+      debugPrint('Error signing in with Google: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Check if user needs team setup after OAuth
+  Future<Map<String, dynamic>> checkUserTeamStatus() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+      
+      // Check if user exists in users table
+      final userResponse = await _client
+          .from('users')
+          .select('id, team_id, full_name, email')
+          .eq('id', user.id)
+          .maybeSingle();
+      
+      if (userResponse == null) {
+        // User needs to complete team setup
+        return {
+          'success': true,
+          'needsTeamSetup': true,
+          'email': user.email,
+          'fullName': user.userMetadata?['full_name'] ?? user.userMetadata?['name'] ?? '',
+        };
+      } else {
+        // User already has a team
+        return {
+          'success': true,
+          'needsTeamSetup': false,
+          'userProfile': userResponse,
+        };
+      }
+    } catch (e) {
+      debugPrint('Error checking user team status: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Join team via OAuth (no password needed)
+  Future<Map<String, dynamic>> joinTeamViaOAuth({
+    required String email,
+    required String fullName,
+    required String teamCode,
+    String? googleRefreshToken,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+      
+      // Check if team exists
+      final teamResponse = await _client
+          .from('teams')
+          .select('id, name')
+          .eq('team_code', teamCode.toUpperCase())
+          .maybeSingle();
+      
+      if (teamResponse == null) {
+        return {
+          'success': false,
+          'error': 'Invalid team code',
+        };
+      }
+      
+      // Create user profile
+      final userInsertData = {
+        'id': user.id,
+        'full_name': fullName,
+        'email': email,
+        'team_id': teamResponse['id'],
+        'role': 'member',
+      };
+      
+      if (googleRefreshToken != null) {
+        userInsertData['google_refresh_token'] = googleRefreshToken;
+      }
+      
+      await _client.from('users').insert(userInsertData);
+      
+      // Load team members
+      await loadTeamMembers(teamResponse['id']);
+      
+      return {
+        'success': true,
+        'team': teamResponse,
+      };
+    } catch (e) {
+      debugPrint('Error joining team via OAuth: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
+  // Create team via OAuth (no password needed)
+  Future<Map<String, dynamic>> createTeamViaOAuth({
+    required String email,
+    required String fullName,
+    required String teamName,
+    String? googleRefreshToken,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+      
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+      
+      // Generate unique team code
+      String teamCode;
+      bool isUnique = false;
+      int attempts = 0;
+      
+      do {
+        teamCode = generateTeamId();
+        final exists = await teamExists(teamCode);
+        isUnique = !exists;
+        attempts++;
+      } while (!isUnique && attempts < 10);
+      
+      if (!isUnique) {
+        return {
+          'success': false,
+          'error': 'Failed to generate unique team code',
+        };
+      }
+      
+      // Create team
+      final teamResponse = await _client
+          .from('teams')
+          .insert({
+            'name': teamName,
+            'team_code': teamCode,
+            'created_by': user.id,
+            'admin_name': fullName,
+            'admin_email': email,
+          })
+          .select()
+          .single();
+      
+      // Create user profile as admin
+      final userInsertData = {
+        'id': user.id,
+        'full_name': fullName,
+        'email': email,
+        'team_id': teamResponse['id'],
+        'role': 'admin',
+      };
+      
+      if (googleRefreshToken != null) {
+        userInsertData['google_refresh_token'] = googleRefreshToken;
+      }
+      
+      await _client.from('users').insert(userInsertData);
+      
+      // Load team members
+      await loadTeamMembers(teamResponse['id']);
+      
+      return {
+        'success': true,
+        'team': teamResponse,
+        'teamCode': teamCode,
+      };
+    } catch (e) {
+      debugPrint('Error creating team via OAuth: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+  
   // Verify OTP for email verification
   Future<Map<String, dynamic>> verifyOTP({
     required String email,

@@ -41,6 +41,9 @@ dependencies:
   supabase_flutter: ^2.3.4
   flutter_dotenv: ^5.2.1
   
+  # Google Sign In
+  google_sign_in: ^6.2.1
+  
   # Local storage
   shared_preferences: ^2.5.3
   
