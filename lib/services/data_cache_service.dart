@@ -200,6 +200,7 @@ class DataCacheService {
   }) async {
     final cacheKey = 'user_teams_$email';
     final storageKey = '${_userTeamsKey}_$email'; // Email-specific storage key
+    final timestampKey = '${_userTeamsTimestampKey}_$email'; // Email-specific timestamp
     
     // Check if there's already a pending request for this data
     if (_pendingUserTeamsRequests.containsKey(cacheKey)) {
@@ -208,7 +209,7 @@ class DataCacheService {
     }
     
     // Check cache validity
-    if (!forceRefresh && await _isCacheValid(_userTeamsTimestampKey)) {
+    if (!forceRefresh && await _isCacheValid(timestampKey)) {
       try {
         final prefs = await SharedPreferences.getInstance();
         final cachedJson = prefs.getString(storageKey);
@@ -233,7 +234,7 @@ class DataCacheService {
       // Save to cache with email-specific key
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(storageKey, jsonEncode(result));
-      await _saveTimestamp(_userTeamsTimestampKey);
+      await _saveTimestamp(timestampKey);
       
       // Complete and remove from pending
       completer.complete(result);
