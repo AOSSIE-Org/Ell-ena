@@ -43,12 +43,15 @@ class DataCacheService {
     String? filterByStatus,
     String? filterByDueDate,
   }) async {
-    final cacheKey = 'tasks_${filterByAssignment}_${filterByStatus}_${filterByDueDate}';
+    // Use a single deduplication key since we always fetch unfiltered data
+    const cacheKey = 'tasks';
     
     // Check if there's already a pending request for this data
     if (_pendingRequests.containsKey(cacheKey)) {
       debugPrint('Waiting for pending tasks request...');
-      return await _pendingRequests[cacheKey]!.future;
+      final tasks = await _pendingRequests[cacheKey]!.future;
+      // Apply filters to the full dataset from the pending request
+      return _applyTaskFilters(tasks, filterByAssignment, filterByStatus, filterByDueDate);
     }
     
     // Check cache validity
@@ -73,11 +76,12 @@ class DataCacheService {
       await _saveToCache(_tasksKey, tasks);
       await _saveTimestamp(_tasksTimestampKey);
       
-      // Apply filters to the full dataset
-      final filtered = _applyTaskFilters(tasks, filterByAssignment, filterByStatus, filterByDueDate);
-      completer.complete(filtered);
+      // Complete the pending request with the full unfiltered dataset
+      completer.complete(tasks);
       _pendingRequests.remove(cacheKey);
       
+      // Apply filters to the full dataset
+      final filtered = _applyTaskFilters(tasks, filterByAssignment, filterByStatus, filterByDueDate);
       return filtered;
     } catch (e) {
       debugPrint('Error fetching tasks: $e');
@@ -99,12 +103,15 @@ class DataCacheService {
     String? filterByStatus,
     String? filterByPriority,
   }) async {
-    final cacheKey = 'tickets_${filterByAssignment}_${filterByStatus}_${filterByPriority}';
+    // Use a single deduplication key since we always fetch unfiltered data
+    const cacheKey = 'tickets';
     
     // Check if there's already a pending request for this data
     if (_pendingRequests.containsKey(cacheKey)) {
       debugPrint('Waiting for pending tickets request...');
-      return await _pendingRequests[cacheKey]!.future;
+      final tickets = await _pendingRequests[cacheKey]!.future;
+      // Apply filters to the full dataset from the pending request
+      return _applyTicketFilters(tickets, filterByAssignment, filterByStatus, filterByPriority);
     }
     
     // Check cache validity
@@ -129,11 +136,12 @@ class DataCacheService {
       await _saveToCache(_ticketsKey, tickets);
       await _saveTimestamp(_ticketsTimestampKey);
       
-      // Apply filters to the full dataset
-      final filtered = _applyTicketFilters(tickets, filterByAssignment, filterByStatus, filterByPriority);
-      completer.complete(filtered);
+      // Complete the pending request with the full unfiltered dataset
+      completer.complete(tickets);
       _pendingRequests.remove(cacheKey);
       
+      // Apply filters to the full dataset
+      final filtered = _applyTicketFilters(tickets, filterByAssignment, filterByStatus, filterByPriority);
       return filtered;
     } catch (e) {
       debugPrint('Error fetching tickets: $e');
@@ -273,8 +281,13 @@ class DataCacheService {
           debugPrint('Meetings cache invalidated');
           break;
         case 'user_teams':
-          await prefs.remove(_userTeamsKey);
-          await prefs.remove(_userTeamsTimestampKey);
+          // Remove all email-specific user teams caches
+          final keys = prefs.getKeys();
+          for (final key in keys) {
+            if (key.startsWith(_userTeamsKey) || key.startsWith(_userTeamsTimestampKey)) {
+              await prefs.remove(key);
+            }
+          }
           debugPrint('User teams cache invalidated');
           break;
         case 'all':
@@ -284,8 +297,13 @@ class DataCacheService {
           await prefs.remove(_ticketsTimestampKey);
           await prefs.remove(_meetingsKey);
           await prefs.remove(_meetingsTimestampKey);
-          await prefs.remove(_userTeamsKey);
-          await prefs.remove(_userTeamsTimestampKey);
+          // Remove all email-specific user teams caches
+          final keys = prefs.getKeys();
+          for (final key in keys) {
+            if (key.startsWith(_userTeamsKey) || key.startsWith(_userTeamsTimestampKey)) {
+              await prefs.remove(key);
+            }
+          }
           debugPrint('All caches invalidated');
           break;
         default:
