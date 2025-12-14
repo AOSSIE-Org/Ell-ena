@@ -34,12 +34,10 @@ class DataCacheService {
   /// Get tasks with optional caching
   /// 
   /// [forceRefresh] - If true, bypasses cache and fetches fresh data
-  /// [filterByAssignment] - Filter by assigned tasks
   /// [filterByStatus] - Filter by task status
   /// [filterByDueDate] - Filter by due date
   Future<List<Map<String, dynamic>>> getTasks({
     bool forceRefresh = false,
-    bool? filterByAssignment,
     String? filterByStatus,
     String? filterByDueDate,
   }) async {
@@ -51,7 +49,7 @@ class DataCacheService {
       debugPrint('Waiting for pending tasks request...');
       final tasks = await _pendingRequests[cacheKey]!.future;
       // Apply filters to the full dataset from the pending request
-      return _applyTaskFilters(tasks, filterByAssignment, filterByStatus, filterByDueDate);
+      return _applyTaskFilters(tasks, filterByStatus, filterByDueDate);
     }
     
     // Check cache validity
@@ -59,7 +57,7 @@ class DataCacheService {
       final cached = await _loadFromCache(_tasksKey);
       if (cached != null) {
         debugPrint('Returning cached tasks (${cached.length} items)');
-        return _applyTaskFilters(cached, filterByAssignment, filterByStatus, filterByDueDate);
+        return _applyTaskFilters(cached, filterByStatus, filterByDueDate);
       }
     }
     
@@ -81,7 +79,7 @@ class DataCacheService {
       _pendingRequests.remove(cacheKey);
       
       // Apply filters to the full dataset
-      final filtered = _applyTaskFilters(tasks, filterByAssignment, filterByStatus, filterByDueDate);
+      final filtered = _applyTaskFilters(tasks, filterByStatus, filterByDueDate);
       return filtered;
     } catch (e) {
       debugPrint('Error fetching tasks: $e');
@@ -94,12 +92,10 @@ class DataCacheService {
   /// Get tickets with optional caching
   /// 
   /// [forceRefresh] - If true, bypasses cache and fetches fresh data
-  /// [filterByAssignment] - Filter by assigned tickets
   /// [filterByStatus] - Filter by ticket status
   /// [filterByPriority] - Filter by priority
   Future<List<Map<String, dynamic>>> getTickets({
     bool forceRefresh = false,
-    bool? filterByAssignment,
     String? filterByStatus,
     String? filterByPriority,
   }) async {
@@ -111,7 +107,7 @@ class DataCacheService {
       debugPrint('Waiting for pending tickets request...');
       final tickets = await _pendingRequests[cacheKey]!.future;
       // Apply filters to the full dataset from the pending request
-      return _applyTicketFilters(tickets, filterByAssignment, filterByStatus, filterByPriority);
+      return _applyTicketFilters(tickets, filterByStatus, filterByPriority);
     }
     
     // Check cache validity
@@ -119,7 +115,7 @@ class DataCacheService {
       final cached = await _loadFromCache(_ticketsKey);
       if (cached != null) {
         debugPrint('Returning cached tickets (${cached.length} items)');
-        return _applyTicketFilters(cached, filterByAssignment, filterByStatus, filterByPriority);
+        return _applyTicketFilters(cached, filterByStatus, filterByPriority);
       }
     }
     
@@ -141,7 +137,7 @@ class DataCacheService {
       _pendingRequests.remove(cacheKey);
       
       // Apply filters to the full dataset
-      final filtered = _applyTicketFilters(tickets, filterByAssignment, filterByStatus, filterByPriority);
+      final filtered = _applyTicketFilters(tickets, filterByStatus, filterByPriority);
       return filtered;
     } catch (e) {
       debugPrint('Error fetching tickets: $e');
@@ -268,16 +264,19 @@ class DataCacheService {
         case 'tasks':
           await prefs.remove(_tasksKey);
           await prefs.remove(_tasksTimestampKey);
+          _pendingRequests.remove('tasks');
           debugPrint('Tasks cache invalidated');
           break;
         case 'tickets':
           await prefs.remove(_ticketsKey);
           await prefs.remove(_ticketsTimestampKey);
+          _pendingRequests.remove('tickets');
           debugPrint('Tickets cache invalidated');
           break;
         case 'meetings':
           await prefs.remove(_meetingsKey);
           await prefs.remove(_meetingsTimestampKey);
+          _pendingRequests.remove('meetings');
           debugPrint('Meetings cache invalidated');
           break;
         case 'user_teams':
@@ -288,6 +287,8 @@ class DataCacheService {
               await prefs.remove(key);
             }
           }
+          // Clear all pending user teams requests
+          _pendingUserTeamsRequests.clear();
           debugPrint('User teams cache invalidated');
           break;
         case 'all':
@@ -297,6 +298,7 @@ class DataCacheService {
           await prefs.remove(_ticketsTimestampKey);
           await prefs.remove(_meetingsKey);
           await prefs.remove(_meetingsTimestampKey);
+          _pendingRequests.clear();
           // Remove all email-specific user teams caches
           final keys = prefs.getKeys();
           for (final key in keys) {
@@ -304,6 +306,7 @@ class DataCacheService {
               await prefs.remove(key);
             }
           }
+          _pendingUserTeamsRequests.clear();
           debugPrint('All caches invalidated');
           break;
         default:
@@ -374,14 +377,10 @@ class DataCacheService {
   /// Apply filters to cached tasks
   List<Map<String, dynamic>> _applyTaskFilters(
     List<Map<String, dynamic>> tasks,
-    bool? filterByAssignment,
     String? filterByStatus,
     String? filterByDueDate,
   ) {
     var filtered = tasks;
-    
-    // Note: Assignment filtering requires current user ID which we don't have in cache
-    // This should be handled by the caller if needed
     
     if (filterByStatus != null && filterByStatus != 'all') {
       filtered = filtered.where((task) => task['status'] == filterByStatus).toList();
@@ -408,7 +407,6 @@ class DataCacheService {
   /// Apply filters to cached tickets
   List<Map<String, dynamic>> _applyTicketFilters(
     List<Map<String, dynamic>> tickets,
-    bool? filterByAssignment,
     String? filterByStatus,
     String? filterByPriority,
   ) {

@@ -142,9 +142,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Future<void> _loadUserTasksAndTickets() async {
     try {
       final cacheService = DataCacheService();
-      final tasks = await cacheService.getTasks(filterByAssignment: true);
+      final tasks = await cacheService.getTasks();
       
-      final tickets = await cacheService.getTickets(filterByAssignment: true);
+      final tickets = await cacheService.getTickets();
       
       if (mounted) {
         setState(() {
