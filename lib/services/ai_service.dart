@@ -77,6 +77,55 @@ class AIService {
       }
     }
     
+    // Use vector search for tasks and tickets instead of full context injection
+    String taskContext = "";
+    String ticketContext = "";
+    
+    // Check if message is task/ticket related and perform vector search
+    if (_isTaskRelatedQuery(userMessage)) {
+      final similarTasks = await _supabaseService.searchSimilarTasks(
+        query: userMessage,
+        matchCount: 3,
+        similarityThreshold: 0.3,
+      );
+      
+      if (similarTasks.isNotEmpty) {
+        taskContext = "\nRelevant tasks (based on semantic similarity):\n";
+        for (var task in similarTasks) {
+          String dueDate = task['due_date'] != null 
+              ? DateFormat('yyyy-MM-dd').format(DateTime.parse(task['due_date']))
+              : "No due date";
+          String status = task['status'] ?? 'todo';
+          double similarity = (task['similarity'] ?? 0.0) * 100;
+          taskContext += "- ${task['title']} (Status: $status, Due: $dueDate, Similarity: ${similarity.toStringAsFixed(0)}%, ID: ${task['task_id']})\n";
+          if (task['description'] != null && task['description'].isNotEmpty) {
+            taskContext += "  Description: ${task['description']}\n";
+          }
+        }
+      }
+    }
+    
+    if (_isTicketRelatedQuery(userMessage)) {
+      final similarTickets = await _supabaseService.searchSimilarTickets(
+        query: userMessage,
+        matchCount: 3,
+        similarityThreshold: 0.3,
+      );
+      
+      if (similarTickets.isNotEmpty) {
+        ticketContext = "\nRelevant tickets (based on semantic similarity):\n";
+        for (var ticket in similarTickets) {
+          String priority = ticket['priority'] ?? 'medium';
+          String status = ticket['status'] ?? 'open';
+          double similarity = (ticket['similarity'] ?? 0.0) * 100;
+          ticketContext += "- ${ticket['title']} (Status: $status, Priority: $priority, Similarity: ${similarity.toStringAsFixed(0)}%, ID: ${ticket['ticket_id']})\n";
+          if (ticket['description'] != null && ticket['description'].isNotEmpty) {
+            ticketContext += "  Description: ${ticket['description']}\n";
+          }
+        }
+      }
+    }
+    
     try {
       // Define function declarations for the model
       final List<Map<String, dynamic>> functionDeclarations = [
@@ -274,31 +323,6 @@ class AIService {
       String teamMemberContext = "Available team members:\n";
       for (var member in teamMembers) {
         teamMemberContext += "- ${member['full_name']} (${member['role']}): ${member['id']}\n";
-      }
-      
-      // Create task context if available
-      String taskContext = "";
-      if (userTasks.isNotEmpty) {
-        taskContext = "\nCurrent user's tasks:\n";
-        for (var task in userTasks) {
-          String dueDate = task['due_date'] != null 
-              ? DateFormat('yyyy-MM-dd').format(DateTime.parse(task['due_date']))
-              : "No due date";
-          
-          String status = task['status'] ?? 'todo';
-          taskContext += "- ${task['title']} (Status: $status, Due: $dueDate, ID: ${task['id']})\n";
-        }
-      }
-      
-      // Create ticket context if available
-      String ticketContext = "";
-      if (userTickets.isNotEmpty) {
-        ticketContext = "\nCurrent user's tickets:\n";
-        for (var ticket in userTickets) {
-          String priority = ticket['priority'] ?? 'medium';
-          String status = ticket['status'] ?? 'open';
-          ticketContext += "- ${ticket['title']} (Status: $status, Priority: $priority, ID: ${ticket['id']})\n";
-        }
       }
       
       // Add system message as the first message with role "model"
@@ -616,5 +640,29 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
     
     final queryLower = query.toLowerCase();
     return meetingKeywords.any((keyword) => queryLower.contains(keyword));
+  }
+  
+  // Helper method to detect if a query is task-related
+  bool _isTaskRelatedQuery(String query) {
+    final taskKeywords = [
+      'task', 'tasks', 'todo', 'to-do', 'to do', 'assignment', 'work',
+      'deadline', 'due', 'complete', 'finish', 'pending', 'overdue',
+      'assigned', 'in progress', 'progress on', 'working on'
+    ];
+    
+    final queryLower = query.toLowerCase();
+    return taskKeywords.any((keyword) => queryLower.contains(keyword));
+  }
+  
+  // Helper method to detect if a query is ticket-related
+  bool _isTicketRelatedQuery(String query) {
+    final ticketKeywords = [
+      'ticket', 'tickets', 'issue', 'issues', 'bug', 'bugs', 
+      'feature request', 'feature', 'problem', 'support',
+      'priority', 'critical', 'urgent', 'resolved', 'open ticket'
+    ];
+    
+    final queryLower = query.toLowerCase();
+    return ticketKeywords.any((keyword) => queryLower.contains(keyword));
   }
 }
