@@ -64,6 +64,19 @@ CREATE POLICY "Users can update tasks they created or are assigned to"
     )
   );
 
+-- Users can delete tasks they created or admins can delete any task in their team
+CREATE POLICY "Users can delete tasks they created or admins can delete" 
+  ON tasks FOR DELETE 
+  USING (
+    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() 
+      AND role = 'admin' 
+      AND team_id = tasks.team_id
+    )
+  );
+
 -- Only admins can approve/reject tasks
 CREATE POLICY "Only admins can approve or reject tasks" 
   ON tasks FOR UPDATE 
