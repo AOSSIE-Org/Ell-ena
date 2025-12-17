@@ -255,6 +255,75 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
   }
+  
+  Future<void> _deleteTicket() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2D2D2D),
+        title: const Text(
+          'Delete Ticket',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this ticket? This action cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed != true) return;
+    
+    try {
+      final result = await _supabaseService.deleteTicket(
+        ticketId: widget.ticketId,
+      );
+      
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ticket deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Navigate back to tickets screen
+          Navigator.of(context).pop();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete ticket: ${result['error']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting ticket: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting ticket: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   // Show team members dialog for assignment
   void _showAssignDialog() {
@@ -467,17 +536,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         backgroundColor: const Color(0xFF2D2D2D),
         title: Text(_ticket!['ticket_number'] ?? 'Ticket Details'),
         actions: [
-          if (_isAdmin)
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value) {
-                if (value.startsWith('status:')) {
-                  _updateTicketStatus(value.split(':')[1]);
-                } else if (value.startsWith('priority:')) {
-                  _updateTicketPriority(value.split(':')[1]);
-                }
-              },
-              itemBuilder: (context) => [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'delete') {
+                _deleteTicket();
+              } else if (value.startsWith('status:')) {
+                _updateTicketStatus(value.split(':')[1]);
+              } else if (value.startsWith('priority:')) {
+                _updateTicketPriority(value.split(':')[1]);
+              }
+            },
+            itemBuilder: (context) => [
+              if (_isAdmin) ...[
                 const PopupMenuItem(
                   value: 'header_status',
                   enabled: false,
@@ -523,8 +594,24 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   value: 'priority:low',
                   child: Text('Low'),
                 ),
+                const PopupMenuItem(
+                  value: 'divider2',
+                  enabled: false,
+                  child: Divider(),
+                ),
               ],
-            ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete Ticket', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(
