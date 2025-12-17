@@ -386,8 +386,7 @@ supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 - **summarize-transcription**: Generates AI summaries of meeting transcriptions
 
 ## Deploying Edge Functions
-
-   Supabase Edge Functions enable serverless functionality. Deploy them using the CLI.
+Supabase Edge Functions enable serverless functionality. Deploy them using the CLI.
 
 ### Deploy All Functions
 ```bash
