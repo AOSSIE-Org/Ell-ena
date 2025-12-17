@@ -62,8 +62,10 @@ ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tickets_view_policy ON tickets
     FOR SELECT
     USING (
-        team_id IN (
-            SELECT team_id FROM users WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = tickets.team_id
         )
     );
 
@@ -71,8 +73,10 @@ CREATE POLICY tickets_insert_policy ON tickets
     FOR INSERT
     WITH CHECK (
         auth.uid() = created_by AND
-        team_id IN (
-            SELECT team_id FROM users WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = tickets.team_id
         )
     );
 
@@ -81,9 +85,11 @@ CREATE POLICY tickets_update_policy ON tickets
     USING (
         auth.uid() = created_by OR 
         auth.uid() = assigned_to OR
-        auth.uid() IN (
-            SELECT id FROM users 
-            WHERE team_id = tickets.team_id AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = tickets.team_id 
+            AND users.role = 'admin'
         )
     );
 
@@ -92,11 +98,11 @@ ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ticket_comments_view_policy ON ticket_comments
     FOR SELECT
     USING (
-        ticket_id IN (
-            SELECT id FROM tickets 
-            WHERE team_id IN (
-                SELECT team_id FROM users WHERE id = auth.uid()
-            )
+        EXISTS (
+            SELECT 1 FROM tickets 
+            JOIN users ON users.team_id = tickets.team_id
+            WHERE tickets.id = ticket_comments.ticket_id 
+            AND users.id = auth.uid()
         )
     );
 
@@ -104,11 +110,11 @@ CREATE POLICY ticket_comments_insert_policy ON ticket_comments
     FOR INSERT
     WITH CHECK (
         auth.uid() = user_id AND
-        ticket_id IN (
-            SELECT id FROM tickets 
-            WHERE team_id IN (
-                SELECT team_id FROM users WHERE id = auth.uid()
-            )
+        EXISTS (
+            SELECT 1 FROM tickets 
+            JOIN users ON users.team_id = tickets.team_id
+            WHERE tickets.id = ticket_comments.ticket_id 
+            AND users.id = auth.uid()
         )
     );
 
