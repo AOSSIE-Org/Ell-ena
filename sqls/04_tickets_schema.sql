@@ -36,13 +36,8 @@ BEGIN
         team_prefix := 'TKT';
     END IF;
 
-    -- Advisory lock per team prefix using a more collision-resistant key
-    -- Use a combination of ascii values to reduce collision risk
-    lock_key := (
-        ascii(substring(team_prefix from 1 for 1)) * 1000000 +
-        ascii(substring(team_prefix from 2 for 1)) * 1000 +
-        ascii(substring(team_prefix from 3 for 1))
-    )::BIGINT;
+    -- Advisory lock per team prefix using hashtext for variable-length safety
+    lock_key := hashtext(team_prefix)::BIGINT;
     
     PERFORM pg_advisory_xact_lock(lock_key);
 
