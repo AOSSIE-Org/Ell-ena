@@ -1,4 +1,4 @@
--- Teams table (required for team prefix lookup)
+-- Teams table
 CREATE TABLE teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL
@@ -15,8 +15,11 @@ CREATE TABLE tickets (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Index for ticket number lookups
-CREATE INDEX idx_tickets_ticket_number ON tickets(ticket_number);
+-- Functional index for faster prefix-based lookups
+CREATE INDEX idx_tickets_prefix_number ON tickets(
+    (SUBSTRING(ticket_number FROM '^[A-Z]+')),
+    (SUBSTRING(ticket_number FROM '[0-9]+$')::INT)
+);
 
 -- Core fix: generate ticket number safely using advisory locks
 CREATE OR REPLACE FUNCTION generate_ticket_number()
@@ -32,16 +35,16 @@ BEGIN
     FROM teams
     WHERE id = NEW.team_id;
 
-    IF team_prefix IS NULL THEN
+    -- Handle NULL or empty team names
+    IF team_prefix IS NULL OR team_prefix = '' THEN
         team_prefix := 'TKT';
     END IF;
 
-    -- Advisory lock per team prefix using hashtext for variable-length safety
-    lock_key := hashtext(team_prefix)::BIGINT;
-    
+    -- Advisory lock per team (prevents cross-team contention)
+    lock_key := hashtext(NEW.team_id::TEXT)::BIGINT;
     PERFORM pg_advisory_xact_lock(lock_key);
 
-    -- Safely calculate next ticket number for this specific team prefix
+    -- Get next number for this team prefix
     SELECT COALESCE(MAX(
         CASE 
             WHEN SUBSTRING(ticket_number FROM '^[A-Z]+') = team_prefix
@@ -50,11 +53,11 @@ BEGIN
     ), 0) + 1
     INTO next_number
     FROM tickets
-    WHERE ticket_number LIKE team_prefix || '-%';
+    WHERE SUBSTRING(ticket_number FROM '^[A-Z]+') = team_prefix;
 
     -- Assign ticket number
     NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
