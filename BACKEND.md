@@ -341,7 +341,7 @@ Supabase provides built-in authentication. The project uses email-based authenti
 
 4. Click **Save** to update your email template.
 
-### 3. Configure Additional Settings
+### 4. Configure Additional Settings
 
 1. Go to **Authentication** → **URL Configuration**.
 2. Set the **Site URL** to your application's URL.
@@ -366,13 +366,13 @@ The project requires the following environment variables. **Do NOT expose server
 
 ### Setting secrets via Supabase CLI
 
-````bash
+```bash
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 supabase secrets set SUPABASE_DB_URL=your-db-url
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 supabase secrets set VEXA_API_KEY=your-vexa-api-key
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
- ```
+```
 
 > **Note:** Secrets set via `supabase secrets set` are automatically injected into deployed Edge Functions. However, for local testing, secrets must be loaded from your `.env` file using the `--env-file .env` flag combined with `--allow-env` to grant Deno permission to access environment variables.
  
@@ -386,29 +386,39 @@ supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 - **summarize-transcription**: Generates AI summaries of meeting transcriptions
 
 ## Deploying Edge Functions
+
 Supabase Edge Functions enable serverless functionality. Deploy them using the CLI.
 
 ### Deploy All Functions
+
 ```bash
-   supabase functions deploy
-   supabase functions deploy fetch-transcript
-   supabase functions deploy generate-embeddings
-   supabase functions deploy get-embedding
-   supabase functions deploy search-meetings
-   supabase functions deploy start-bot
-   supabase functions deploy summarize-transcription
-   ```
+supabase functions deploy
+```
+
+Or deploy individual functions:
+
+```bash
+supabase functions deploy fetch-transcript
+supabase functions deploy generate-embeddings
+supabase functions deploy get-embedding
+supabase functions deploy search-meetings
+supabase functions deploy start-bot
+supabase functions deploy summarize-transcription
+```
+
 ### Verify Deployment
 
 After deploying your Supabase Edge Functions, you can check that they are running correctly both locally and remotely.
 
 #### 1. List Deployed Functions
+
 To see all functions deployed to your Supabase project:
 
 ```bash
-   supabase functions list
-   ```
-   This will display the function names, their status, and the deployment URL.
+supabase functions list
+```
+
+This will display the function names, their status, and the deployment URL.
 
 #### 2. Test Functions Locally
 
@@ -417,7 +427,6 @@ To run a specific function locally for testing:
 ```bash
 supabase functions serve <function-name> --allow-env --env-file .env
 ```
-
 
 Replace `<function-name>` with the name of the function you want to test, for example:
 
@@ -438,8 +447,31 @@ supabase functions invoke <function-name>
 ```
 
 This is useful for quick testing of your production deployment.
-   
 
+#### POW (Proof of Work) - Verify Deployment
+
+To confirm your Edge Functions are working, follow these steps:
+
+1. Serve a function locally:
+
+```bash
+supabase functions serve fetch-transcript --allow-env --env-file .env
+```
+
+2. Make a test POST request using curl or Postman:
+
+```bash
+curl -X POST http://localhost:54321/functions/v1/fetch-transcript \
+-H "Authorization: Bearer <YOUR_SUPABASE_KEY>" \
+-H "Content-Type: application/json" \
+-d '{"text":"Hello world"}'
+```
+
+✅ **Expected result:** You should see a valid JSON response with the transcript.
+
+This confirms that:
+- Environment variables loaded correctly
+- The Edge Function works locally
 
 ## Troubleshooting
 
