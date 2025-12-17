@@ -59,7 +59,7 @@ BEGIN
 
     -- Assign ticket number
     NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
-
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
