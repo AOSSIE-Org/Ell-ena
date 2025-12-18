@@ -90,6 +90,10 @@ flutter:
   assets:
     - .env
     - ELL-ena-logo/
+    - ELL-ena-logo/png/logo-removed-bg.png
+    - ELL-ena-logo/png/logo-removed-bg-cropped.png
+    - ELL-ena-logo/png/logo-removed-bg-bigger.png
+
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
@@ -124,6 +128,6 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "ELL-ena-logo/png/logo-removed-bg.png"
+  image_path: "ELL-ena-logo/png/logo-removed-bg-bigger.png"
   adaptive_icon_background: "#1A1A1A"
-  adaptive_icon_foreground: "ELL-ena-logo/png/logo-removed-bg.png"
+  adaptive_icon_foreground: "ELL-ena-logo/png/logo-removed-bg-bigger.png"

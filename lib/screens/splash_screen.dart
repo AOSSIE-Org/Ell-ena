@@ -99,9 +99,9 @@ class _SplashScreenState extends State<SplashScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'ELL-ena-logo/png/logo-removed-bg.png',
-                  width: 200,
-                  height: 200,
+                  'ELL-ena-logo/png/logo-removed-bg-cropped.png',
+                  width: 250,
+                  height: 250,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       padding: const EdgeInsets.all(20),
@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 const Text(
                   'Ell-ena',
                   style: TextStyle(
