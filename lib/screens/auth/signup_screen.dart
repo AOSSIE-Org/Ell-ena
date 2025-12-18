@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
 import '../home/home_screen.dart';
 import 'login_screen.dart';
 import 'verify_otp_screen.dart';
+import 'team_selection_dialog.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,7 +15,8 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderStateMixin {
+class _SignupScreenState extends State<SignupScreen>
+    with SingleTickerProviderStateMixin {
   final _joinTeamFormKey = GlobalKey<FormState>();
   final _createTeamFormKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -59,7 +61,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       await _supabaseService.client.auth.signInWithOtp(
         email: _emailController.text,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -67,7 +69,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
             backgroundColor: Colors.green,
           ),
         );
-        
+
         NavigationService().navigateTo(
           VerifyOTPScreen(
             email: _emailController.text,
@@ -101,8 +103,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
 
     try {
       // First check if the team exists
-      final teamExists = await _supabaseService.teamExists(_teamIdController.text);
-      
+      final teamExists =
+          await _supabaseService.teamExists(_teamIdController.text);
+
       if (!teamExists) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -115,12 +118,12 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         }
         return;
       }
-      
+
       // Only send signup email without creating user upfront
       await _supabaseService.client.auth.signInWithOtp(
         email: _emailController.text,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -128,7 +131,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
             backgroundColor: Colors.green,
           ),
         );
-        
+
         NavigationService().navigateTo(
           VerifyOTPScreen(
             email: _emailController.text,
@@ -154,7 +157,53 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     }
   }
 
- 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await _supabaseService.signInWithGoogle();
+
+      if (mounted) {
+        if (result['success'] == true) {
+          if (result['isNewUser'] == true) {
+            // New user - show team selection dialog
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => TeamSelectionDialog(
+                userEmail: result['email'] ?? '',
+                googleRefreshToken: result['googleRefreshToken'],
+              ),
+            );
+          } else {
+            // Existing user - go to home
+            NavigationService().navigateToReplacement(const HomeScreen());
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Google sign-in failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScreenWrapper(
@@ -343,10 +392,59 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         const SizedBox(height: 24),
         CustomButton(
           text: _tabController.index == 0 ? 'Join Team' : 'Create Team',
-          onPressed: _isLoading 
-              ? null 
-              : (_tabController.index == 0 ? _handleJoinTeam : _handleCreateTeam),
+          onPressed: _isLoading
+              ? null
+              : (_tabController.index == 0
+                  ? _handleJoinTeam
+                  : _handleCreateTeam),
           isLoading: _isLoading,
+        ),
+        const SizedBox(height: 24),
+        // OR divider
+        Row(
+          children: [
+            Expanded(child: Divider(color: Colors.grey.shade700)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'OR',
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: Colors.grey.shade700)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Google Sign-Up Button
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: _isLoading ? null : _handleGoogleSignIn,
+            icon: const FaIcon(
+              FontAwesomeIcons.google,
+              size: 20,
+            ),
+            label: const Text(
+              'Sign up with Google',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.green.shade400, width: 2),
+              padding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         CustomButton(
