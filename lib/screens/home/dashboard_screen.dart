@@ -4,6 +4,7 @@ import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../services/data_cache_service.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
@@ -35,6 +36,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _recentTickets = [];
   List<FlSpot> _taskCompletionSpots = [];
   List<Map<String, dynamic>> _upcomingItems = [];
+  
+  // Track refresh context for cache control
+  bool? _onRefreshContext;
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _onRefresh() async {
+    _onRefreshContext = true;
     await _loadData();
   }
   
@@ -205,15 +210,24 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
 
       // Load other data
-      final tasksFuture = supa.getTasks();
-      final ticketsFuture = supa.getTickets();
-      final meetingsFuture = supa.getMeetings();
+      final cacheService = DataCacheService();
+      final tasksFuture = _onRefreshContext != null 
+          ? cacheService.getTasks(forceRefresh: true)
+          : cacheService.getTasks();
+      final ticketsFuture = _onRefreshContext != null
+          ? cacheService.getTickets(forceRefresh: true)
+          : cacheService.getTickets();
+      final meetingsFuture = _onRefreshContext != null
+          ? cacheService.getMeetings(forceRefresh: true)
+          : cacheService.getMeetings();
 
       final results = await Future.wait([
         tasksFuture,
         ticketsFuture,
         meetingsFuture,
       ]);
+      
+      _onRefreshContext = null; // Reset refresh flag
 
       final tasks = List<Map<String, dynamic>>.from(results[0] as List);
       final tickets = List<Map<String, dynamic>>.from(results[1] as List);

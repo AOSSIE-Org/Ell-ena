@@ -28,7 +28,8 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
 
-  List<Widget> _screens = [];
+  // All screens initialized to preserve state using IndexedStack
+  late final List<Widget> _screens;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen>
       reverseCurve: Curves.easeIn,
     );
     
-    // Initialize screens
+    // Initialize all screens (DataCacheService prevents duplicate API calls)
     _initializeScreens();
     
     // Handle initial arguments if provided
@@ -59,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (widget.arguments!.containsKey('initial_message') && 
             widget.arguments!['initial_message'] is String && 
             _selectedIndex == 3) {
-          // Update the chat screen with the initial message
+          // Update chat screen with initial message
           setState(() {
             _screens[3] = ChatScreen(
               arguments: {'initial_message': widget.arguments!['initial_message']}
@@ -140,7 +141,10 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
