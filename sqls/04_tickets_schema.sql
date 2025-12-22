@@ -23,6 +23,11 @@ CREATE TABLE ticket_comments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Critical indexes for RLS policy performance
+-- These are essential for team-based row level security checks
+CREATE INDEX idx_tickets_team_id ON tickets(team_id);
+CREATE INDEX idx_ticket_comments_ticket_id ON ticket_comments(ticket_id);
+
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
