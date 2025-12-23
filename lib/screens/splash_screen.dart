@@ -44,41 +44,36 @@ class _SplashScreenState extends State<SplashScreen>
   }
   
   Future<void> _checkSession() async {
-    try {
-      final currentUser = _supabaseService.client.auth.currentUser;
-      
-      final args = ModalRoute.of(context)?.settings.arguments;
-      
-      if (currentUser != null) {
-        if (args != null && args is Map<String, dynamic>) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(arguments: args),
-            ),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-            ),
-          );
-        }
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const LoginScreen(),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error checking session: $e');
+  if (!mounted) return;
+
+  try {
+    final currentUser = _supabaseService.client.auth.currentUser;
+    final args = ModalRoute.of(context)?.settings.arguments;
+
+    if (!mounted) return;
+
+    if (currentUser != null) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const OnboardingScreen(),
+          builder: (context) =>
+              args is Map<String, dynamic>
+                  ? HomeScreen(arguments: args)
+                  : const HomeScreen(),
         ),
       );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     }
+  } catch (e) {
+    debugPrint('Error checking session: $e');
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+    );
   }
+}
 
   @override
   void dispose() {
