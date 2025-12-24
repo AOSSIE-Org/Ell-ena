@@ -154,7 +154,7 @@ class AuthScreenWrapper extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              // const SizedBox(height: 40),
               Text(
                 title,
                 style: const TextStyle(
@@ -168,7 +168,7 @@ class AuthScreenWrapper extends StatelessWidget {
                 subtitle,
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               ...children,
             ],
           ),
