@@ -223,7 +223,7 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         const SizedBox(height: 24),
         SizedBox(
-          height: MediaQuery.of(context).size.height * 0.42,   // ~45% of screen 
+          height: MediaQuery.of(context).size.height * 0.42,   // ~42% of screen 
           child: TabBarView(
             controller: _tabController,
             children: [
