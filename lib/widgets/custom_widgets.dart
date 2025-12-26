@@ -68,10 +68,10 @@ class CustomTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.green.shade400),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+        // contentPadding: const EdgeInsets.symmetric(
+        //   horizontal: 16,
+        //   vertical: 16,
+        // ),
       ),
     );
   }
