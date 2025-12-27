@@ -68,10 +68,10 @@ class CustomTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.green.shade400),
         ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+        // contentPadding: const EdgeInsets.symmetric(
+        //   horizontal: 16,
+        //   vertical: 16,
+        // ),
       ),
     );
   }
@@ -154,7 +154,7 @@ class AuthScreenWrapper extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              // const SizedBox(height: 40),
               Text(
                 title,
                 style: const TextStyle(
@@ -168,7 +168,7 @@ class AuthScreenWrapper extends StatelessWidget {
                 subtitle,
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               ...children,
             ],
           ),
