@@ -7,7 +7,7 @@ CREATE TABLE teams (
 -- Tickets table
 CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_number TEXT NOT NULL,
+    ticket_number TEXT NOT NULL UNIQUE,
     title TEXT NOT NULL,
     description TEXT,
     priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
@@ -15,10 +15,8 @@ CREATE TABLE tickets (
     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
     approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
     created_by UUID REFERENCES auth.users(id),
-    
     assigned_to UUID REFERENCES auth.users(id),
     team_id UUID REFERENCES teams(id),
-
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -37,7 +35,7 @@ CREATE INDEX idx_tickets_number_suffix ON tickets(
      END)
 );
 
--- Core fix: generate ticket number safely using advisory locks
+-- Core fix: generate ticket number safely using advisory locks on prefix
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -59,8 +57,8 @@ BEGIN
         END IF;
     END IF;
 
-    -- Compute a deterministic lock key for both NULL and non-NULL team_id
-    lock_key := hashtext(COALESCE(NEW.team_id::TEXT, 'TKT'))::BIGINT;
+    -- Advisory lock per team prefix (serializes inserts for the same prefix)
+    lock_key := hashtext(team_prefix)::BIGINT;
     PERFORM pg_advisory_xact_lock(lock_key);
 
     -- Defensive MAX calculation (ignore malformed ticket numbers)
