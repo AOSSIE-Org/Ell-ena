@@ -342,27 +342,47 @@ class SupabaseService {
           isUnique = response == false;
         } catch (e) {
           debugPrint('Error checking team code: $e');
-          // If we can't check, assume it's unique after 3 attempts
+          // If RPC consistently fails, throw error instead of risking duplicates
           if (attempts >= 3) {
-            isUnique = true;
+            throw Exception(
+                'Unable to verify team code uniqueness. Please try again.');
           }
         }
       } while (!isUnique && attempts < 10);
 
-      // Step 3: Create the team
-      final teamInsertResponse = await _client.from('teams').insert({
-        'name': teamName,
-        'team_code': teamId,
-        'created_by': userId,
-        'admin_name': adminName,
-        'admin_email': adminEmail,
-      }).select();
+      // Step 3: Create the team with retry on duplicate
+      Map<String, dynamic>? teamResponse;
+      int insertAttempts = 0;
 
-      final teamResponse =
-          teamInsertResponse.isNotEmpty ? teamInsertResponse.first : null;
+      while (teamResponse == null && insertAttempts < 3) {
+        try {
+          final teamInsertResponse = await _client.from('teams').insert({
+            'name': teamName,
+            'team_code': teamId,
+            'created_by': userId,
+            'admin_name': adminName,
+            'admin_email': adminEmail,
+          }).select();
+
+          teamResponse =
+              teamInsertResponse.isNotEmpty ? teamInsertResponse.first : null;
+        } catch (e) {
+          // Check if it's a duplicate key error
+          if (e.toString().contains('duplicate') ||
+              e.toString().contains('unique')) {
+            // Generate new team code and retry
+            teamId = generateTeamId();
+            insertAttempts++;
+            debugPrint(
+                'Duplicate team code detected, retrying with new code...');
+          } else {
+            rethrow;
+          }
+        }
+      }
 
       if (teamResponse == null) {
-        throw Exception('Failed to create team');
+        throw Exception('Failed to create team after multiple attempts');
       }
 
       // Step 4: Update user profile
@@ -481,6 +501,321 @@ class SupabaseService {
     }
   }
 
+  // Sign in with Google OAuth
+  Future<Map<String, dynamic>> signInWithGoogle() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final redirectUrl = dotenv.env['OAUTH_REDIRECT_URL'] ??
+          'io.supabase.ellena://login-callback';
+
+      // Create a completer to wait for auth state change
+      final completer = Completer<Map<String, dynamic>>();
+      StreamSubscription<AuthState>? authSubscription;
+
+      // Listen to auth state changes
+      authSubscription = _client.auth.onAuthStateChange.listen((data) {
+        final event = data.event;
+        final session = data.session;
+
+        if (event == AuthChangeEvent.signedIn && session != null) {
+          final user = session.user;
+
+          // Process the authenticated user
+          _processAuthenticatedUser(user, session).then((result) {
+            authSubscription?.cancel();
+            if (!completer.isCompleted) {
+              completer.complete(result);
+            }
+          });
+        }
+      });
+
+      final response = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: redirectUrl,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+        queryParams: const {
+          'access_type': 'offline',
+          'prompt': 'consent',
+        },
+      );
+
+      if (!response) {
+        await authSubscription.cancel();
+        return {
+          'success': false,
+          'error': 'Failed to launch Google sign-in',
+        };
+      }
+
+      // Wait for auth state change with timeout
+      return await completer.future.timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          authSubscription?.cancel();
+          return {
+            'success': false,
+            'error': 'Authentication timed out',
+          };
+        },
+      );
+    } catch (e) {
+      debugPrint('Error signing in with Google: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Helper method to process authenticated user
+  Future<Map<String, dynamic>> _processAuthenticatedUser(
+      User user, Session session) async {
+    try {
+      // Check if user already has a profile (existing user)
+      final existingProfile = await _client
+          .from('users')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (existingProfile != null) {
+        // Existing user - navigate to home
+        return {
+          'success': true,
+          'isNewUser': false,
+          'email': user.email,
+        };
+      } else {
+        // New user - needs team setup
+        // Extract refresh token for Google Calendar API
+        final googleRefreshToken = session.providerRefreshToken;
+
+        return {
+          'success': true,
+          'isNewUser': true,
+          'email': user.email,
+          'googleRefreshToken': googleRefreshToken,
+        };
+      }
+    } catch (e) {
+      debugPrint('Error processing authenticated user: $e');
+      return {
+        'success': false,
+        'error': 'Failed to process authentication',
+      };
+    }
+  }
+
+  // Join team after Google OAuth (for new users)
+  Future<Map<String, dynamic>> joinTeamWithGoogle({
+    required String email,
+    required String teamCode,
+    required String fullName,
+    String? googleRefreshToken,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      final authedEmail = user.email;
+      if (authedEmail == null ||
+          authedEmail.toLowerCase() != email.toLowerCase()) {
+        return {
+          'success': false,
+          'error': 'Email mismatch for authenticated user',
+        };
+      }
+
+      // Check if the team exists
+      final teamExistsResponse = await _client.rpc(
+        'check_team_code_exists',
+        params: {'code': teamCode},
+      );
+
+      if (teamExistsResponse != true) {
+        return {
+          'success': false,
+          'error': 'Team not found',
+        };
+      }
+
+      // Get the team ID
+      final teamResponse = await _client
+          .from('teams')
+          .select('id')
+          .eq('team_code', teamCode)
+          .limit(1);
+
+      if (teamResponse.isEmpty) {
+        return {
+          'success': false,
+          'error': 'Team not found',
+        };
+      }
+
+      final teamIdUuid = teamResponse[0]['id'];
+
+      // Create user profile
+      await _client.from('users').insert({
+        'id': user.id,
+        'full_name': fullName,
+        'email': authedEmail,
+        'team_id': teamIdUuid,
+        'role': 'member',
+        'google_refresh_token': googleRefreshToken,
+      });
+
+      return {
+        'success': true,
+        'teamCode': teamCode,
+      };
+    } catch (e) {
+      debugPrint('Error joining team with Google: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Create team after Google OAuth (for new users)
+  Future<Map<String, dynamic>> createTeamWithGoogle({
+    required String email,
+    required String teamName,
+    required String adminName,
+    String? googleRefreshToken,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      final authedEmail = user.email;
+      if (authedEmail == null ||
+          authedEmail.toLowerCase() != email.toLowerCase()) {
+        return {
+          'success': false,
+          'error': 'Email mismatch for authenticated user',
+        };
+      }
+
+      final userId = user.id;
+
+      // Generate a unique team ID
+      String teamId;
+      bool isUnique = false;
+      int attempts = 0;
+
+      do {
+        teamId = generateTeamId();
+        attempts++;
+
+        try {
+          final response = await _client.rpc(
+            'check_team_code_exists',
+            params: {'code': teamId},
+          );
+
+          isUnique = response == false;
+        } catch (e) {
+          debugPrint('Error checking team code: $e');
+          // If RPC consistently fails, throw error instead of risking duplicates
+          if (attempts >= 3) {
+            throw Exception(
+                'Unable to verify team code uniqueness. Please try again.');
+          }
+        }
+      } while (!isUnique && attempts < 10);
+
+      // Create the team with retry on duplicate
+      Map<String, dynamic>? teamResponse;
+      int insertAttempts = 0;
+
+      while (teamResponse == null && insertAttempts < 3) {
+        try {
+          final teamInsertResponse = await _client.from('teams').insert({
+            'name': teamName,
+            'team_code': teamId,
+            'created_by': userId,
+            'admin_name': adminName,
+            'admin_email': authedEmail,
+          }).select();
+
+          teamResponse =
+              teamInsertResponse.isNotEmpty ? teamInsertResponse.first : null;
+        } catch (e) {
+          // Check if it's a duplicate key error
+          if (e.toString().contains('duplicate') ||
+              e.toString().contains('unique')) {
+            // Generate new team code and retry
+            teamId = generateTeamId();
+            insertAttempts++;
+            debugPrint(
+                'Duplicate team code detected, retrying with new code...');
+          } else {
+            rethrow;
+          }
+        }
+      }
+
+      if (teamResponse == null) {
+        throw Exception('Failed to create team after multiple attempts');
+      }
+
+      // Create user profile
+      await _client.from('users').insert({
+        'id': userId,
+        'full_name': adminName,
+        'email': authedEmail,
+        'team_id': teamResponse['id'],
+        'role': 'admin',
+        'google_refresh_token': googleRefreshToken,
+      });
+
+      return {
+        'success': true,
+        'teamId': teamId,
+        'teamData': teamResponse,
+      };
+    } catch (e) {
+      debugPrint('Error creating team with Google: $e');
+      return {
+        'success': false,
+        'error': 'Failed to create team. Please try again.',
+      };
+    }
+  }
+
   // Get current user profile
   Future<Map<String, dynamic>?> getCurrentUserProfile(
       {bool forceRefresh = false}) async {
@@ -582,6 +917,7 @@ class SupabaseService {
       }
 
       // Wait a moment for the auth to fully process
+
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Set the user's password if provided

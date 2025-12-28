@@ -20,6 +20,7 @@ CREATE TABLE users (
   email TEXT NOT NULL UNIQUE,
   team_id UUID REFERENCES teams(id),
   role TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+  google_refresh_token TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

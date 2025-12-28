@@ -62,8 +62,10 @@ ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY meetings_view_policy ON meetings
     FOR SELECT
     USING (
-        team_id IN (
-            SELECT team_id FROM users WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id
         )
     );
 
@@ -72,8 +74,10 @@ CREATE POLICY meetings_insert_policy ON meetings
     FOR INSERT
     WITH CHECK (
         auth.uid() = created_by AND
-        team_id IN (
-            SELECT team_id FROM users WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id
         )
     );
 
@@ -82,9 +86,11 @@ CREATE POLICY meetings_delete_policy ON meetings
     FOR DELETE
     USING (
         auth.uid() = created_by OR
-        auth.uid() IN (
-            SELECT id FROM users 
-            WHERE team_id = meetings.team_id AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id 
+            AND users.role = 'admin'
         )
     );
 
@@ -93,9 +99,11 @@ CREATE POLICY meetings_update_policy ON meetings
     FOR UPDATE
     USING (
         auth.uid() = created_by OR
-        auth.uid() IN (
-            SELECT id FROM users 
-            WHERE team_id = meetings.team_id AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id 
+            AND users.role = 'admin'
         )
     );
 
@@ -159,13 +167,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Scheduled jobs for bot automation (idempotent version)
+-- Scheduled jobs for bot automation
+-- Note: IF EXISTS checks allow safe re-running during development/debugging
 DO $$
 BEGIN
-  PERFORM cron.unschedule('start-bot');
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'start-bot') THEN
+    PERFORM cron.unschedule('start-bot');
+  END IF;
   PERFORM cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
   
-  PERFORM cron.unschedule('fetch-transcript');
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'fetch-transcript') THEN
+    PERFORM cron.unschedule('fetch-transcript');
+  END IF;
   PERFORM cron.schedule('fetch-transcript', '* * * * *', 'SELECT fetch_meeting_transcript()');
 END $$;
 
@@ -178,9 +191,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Idempotent cron job for cleanup
+-- Cleanup cron job
+-- Note: IF EXISTS check allows safe re-running during development/debugging
 DO $$
 BEGIN
-  PERFORM cron.unschedule('delete-old-meetings');
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'delete-old-meetings') THEN
+    PERFORM cron.unschedule('delete-old-meetings');
+  END IF;
   PERFORM cron.schedule('delete-old-meetings', '30 2 * * *', 'SELECT delete_old_meetings()');
 END $$;
