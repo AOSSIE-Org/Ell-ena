@@ -27,25 +27,21 @@ The Supabase CLI is essential for managing your Supabase projects locally and de
 
 ### For Windows (using Scoop)
 
-1. Allow scripts to run
-```powershell
+1. If you don't have Scoop installed, install it first:
+
+   ```powershell
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-   ```
-2. Install Scoop if not installed
-```powershell
    irm get.scoop.sh | iex
    ```
-3. Add the Supabase bucket 
-```powershell
-   scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-   ```
 
-4. Install Supabase CLI
-```powershell
+2. Add the Supabase bucket and install the CLI:
+
+   ```powershell
+   scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
    scoop install supabase
    ```
 
-5. Verify the installation:
+3. Verify the installation:
    ```powershell
    supabase --version
    ```
@@ -54,7 +50,7 @@ The Supabase CLI is essential for managing your Supabase projects locally and de
 
 1. If you don't have Homebrew installed, install it first:
 
-    ```bash
+   ```bash
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
 
@@ -73,7 +69,6 @@ The Supabase CLI is essential for managing your Supabase projects locally and de
 
 ```bash
 npm install -g supabase
-supabase --version
 ```
 
 ## Setting Up Supabase Project
@@ -100,6 +95,7 @@ The project creation will take a few minutes. Once completed, you'll be redirect
    ```bash
    supabase login
    ```
+
    This will open a browser window where you need to authorize the CLI.
 
 2. Navigate to your project directory:
@@ -107,15 +103,12 @@ The project creation will take a few minutes. Once completed, you'll be redirect
    ```bash
    cd path/to/Ell-ena
    ```
-   Replace path/to/Ell-ena with the actual path to your project folder.
 
 3. Initialize Supabase in your project (if not already initialized):
 
    ```bash
    supabase init
    ```
-   This creates a .supabase folder in your project directory.
-   Important: If .supabase already exists, skip this step to avoid error.
 
 4. Link your local project to the remote Supabase project:
    ```bash
@@ -130,7 +123,6 @@ The project creation will take a few minutes. Once completed, you'll be redirect
    ```bash
    cp .env.example .env
    ```
-   This copies the example environment variables to a new file you can safely edit.
 
 2. Get your Supabase credentials from the project dashboard:
 
@@ -341,7 +333,7 @@ Supabase provides built-in authentication. The project uses email-based authenti
 
 4. Click **Save** to update your email template.
 
-### 4. Configure Additional Settings
+### 3. Configure Additional Settings
 
 1. Go to **Authentication** → **URL Configuration**.
 2. Set the **Site URL** to your application's URL.
@@ -366,112 +358,36 @@ The project requires the following environment variables. **Do NOT expose server
 
 ### Setting secrets via Supabase CLI
 
-```bash
+````bash
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 supabase secrets set SUPABASE_DB_URL=your-db-url
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 supabase secrets set VEXA_API_KEY=your-vexa-api-key
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
-```
 
-> **Note:** Secrets set via `supabase secrets set` are automatically injected into deployed Edge Functions. However, for local testing, secrets must be loaded from your `.env` file using the `--env-file .env` flag combined with `--allow-env` to grant Deno permission to access environment variables.
- 
-### Function Descriptions
 
-- **fetch-transcript**: Retrieves meeting transcriptions
-- **generate-embeddings**: Creates vector embeddings for meeting content
-- **get-embedding**: Retrieves embeddings for specific content
-- **search-meetings**: Performs semantic search across meeting transcriptions
-- **start-bot**: Initializes the AI assistant
-- **summarize-transcription**: Generates AI summaries of meeting transcriptions
+# Local Testing the functions (optional)
+supabase functions serve --allow-env --env-file .env
+
+
 
 ## Deploying Edge Functions
 
-Supabase Edge Functions enable serverless functionality. Deploy them using the CLI.
-
-### Deploy All Functions
+The project uses Supabase Edge Functions for serverless functionality. Deploy them using the CLI:
 
 ```bash
+# Deploy all functions
 supabase functions deploy
-```
 
-Or deploy individual functions:
 
-```bash
+# Or deploy specific functions
 supabase functions deploy fetch-transcript
 supabase functions deploy generate-embeddings
 supabase functions deploy get-embedding
 supabase functions deploy search-meetings
 supabase functions deploy start-bot
 supabase functions deploy summarize-transcription
-```
-
-### Verify Deployment
-
-After deploying your Supabase Edge Functions, you can check that they are running correctly both locally and remotely.
-
-#### 1. List Deployed Functions
-
-To see all functions deployed to your Supabase project:
-
-```bash
-supabase functions list
-```
-
-This will display the function names, their status, and the deployment URL.
-
-#### 2. Test Functions Locally
-
-To run a specific function locally for testing:
-
-```bash
-supabase functions serve <function-name> --allow-env --env-file .env
-```
-
-Replace `<function-name>` with the name of the function you want to test, for example:
-
-```bash
-supabase functions serve fetch-transcript --allow-env --env-file .env
-```
-
-**Important:** Deno (the runtime for Edge Functions) blocks access to environment variables by default for security. The `--allow-env` flag grants permission to access environment variables, and `--env-file .env` loads your secrets from the `.env` file. Both flags are required for local development.
-
-The CLI will start a local server, usually on `http://localhost:54321/functions/v1/<function-name>`. You can make HTTP requests to this endpoint to test your function.
-
-#### 3. Invoke Functions Directly (Optional)
-
-You can also invoke a deployed function directly:
-
-```bash
-supabase functions invoke <function-name>
-```
-
-This is useful for quick testing of your production deployment.
-
-#### POW (Proof of Work) - Verify Deployment
-
-To confirm your Edge Functions are working, follow these steps:
-
-1. Serve a function locally:
-
-```bash
-supabase functions serve fetch-transcript --allow-env --env-file .env
-```
-
-2. Make a test POST request using curl or Postman:
-
-```bash
-curl -X POST http://localhost:54321/functions/v1/fetch-transcript \
--H "Authorization: Bearer <YOUR_SUPABASE_KEY>" \
--H "Content-Type: application/json" \
--d '{"text":"Hello world"}'
-```
-
-✅ **Expected result:** You should see a valid JSON response with the transcript.
-
-This confirms that:
-- Environment variables loaded correctly
-- The Edge Function works locally
+````
 
 ## Troubleshooting
 
@@ -517,3 +433,4 @@ After setting up your backend:
 ---
 
 This guide should help you get started with the Ell-ena backend.
+  is it ok
