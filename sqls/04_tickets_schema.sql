@@ -45,7 +45,7 @@ DECLARE
     next_number INT;
     lock_key BIGINT;
 BEGIN
-    -- Handle NULL team_id safely
+    -- Set team prefix
     IF NEW.team_id IS NULL THEN
         team_prefix := 'TKT';
     ELSE
@@ -57,10 +57,11 @@ BEGIN
         IF team_prefix IS NULL OR team_prefix = '' THEN
             team_prefix := 'TKT';
         END IF;
-
-        lock_key := hashtext(NEW.team_id::TEXT)::BIGINT;
-        PERFORM pg_advisory_xact_lock(lock_key);
     END IF;
+
+    -- Compute a deterministic lock key for both NULL and non-NULL team_id
+    lock_key := hashtext(COALESCE(NEW.team_id::TEXT, 'TKT'))::BIGINT;
+    PERFORM pg_advisory_xact_lock(lock_key);
 
     -- Defensive MAX calculation (ignore malformed ticket numbers)
     SELECT COALESCE(
