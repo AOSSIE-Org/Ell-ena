@@ -37,35 +37,39 @@ DECLARE
     next_number INT;
     lock_key BIGINT;
 BEGIN
-    -- Get team prefix (first 3 letters of team name)
-    SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
-    INTO team_prefix
-    FROM teams
-    WHERE id = NEW.team_id;
-
-    -- Handle NULL or empty team names
-    IF team_prefix IS NULL OR team_prefix = '' THEN
+    -- Handle NULL team_id safely
+    IF NEW.team_id IS NULL THEN
         team_prefix := 'TKT';
+    ELSE
+        SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
+        INTO team_prefix
+        FROM teams
+        WHERE id = NEW.team_id;
+
+        IF team_prefix IS NULL OR team_prefix = '' THEN
+            team_prefix := 'TKT';
+        END IF;
+
+        lock_key := hashtext(NEW.team_id::TEXT)::BIGINT;
+        PERFORM pg_advisory_xact_lock(lock_key);
     END IF;
 
-    -- Advisory lock per team (prevents cross-team contention)
-    lock_key := hashtext(NEW.team_id::TEXT)::BIGINT;
-    PERFORM pg_advisory_xact_lock(lock_key);
-
-    -- Get next number for this team prefix
-    SELECT COALESCE(MAX(
-        CASE 
-            WHEN SUBSTRING(ticket_number FROM '^[A-Z]+') = team_prefix
-            THEN SUBSTRING(ticket_number FROM '[0-9]+$')::INT
-        END
-    ), 0) + 1
+    -- Defensive MAX calculation (ignore malformed ticket numbers)
+    SELECT COALESCE(
+        MAX(
+            CASE
+                WHEN ticket_number ~ ('^' || team_prefix || '-[0-9]+$')
+                THEN SUBSTRING(ticket_number FROM '[0-9]+$')::INT
+                ELSE NULL
+            END
+        ),
+        0
+    ) + 1
     INTO next_number
     FROM tickets
-    WHERE SUBSTRING(ticket_number FROM '^[A-Z]+') = team_prefix;
+    WHERE ticket_number LIKE team_prefix || '-%';
 
-    -- Assign ticket number
     NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
-
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
