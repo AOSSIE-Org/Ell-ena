@@ -23,10 +23,18 @@ CREATE TABLE tickets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Functional index for faster prefix-based lookups
-CREATE INDEX idx_tickets_prefix_number ON tickets(
-    (SUBSTRING(ticket_number FROM '^[A-Z]+')),
-    (SUBSTRING(ticket_number FROM '[0-9]+$')::INT)
+-- Index on prefix
+CREATE INDEX idx_tickets_prefix ON tickets(
+    (SUBSTRING(ticket_number FROM '^[A-Z]+'))
+);
+
+-- Index on numeric suffix (cast safely using regex check)
+CREATE INDEX idx_tickets_number_suffix ON tickets(
+    (CASE 
+        WHEN ticket_number ~ '^[A-Z]+-[0-9]+$' 
+        THEN SUBSTRING(ticket_number FROM '[0-9]+$')::INT
+        ELSE NULL
+     END)
 );
 
 -- Core fix: generate ticket number safely using advisory locks
