@@ -7,12 +7,20 @@ CREATE TABLE teams (
 -- Tickets table
 CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_number TEXT NOT NULL UNIQUE,
+    ticket_number TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
+    category TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+    approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+    created_by UUID REFERENCES auth.users(id),
+    
+    assigned_to UUID REFERENCES auth.users(id),
     team_id UUID REFERENCES teams(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Functional index for faster prefix-based lookups

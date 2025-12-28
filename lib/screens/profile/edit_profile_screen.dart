@@ -215,13 +215,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       icon: Icons.person_outline,
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
+                    TextFormField(
                       controller: _emailController,
-                      label: 'Email',
-                      icon: Icons.email_outlined,
-                      enabled: false,
-                      helperText: 'Email cannot be changed',
+                      readOnly: true,
+                      style: TextStyle(color: Colors.grey.shade500),
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                        helperText: 'Email cannot be changed',
+                        helperStyle: TextStyle(color: Colors.grey.shade600),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: Colors.grey.shade600,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade900),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade900),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFF1F1F1F),
+                      ),
                     ),
+
                     const SizedBox(height: 32),
                     const Text(
                       'Role',
