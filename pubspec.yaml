@@ -69,6 +69,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Launcher icons
+  flutter_launcher_icons: ^0.13.1
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -119,3 +122,11 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "ELL-ena-logo/png/logo-removed-bg-bigger.png"
+  adaptive_icon_background: "#1A1A1A"
+  adaptive_icon_foreground: "ELL-ena-logo/png/logo-removed-bg-bigger.png"
