@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL,
     name TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('member', 'admin')),
-    team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+    team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -50,7 +50,6 @@ CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
 
 -- Optional indexes for query optimization
 CREATE INDEX IF NOT EXISTS idx_users_id_team_id ON users(id, team_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_ticket_number ON tickets(ticket_number);
 CREATE INDEX IF NOT EXISTS idx_tickets_team_status ON tickets(team_id, status);
 CREATE INDEX IF NOT EXISTS idx_tickets_team_created ON tickets(team_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_tickets_created_by ON tickets(created_by);
@@ -65,20 +64,19 @@ DECLARE
     next_number INT;
     lock_key BIGINT;
 BEGIN
-    IF NEW.team_id IS NULL THEN
-        team_prefix := 'TKT';
-    ELSE
-        SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
-        INTO team_prefix
-        FROM teams
-        WHERE id = NEW.team_id;
 
-        IF team_prefix IS NULL OR team_prefix = '' THEN
-            team_prefix := 'TKT';
-        END IF;
+    -- Get team prefix
+    SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
+    INTO team_prefix
+    FROM teams
+    WHERE id = NEW.team_id;
+
+    IF team_prefix IS NULL OR team_prefix = '' THEN
+        team_prefix := 'TKT';
     END IF;
 
-    lock_key := hashtext(team_prefix)::BIGINT;
+
+    lock_key := ('x' || replace(NEW.team_id::text, '-', ''))::bit(64)::bigint;
     PERFORM pg_advisory_xact_lock(lock_key);
 
     SELECT COALESCE(
@@ -95,7 +93,7 @@ BEGIN
     FROM tickets
     WHERE ticket_number LIKE team_prefix || '-%';
 
-    NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
+    NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 5, '0');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -239,8 +237,17 @@ USING (
         AND users.team_id = tickets.team_id
         AND users.role = 'admin'
     )
+)
+WITH CHECK (
+    auth.uid() = created_by
+    OR auth.uid() = assigned_to
+    OR EXISTS (
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+        AND users.team_id = tickets.team_id
+        AND users.role = 'admin'
+    )
 );
-
 
 -- Ticket comments RLS policies
 CREATE POLICY ticket_comments_view_policy ON ticket_comments
