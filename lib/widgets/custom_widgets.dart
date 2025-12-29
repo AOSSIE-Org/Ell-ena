@@ -168,7 +168,7 @@ class AuthScreenWrapper extends StatelessWidget {
                 subtitle,
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               ...children,
             ],
           ),
