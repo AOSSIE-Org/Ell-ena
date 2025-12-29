@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -66,11 +69,85 @@ class SupabaseService {
       _isInitialized = true;
 
       await _loadCachedUserProfile();
-
       await _loadTeamMembersIfLoggedIn();
     } catch (e) {
       debugPrint('Error initializing Supabase: $e');
       rethrow;
+    }
+  }
+
+  // Add deleteProfileImage method here
+  Future<Map<String, dynamic>> deleteProfileImage(String fileName) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      debugPrint('Attempting to delete profile image: $fileName');
+
+      // Extract just the filename if full path is provided
+      String filePath = fileName;
+      if (fileName.contains('profile-images/')) {
+        // Already contains the path
+      } else if (fileName.contains('/')) {
+        // Assume it's the full path from URL extraction
+        filePath = fileName;
+      } else {
+        // Just a filename, need to prepend the user's folder
+        filePath = 'profile-images/${user.id}/$fileName';
+      }
+
+      debugPrint('Deleting file at path: $filePath');
+
+      // Delete from Supabase storage
+      await _client.storage
+          .from('avatars')
+          .remove([filePath]);
+
+      debugPrint('Profile image deleted successfully');
+
+      return {
+        'success': true,
+      };
+    } catch (e) {
+      debugPrint('Error deleting profile image: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // NOTE: The createBucket method doesn't have a 'public' parameter in newer versions
+  // You need to create the bucket manually in Supabase Dashboard or use REST API
+  Future<void> initializeStorageBuckets() async {
+    try {
+      if (!_isInitialized) return;
+
+      // Check if avatars bucket exists by trying to list files
+      // If it fails, the bucket doesn't exist and needs to be created manually
+      try {
+        await _client.storage.from('avatars').list();
+        debugPrint('Avatars bucket exists');
+      } catch (e) {
+        debugPrint('Avatars bucket does not exist or cannot be accessed.');
+        debugPrint('Please create the "avatars" bucket in Supabase Dashboard with public access.');
+        // Note: Bucket creation via SDK is not available in this version
+        // You need to create it manually in Supabase Dashboard
+      }
+    } catch (e) {
+      debugPrint('Error checking storage buckets: $e');
     }
   }
 
@@ -107,6 +184,87 @@ class SupabaseService {
       debugPrint('Cleared user profile cache');
     } catch (e) {
       debugPrint('Error clearing cached user profile: $e');
+    }
+  }
+
+  // Upload profile image to Supabase Storage - FIXED VERSION
+  Future<String?> uploadProfileImage(File imageFile) async {
+    try {
+      if (!_isInitialized) return null;
+
+      final user = _client.auth.currentUser;
+      if (user == null) return null;
+
+      // Generate unique filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = imageFile.path.split('.').last;
+      final fileName = 'profile_${user.id}_$timestamp.$extension';
+      final filePath = 'profile-images/$fileName';
+
+      // Read file bytes
+      final fileBytes = await imageFile.readAsBytes();
+
+      // Upload to Supabase Storage - FIXED: Using uploadBinary for Uint8List
+      final uploadResponse = await _client.storage
+          .from('avatars')
+          .uploadBinary(
+            filePath,
+            fileBytes,
+            fileOptions: const FileOptions(
+              upsert: true,
+              contentType: 'image/jpeg', // You can adjust this based on file type
+            ),
+          );
+
+      // Get public URL
+      final publicUrl = _client.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+      debugPrint('Profile image uploaded successfully: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading profile image: $e');
+      return null;
+    }
+  }
+
+  // Alternative upload method using the File object directly
+  Future<String?> uploadProfileImageDirect(File imageFile) async {
+    try {
+      if (!_isInitialized) return null;
+
+      final user = _client.auth.currentUser;
+      if (user == null) return null;
+
+      // Generate unique filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = imageFile.path.split('.').last;
+      final fileName = 'profile_${user.id}_$timestamp.$extension';
+      final filePath = 'profile-images/$fileName';
+
+      // Upload using the file directly
+      final uploadResponse = await _client.storage
+          .from('avatars')
+          .upload(
+            filePath,
+            imageFile,
+            fileOptions: const FileOptions(
+              upsert: true,
+              contentType: 'image/jpeg',
+            ),
+          );
+
+      // Get public URL
+      final publicUrl = _client.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+      debugPrint('Profile image uploaded successfully: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading profile image: $e');
+      return null;
     }
   }
 
@@ -284,6 +442,17 @@ class SupabaseService {
   bool isCurrentUser(String userId) {
     final currentUserId = _client.auth.currentUser?.id;
     return currentUserId != null && currentUserId == userId;
+  }
+
+  // Check if current user is admin
+  Future<bool> isCurrentUserAdmin() async {
+    try {
+      final profile = await getCurrentUserProfile();
+      return profile != null && profile['role'] == 'admin';
+    } catch (e) {
+      debugPrint('Error checking admin status: $e');
+      return false;
+    }
   }
 
   SupabaseClient get client => _client;
@@ -879,6 +1048,147 @@ class SupabaseService {
     }
   }
 
+  // Update user's Google refresh token
+  Future<bool> updateGoogleRefreshToken(String refreshToken) async {
+    try {
+      if (!_isInitialized) return false;
+
+      final user = _client.auth.currentUser;
+      if (user == null) return false;
+
+      await _client.from('users').update({
+        'google_refresh_token': refreshToken,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', user.id);
+
+      // Update cache
+      if (_userProfileCache != null) {
+        _userProfileCache!['google_refresh_token'] = refreshToken;
+        await _saveUserProfileToCache(_userProfileCache!);
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error updating Google refresh token: $e');
+      return false;
+    }
+  }
+
+  // Get Google refresh token
+  Future<String?> getGoogleRefreshToken() async {
+    try {
+      if (!_isInitialized) return null;
+
+      final user = _client.auth.currentUser;
+      if (user == null) return null;
+
+      // Check cache first
+      if (_userProfileCache != null && 
+          _userProfileCache!['google_refresh_token'] != null) {
+        return _userProfileCache!['google_refresh_token'];
+      }
+
+      // Fetch from database
+      final response = await _client
+          .from('users')
+          .select('google_refresh_token')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (response != null && response['google_refresh_token'] != null) {
+        return response['google_refresh_token'];
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('Error getting Google refresh token: $e');
+      return null;
+    }
+  }
+
+  // Update team information
+  Future<Map<String, dynamic>> updateTeamInfo({
+    required String teamId,
+    String? teamName,
+    String? adminName,
+    String? adminEmail,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // Check if user is admin of this team
+      final userProfile = await getCurrentUserProfile();
+      if (userProfile == null || 
+          userProfile['team_id'] != teamId || 
+          userProfile['role'] != 'admin') {
+        return {
+          'success': false,
+          'error': 'Only team admins can update team information',
+        };
+      }
+
+      final Map<String, dynamic> updateData = {
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      if (teamName != null && teamName.isNotEmpty) {
+        updateData['name'] = teamName;
+      }
+
+      if (adminName != null && adminName.isNotEmpty) {
+        updateData['admin_name'] = adminName;
+      }
+
+      if (adminEmail != null && adminEmail.isNotEmpty) {
+        updateData['admin_email'] = adminEmail;
+      }
+
+      final response = await _client
+          .from('teams')
+          .update(updateData)
+          .eq('id', teamId)
+          .select();
+
+      if (response.isEmpty) {
+        return {
+          'success': false,
+          'error': 'Failed to update team',
+        };
+      }
+
+      // Update cache if this is the current team
+      if (_userProfileCache != null && 
+          _userProfileCache!['team_id'] == teamId) {
+        _userProfileCache!['teams'] = response[0];
+        await _saveUserProfileToCache(_userProfileCache!);
+      }
+
+      return {
+        'success': true,
+        'team': response[0],
+      };
+    } catch (e) {
+      debugPrint('Error updating team info: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     if (!_isInitialized) return;
@@ -917,7 +1227,6 @@ class SupabaseService {
       }
 
       // Wait a moment for the auth to fully process
-
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Set the user's password if provided
@@ -1099,6 +1408,115 @@ class SupabaseService {
       return {
         'success': false,
         'error': e.toString(),
+      };
+    }
+  }
+
+  // Reset user password
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      await _client.auth.resetPasswordForEmail(email);
+
+      return {
+        'success': true,
+        'message': 'Password reset email sent successfully',
+      };
+    } catch (e) {
+      debugPrint('Error resetting password: $e');
+      return {
+        'success': false,
+        'error': 'Failed to send reset email. Please try again.',
+      };
+    }
+  }
+
+  // Update user password
+  Future<Map<String, dynamic>> updatePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // First, reauthenticate with current password
+      await _client.auth.signInWithPassword(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      // Then update to new password
+      await _client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+
+      return {
+        'success': true,
+        'message': 'Password updated successfully',
+      };
+    } catch (e) {
+      debugPrint('Error updating password: $e');
+      return {
+        'success': false,
+        'error': 'Failed to update password. Please check your current password.',
+      };
+    }
+  }
+
+  // Delete user account
+  Future<Map<String, dynamic>> deleteAccount() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // Delete user from database
+      await _client.from('users').delete().eq('id', user.id);
+
+      // Sign out
+      await signOut();
+
+      return {
+        'success': true,
+        'message': 'Account deleted successfully',
+      };
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      return {
+        'success': false,
+        'error': 'Failed to delete account. Please try again.',
       };
     }
   }
@@ -1479,7 +1897,7 @@ class SupabaseService {
     }
   }
 
-  // Add a comment to a task
+  // Add a comment to a task - FIXED VERSION
   Future<Map<String, dynamic>> addTaskComment({
     required String taskId,
     required String content,
@@ -2419,6 +2837,143 @@ class SupabaseService {
         'success': false,
         'error': e.toString(),
       };
+    }
+  }
+
+  // Get user statistics
+  Future<Map<String, dynamic>> getUserStatistics() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // Get user profile to get team ID
+      final userProfile = await getCurrentUserProfile();
+      if (userProfile == null || userProfile['team_id'] == null) {
+        return {
+          'success': false,
+          'error': 'User not associated with a team',
+        };
+      }
+
+      final teamId = userProfile['team_id'];
+      final userId = user.id;
+
+      // Get task statistics
+      final tasksResponse = await _client
+          .from('tasks')
+          .select('status, approval_status')
+          .eq('team_id', teamId);
+
+      // Get ticket statistics
+      final ticketsResponse = await _client
+          .from('tickets')
+          .select('status, priority')
+          .eq('team_id', teamId);
+
+      // Get meeting statistics
+      final meetingsResponse = await _client
+          .from('meetings')
+          .select('*')
+          .eq('team_id', teamId)
+          .order('meeting_date', ascending: false)
+          .limit(10);
+
+      // Calculate statistics
+      int totalTasks = tasksResponse.length;
+      int completedTasks = tasksResponse
+          .where((task) => task['status'] == 'done')
+          .length;
+
+      int totalTickets = ticketsResponse.length;
+      int openTickets = ticketsResponse
+          .where((ticket) => ticket['status'] == 'open')
+          .length;
+
+      int highPriorityTickets = ticketsResponse
+          .where((ticket) => ticket['priority'] == 'high')
+          .length;
+
+      return {
+        'success': true,
+        'statistics': {
+          'tasks': {
+            'total': totalTasks,
+            'completed': completedTasks,
+            'completionRate': totalTasks > 0 
+                ? (completedTasks / totalTasks * 100).round() 
+                : 0,
+          },
+          'tickets': {
+            'total': totalTickets,
+            'open': openTickets,
+            'highPriority': highPriorityTickets,
+          },
+          'recentMeetings': meetingsResponse.length,
+        },
+      };
+    } catch (e) {
+      debugPrint('Error getting user statistics: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Refresh user session
+  Future<bool> refreshSession() async {
+    try {
+      if (!_isInitialized) return false;
+
+      final session = _client.auth.currentSession;
+      if (session == null) return false;
+
+      // Refresh the session if it's about to expire
+      if (session.expiresAt != null) {
+        final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+          session.expiresAt! * 1000,
+        );
+        final now = DateTime.now();
+        
+        // Refresh if session expires in less than 5 minutes
+        if (expiresAt.difference(now).inMinutes < 5) {
+          await _client.auth.refreshSession();
+          return true;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error refreshing session: $e');
+      return false;
+    }
+  }
+
+  // Clear all caches
+  Future<void> clearAllCaches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      
+      _teamMembersCache = [];
+      _currentTeamId = null;
+      _userProfileCache = null;
+      
+      debugPrint('All caches cleared');
+    } catch (e) {
+      debugPrint('Error clearing caches: $e');
     }
   }
 

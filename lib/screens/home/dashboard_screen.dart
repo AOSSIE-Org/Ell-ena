@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,6 +6,9 @@ import '../../services/supabase_service.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
+
+// Import the UserAvatar widget
+import '../../widgets/user_avatar.dart'; // Add this import
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,6 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _selectedTimeRange = 0; // 0: Week, 1: Month
   bool _isLoading = true;
   String? _userName;
+  String? _avatarUrl; // Add avatar URL
   String? _currentTeamId;
   String? _currentTeamName;
   List<Map<String, dynamic>> _userTeams = [];
@@ -183,8 +186,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       // Get user profile with team information
       final profile = await supa.getCurrentUserProfile(forceRefresh: true);
       
-      // Set username
+      // Set username and avatar
       _userName = (profile?['full_name'] as String?)?.trim();
+      _avatarUrl = profile?['avatar_url'] as String?; // Get avatar URL
       
       // Set current team
       if (profile != null && profile['team_id'] != null) {
@@ -363,190 +367,181 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            expandedHeight: 140,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF2E7D32),
-                          const Color(0xFF1B5E20),
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
+            SliverAppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              expandedHeight: 140,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFF2E7D32),
+                            const Color(0xFF1B5E20),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(24),
+                          bottomRight: Radius.circular(24),
+                        ),
                       ),
                     ),
-                  ),
-                  CustomPaint(
-                    painter: DotPatternPainter(
-                      color: Colors.white.withOpacity(0.1),
+                    CustomPaint(
+                      painter: DotPatternPainter(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      size: Size(MediaQuery.of(context).size.width, 140),
                     ),
-                    size: Size(MediaQuery.of(context).size.width, 140),
-                  ),
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Replace the Container with UserAvatar widget
+                                UserAvatar(
+                                  avatarUrl: _avatarUrl,
+                                  fullName: _userName ?? 'User',
+                                  size: 48,
+                                  showBorder: true,
+                                  borderColor: Colors.white,
+                                  borderWidth: 2.0,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Welcome back,',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              _userName ?? '—',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(
+                                                0.2,
+                                              ),
+                                              borderRadius: BorderRadius.circular(
+                                                12,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.trending_up,
+                                                  color:
+                                                      Colors.greenAccent.shade100,
+                                                  size: 14,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
+                                                  style: TextStyle(
+                                                    color: Colors.greenAccent.shade100,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (_userTeams.length > 1)
+                                        GestureDetector(
+                                          onTap: _showTeamSwitcher,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  _currentTeamName ?? 'My Team',
+                                                  style: TextStyle(
+                                                    color: Colors.white.withOpacity(0.9),
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Icon(
+                                                  Icons.swap_horiz,
+                                                  color: Colors.white.withOpacity(0.9),
+                                                  size: 16,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
-                                child: const Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                  
-                                    const Text(
-                                      'Welcome back,',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        Flexible(
-                                          child: Text(
-                                            _userName ?? '—',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(
-                                              0.2,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.trending_up,
-                                                color:
-                                                    Colors.greenAccent.shade100,
-                                                size: 14,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
-                                                style: TextStyle(
-                                                  color: Colors.greenAccent.shade100,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (_userTeams.length > 1)
-                                      GestureDetector(
-                                        onTap: _showTeamSwitcher,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                _currentTeamName ?? 'My Team',
-                                                style: TextStyle(
-                                                  color: Colors.white.withOpacity(0.9),
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Icon(
-                                                Icons.swap_horiz,
-                                                color: Colors.white.withOpacity(0.9),
-                                                size: 16,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildOverviewCards(),
-                    const SizedBox(height: 24),
-                    _buildAnalyticsSection(),
-                    const SizedBox(height: 24),
-                    _buildUpcomingSection(),
-                    const SizedBox(height: 24),
-                    _buildRecentActivity(),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
-          ),
-        ],
+            SliverToBoxAdapter(
+              child: Transform.translate(
+                offset: const Offset(0, -10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildOverviewCards(),
+                      const SizedBox(height: 24),
+                      _buildAnalyticsSection(),
+                      const SizedBox(height: 24),
+                      _buildUpcomingSection(),
+                      const SizedBox(height: 24),
+                      _buildRecentActivity(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -715,13 +710,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
               if (_selectedTimeRange == 1)
-  Text(
-    DateFormat('MMMM yyyy').format(DateTime.now()),
-    style: TextStyle(
-      color: Colors.grey.shade400,
-      fontSize: 13,
-    ),
-  ),
+                Text(
+                  DateFormat('MMMM yyyy').format(DateTime.now()),
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                ),
 
               const SizedBox(height: 10),
               Container(
@@ -907,7 +902,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _timeRangeButton(String text, int index) {
     final isSelected = _selectedTimeRange == index;
     return GestureDetector(
-      //onTap: () => setState(() => _selectedTimeRange = index),
       onTap: () {
         setState(() {
           _selectedTimeRange = index;
@@ -966,36 +960,35 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   List<FlSpot> _buildCurrentMonthSpots(List<Map<String, dynamic>> tasks) {
-  final now = DateTime.now();
+    final now = DateTime.now();
 
-  final firstDayOfMonth = DateTime(now.year, now.month, 1);
-  final firstDayNextMonth = DateTime(now.year, now.month + 1, 1);
-  final daysInMonth =
-      firstDayNextMonth.difference(firstDayOfMonth).inDays;
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final firstDayNextMonth = DateTime(now.year, now.month + 1, 1);
+    final daysInMonth =
+        firstDayNextMonth.difference(firstDayOfMonth).inDays;
 
-  final Map<int, int> dayCounts = {
-    for (int i = 0; i < daysInMonth; i++) i: 0,
-  };
+    final Map<int, int> dayCounts = {
+      for (int i = 0; i < daysInMonth; i++) i: 0,
+    };
 
-  for (final t in tasks) {
-    if (t['status'] != 'completed') continue;
+    for (final t in tasks) {
+      if (t['status'] != 'completed') continue;
 
-    final ts = (t['updated_at'] ?? t['created_at'])?.toString();
-    final date = ts != null ? DateTime.tryParse(ts) : null;
-    if (date == null) continue;
+      final ts = (t['updated_at'] ?? t['created_at'])?.toString();
+      final date = ts != null ? DateTime.tryParse(ts) : null;
+      if (date == null) continue;
 
-    if (date.year == now.year && date.month == now.month) {
-      final index = date.day - 1;
-      dayCounts[index] = (dayCounts[index] ?? 0) + 1;
+      if (date.year == now.year && date.month == now.month) {
+        final index = date.day - 1;
+        dayCounts[index] = (dayCounts[index] ?? 0) + 1;
+      }
     }
+
+    return List.generate(
+      daysInMonth,
+      (i) => FlSpot(i.toDouble(), (dayCounts[i] ?? 0).toDouble()),
+    );
   }
-
-  return List.generate(
-    daysInMonth,
-    (i) => FlSpot(i.toDouble(), (dayCounts[i] ?? 0).toDouble()),
-  );
-}
-
 
   Widget _buildUpcomingSection() {
     return Column(
@@ -1265,4 +1258,3 @@ class DotPatternPainter extends CustomPainter {
   @override
   bool shouldRepaint(DotPatternPainter oldDelegate) => false;
 }
-

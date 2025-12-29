@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:ell_ena/services/ai_service.dart';
 import 'package:ell_ena/services/supabase_service.dart';
@@ -8,6 +7,7 @@ import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:ell_ena/widgets/user_avatar.dart'; // Add this import
 
 class ChatScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
@@ -23,7 +23,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   bool _isProcessing = false;
-  bool _isListening = false; // toggles mic icon state
+  bool _isListening = false;
   late AnimationController _waveformController;
   late final stt.SpeechToText _speech;
   bool _speechAvailable = false;
@@ -36,6 +36,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _teamMembers = [];
   List<Map<String, dynamic>> _userTasks = [];
   List<Map<String, dynamic>> _userTickets = [];
+  
+  // Current user profile
+  Map<String, dynamic>? _currentUserProfile;
 
   @override
   void initState() {
@@ -53,7 +56,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (widget.arguments != null && 
           widget.arguments!.containsKey('initial_message') &&
           widget.arguments!['initial_message'] is String) {
-        // Set a small delay to ensure services are initialized
         Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) {
             _messageController.text = widget.arguments!['initial_message'] as String;
@@ -71,7 +73,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         if (status == 'done' || status == 'notListening') {
           if (mounted) {
             setState(() => _isListening = false);
-            // Dismiss dialog if open
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             }
@@ -103,10 +104,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       }
       
       if (_supabaseService.isInitialized) {
-        final userProfile = await _supabaseService.getCurrentUserProfile();
-        if (userProfile != null && userProfile['team_id'] != null) {
-          await _loadTeamMembers(userProfile['team_id']);
-          
+        _currentUserProfile = await _supabaseService.getCurrentUserProfile();
+        if (_currentUserProfile != null && _currentUserProfile!['team_id'] != null) {
+          await _loadTeamMembers(_currentUserProfile!['team_id']);
           await _loadUserTasksAndTickets();
         }
       }
@@ -117,6 +117,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             text: "Hello! I'm Ell-ena, your AI assistant. How can I help you today?",
             isUser: false,
             timestamp: DateTime.now(),
+            avatarUrl: null,
+            fullName: "Ell-ena",
           ),
         );
       });
@@ -141,7 +143,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   Future<void> _loadUserTasksAndTickets() async {
     try {
       final tasks = await _supabaseService.getTasks(filterByAssignment: true);
-      
       final tickets = await _supabaseService.getTickets(filterByAssignment: true);
       
       if (mounted) {
@@ -166,7 +167,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     super.dispose();
   }
   
-  // Build the listening animation dialog
   Widget _buildListeningDialog() {
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -190,7 +190,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Sound wave animation
             Flexible(
               child: FittedBox(
                 fit: BoxFit.contain,
@@ -207,7 +206,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // Outer ripple
                           Container(
                             width: 100 * _waveformController.value,
                             height: 100 * _waveformController.value,
@@ -216,7 +214,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               color: Colors.green.withOpacity(0.2 * (1 - _waveformController.value)),
                             ),
                           ),
-                          // Middle ripple
                           Container(
                             width: 70 * _waveformController.value,
                             height: 70 * _waveformController.value,
@@ -225,7 +222,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                               color: Colors.green.withOpacity(0.3 * (1 - _waveformController.value)),
                             ),
                           ),
-                          // Inner circle with mic icon
                           Container(
                             width: 50,
                             height: 50,
@@ -278,7 +274,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     setState(() {
       _messages.add(
-        ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
+        ChatMessage(
+          text: userMessage, 
+          isUser: true, 
+          timestamp: DateTime.now(),
+          avatarUrl: _currentUserProfile?['avatar_url'],
+          fullName: _currentUserProfile?['full_name'] ?? 'You',
+        ),
       );
       _isProcessing = true;
     });
@@ -309,6 +311,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               text: response['content'],
               isUser: false,
               timestamp: DateTime.now(),
+              avatarUrl: null,
+              fullName: "Ell-ena",
             ),
           );
           _isProcessing = false;
@@ -322,6 +326,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             text: "Sorry, I encountered an error. Please try again later.",
             isUser: false,
             timestamp: DateTime.now(),
+            avatarUrl: null,
+            fullName: "Ell-ena",
           ),
         );
         _isProcessing = false;
@@ -355,6 +361,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           text: "I'll help you with that. Let me process your request...",
           isUser: false,
           timestamp: DateTime.now(),
+          avatarUrl: null,
+          fullName: "Ell-ena",
         ),
       );
     });
@@ -364,7 +372,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       Map<String, dynamic> result = {'success': false, 'error': 'Function not implemented'};
       
-      // Execute the appropriate function based on the function name
       switch (functionName) {
         case 'create_task':
           result = await _createTask(arguments);
@@ -388,7 +395,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           result = {'success': false, 'error': 'Unknown function'};
       }
       
-      // Get a user-friendly response from the AI
       final responseMessage = await _aiService.handleToolResponse(
         functionName: functionName,
         arguments: arguments,
@@ -396,17 +402,17 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         result: result,
       );
       
-      // Add the response to the chat
       setState(() {
         _messages.add(
           ChatMessage(
             text: responseMessage,
             isUser: false,
             timestamp: DateTime.now(),
+            avatarUrl: null,
+            fullName: "Ell-ena",
           ),
         );
         
-        // Add card if successful for creation functions
         if (result['success'] == true && 
             (functionName == 'create_task' || 
              functionName == 'create_ticket' || 
@@ -419,6 +425,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               isCard: true,
               cardType: _getCardType(functionName),
               cardData: result,
+              avatarUrl: null,
+              fullName: "Ell-ena",
             ),
           );
         }
@@ -426,7 +434,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         _isProcessing = false;
       });
       
-      // Refresh tasks and tickets if we just queried them
       if (functionName == 'query_tasks' || functionName == 'query_tickets') {
         _loadUserTasksAndTickets();
       }
@@ -438,6 +445,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             text: "Sorry, I encountered an error while processing your request.",
             isUser: false,
             timestamp: DateTime.now(),
+            avatarUrl: null,
+            fullName: "Ell-ena",
           ),
         );
         _isProcessing = false;
@@ -447,7 +456,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _scrollToBottom();
   }
   
-  // Create a task using the Supabase service
   Future<Map<String, dynamic>> _createTask(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) {
@@ -457,7 +465,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final title = arguments['title'] as String;
       final description = arguments['description'] as String?;
       
-      // Parse due date if provided
       DateTime? dueDate;
       if (arguments['due_date'] != null) {
         try {
@@ -467,19 +474,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
       
-      // Get assigned user ID if provided
       String? assignedToUserId;
       final assignedTo = arguments['assigned_to'] as String?;
       
       if (assignedTo != null && assignedTo.isNotEmpty) {
-        // Check if the value is already a valid UUID
         final uuidPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
         
         if (uuidPattern.hasMatch(assignedTo)) {
-          // It's already a UUID
           assignedToUserId = assignedTo;
         } else {
-          // Try to find the user by name
           final matchingMember = _teamMembers.firstWhere(
             (member) => member['full_name'].toString().toLowerCase() == assignedTo.toLowerCase(),
             orElse: () => {},
@@ -491,7 +494,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
       
-      // Create the task
       final result = await _supabaseService.createTask(
         title: title,
         description: description,
@@ -506,7 +508,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
   
-  // Create a ticket using the Supabase service
   Future<Map<String, dynamic>> _createTicket(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) {
@@ -518,19 +519,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final priority = arguments['priority'] as String;
       final category = arguments['category'] as String;
       
-      // Get assigned user ID if provided
       String? assignedToUserId;
       final assignedTo = arguments['assigned_to'] as String?;
       
       if (assignedTo != null && assignedTo.isNotEmpty) {
-        // Check if the value is already a valid UUID
         final uuidPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
         
         if (uuidPattern.hasMatch(assignedTo)) {
-          // It's already a UUID
           assignedToUserId = assignedTo;
         } else {
-          // Try to find the user by name
           final matchingMember = _teamMembers.firstWhere(
             (member) => member['full_name'].toString().toLowerCase() == assignedTo.toLowerCase(),
             orElse: () => {},
@@ -542,7 +539,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
       
-      // Create the ticket
       final result = await _supabaseService.createTicket(
         title: title,
         description: description,
@@ -558,7 +554,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
   
-  // Create a meeting using the Supabase service
   Future<Map<String, dynamic>> _createMeeting(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) {
@@ -568,7 +563,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final title = arguments['title'] as String;
       final description = arguments['description'] as String?;
       
-      // Parse meeting date
       DateTime meetingDate;
       try {
         meetingDate = DateTime.parse(arguments['meeting_date']);
@@ -579,7 +573,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       
       final meetingUrl = arguments['meeting_url'] as String?;
       
-      // Create the meeting
       final result = await _supabaseService.createMeeting(
         title: title,
         description: description,
@@ -593,7 +586,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return {'success': false, 'error': e.toString()};
     }
   }
-  // Query tasks based on filters
+  
   Future<Map<String, dynamic>> _queryTasks(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) {
@@ -605,23 +598,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final assignedToMe = arguments['assigned_to_me'] as bool? ?? false;
       final assignedToTeamMember = arguments['assigned_to_team_member'] as String?;
       
-      // Find team member ID if name was provided
       String? teamMemberId;
       if (assignedToTeamMember != null && assignedToTeamMember.isNotEmpty) {
-        // Check if it's already a UUID
         final uuidPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
         
         if (uuidPattern.hasMatch(assignedToTeamMember)) {
           teamMemberId = assignedToTeamMember;
         } else {
-          // Try to find by name - more flexible matching
-          // First try exact match
           var matchingMember = _teamMembers.firstWhere(
             (member) => member['full_name'].toString().toLowerCase() == assignedToTeamMember.toLowerCase(),
             orElse: () => {},
           );
           
-          // If no exact match, try partial match
           if (matchingMember.isEmpty) {
             matchingMember = _teamMembers.firstWhere(
               (member) => member['full_name'].toString().toLowerCase().contains(assignedToTeamMember.toLowerCase()),
@@ -629,7 +617,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             );
           }
           
-          // Try matching first name only
           if (matchingMember.isEmpty) {
             for (var member in _teamMembers) {
               final fullName = member['full_name'].toString().toLowerCase();
@@ -643,26 +630,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           
           if (matchingMember.isNotEmpty && matchingMember['id'] != null) {
             teamMemberId = matchingMember['id'];
-            debugPrint('Found team member: ${matchingMember['full_name']} with ID: $teamMemberId');
-          } else {
-            debugPrint('Could not find team member with name: $assignedToTeamMember');
-            debugPrint('Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}');
           }
         }
       }
       
-      // Get tasks with filters
       List<Map<String, dynamic>> tasks;
       
       if (teamMemberId != null) {
-        // For team member queries, we need to manually filter results
         tasks = await _supabaseService.getTasks(
-          filterByAssignment: false, // Don't filter by current user
+          filterByAssignment: false,
           filterByStatus: status != null && status != 'all' ? status : null,
           filterByDueDate: dueDate,
         );
         
-        // Filter by assigned team member
         tasks = tasks.where((task) => 
           task['assigned_to'] == teamMemberId
         ).toList();
@@ -674,7 +654,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
       
-      // Update local cache
       if (mounted) {
         setState(() {
           _userTasks = tasks;
@@ -692,7 +671,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
   
-  // Query tickets based on filters
   Future<Map<String, dynamic>> _queryTickets(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) {
@@ -704,23 +682,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final assignedToMe = arguments['assigned_to_me'] as bool? ?? false;
       final assignedToTeamMember = arguments['assigned_to_team_member'] as String?;
       
-      // Find team member ID if name was provided
       String? teamMemberId;
       if (assignedToTeamMember != null && assignedToTeamMember.isNotEmpty) {
-        // Check if it's already a UUID
         final uuidPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
         
         if (uuidPattern.hasMatch(assignedToTeamMember)) {
           teamMemberId = assignedToTeamMember;
         } else {
-          // Try to find by name - more flexible matching
-          // First try exact match
           var matchingMember = _teamMembers.firstWhere(
             (member) => member['full_name'].toString().toLowerCase() == assignedToTeamMember.toLowerCase(),
             orElse: () => {},
           );
           
-          // If no exact match, try partial match
           if (matchingMember.isEmpty) {
             matchingMember = _teamMembers.firstWhere(
               (member) => member['full_name'].toString().toLowerCase().contains(assignedToTeamMember.toLowerCase()),
@@ -728,7 +701,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             );
           }
           
-          // Try matching first name only
           if (matchingMember.isEmpty) {
             for (var member in _teamMembers) {
               final fullName = member['full_name'].toString().toLowerCase();
@@ -742,26 +714,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           
           if (matchingMember.isNotEmpty && matchingMember['id'] != null) {
             teamMemberId = matchingMember['id'];
-            debugPrint('Found team member: ${matchingMember['full_name']} with ID: $teamMemberId');
-          } else {
-            debugPrint('Could not find team member with name: $assignedToTeamMember');
-            debugPrint('Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}');
           }
         }
       }
       
-      // Get tickets with filters
       List<Map<String, dynamic>> tickets;
       
       if (teamMemberId != null) {
-        // For team member queries, we need to manually filter results
         tickets = await _supabaseService.getTickets(
-          filterByAssignment: false, // Don't filter by current user
+          filterByAssignment: false,
           filterByStatus: status != null && status != 'all' ? status : null,
           filterByPriority: priority != null && priority != 'all' ? priority : null,
         );
         
-        // Filter by assigned team member
         tickets = tickets.where((ticket) => 
           ticket['assigned_to'] == teamMemberId
         ).toList();
@@ -773,7 +738,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
       
-      // Update local cache
       if (mounted) {
         setState(() {
           _userTickets = tickets;
@@ -791,7 +755,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
   
-  // Modify an existing task, ticket, or meeting
   Future<Map<String, dynamic>> _modifyItem(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) {
@@ -808,24 +771,18 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       final meetingDate = arguments['meeting_date'] as String?;
       final assignedTo = arguments['assigned_to'] as String?;
       
-      // Get assigned user ID if provided
       String? assignedToUserId;
       if (assignedTo != null && assignedTo.isNotEmpty) {
-        // Check if the value is already a valid UUID
         final uuidPattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
         
         if (uuidPattern.hasMatch(assignedTo)) {
-          // It's already a UUID
           assignedToUserId = assignedTo;
         } else {
-          // Try to find by name - more flexible matching
-          // First try exact match
           var matchingMember = _teamMembers.firstWhere(
             (member) => member['full_name'].toString().toLowerCase() == assignedTo.toLowerCase(),
             orElse: () => {},
           );
           
-          // If no exact match, try partial match
           if (matchingMember.isEmpty) {
             matchingMember = _teamMembers.firstWhere(
               (member) => member['full_name'].toString().toLowerCase().contains(assignedTo.toLowerCase()),
@@ -833,7 +790,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             );
           }
           
-          // Try matching first name only
           if (matchingMember.isEmpty) {
             for (var member in _teamMembers) {
               final fullName = member['full_name'].toString().toLowerCase();
@@ -847,15 +803,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           
           if (matchingMember.isNotEmpty && matchingMember['id'] != null) {
             assignedToUserId = matchingMember['id'];
-            debugPrint('Found team member: ${matchingMember['full_name']} with ID: $assignedToUserId');
-          } else {
-            debugPrint('Could not find team member with name: $assignedTo');
-            debugPrint('Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}');
           }
         }
       }
       
-      // Prepare update data based on item type
       Map<String, dynamic> updateData = {};
       
       if (title != null) updateData['title'] = title;
@@ -863,7 +814,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (status != null) updateData['status'] = status;
       if (assignedToUserId != null) updateData['assigned_to'] = assignedToUserId;
       
-      // Add type-specific fields
       switch (itemType) {
         case 'task':
           if (dueDate != null) {
@@ -899,27 +849,19 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         return {'success': false, 'error': 'No changes specified'};
       }
       
-      // Update the item in the database
       Map<String, dynamic> result = {'success': false, 'error': 'No changes made'};
       
       switch (itemType) {
         case 'task':
-          // For tasks, we need to handle different update methods based on what's changing
           if (status != null) {
             result = await _supabaseService.updateTaskStatus(
               taskId: itemId,
               status: status,
             );
           }
-          
-          // Handle other task updates as needed
-          // Note: This is a simplified implementation - for a complete solution,
-          // you would need to add methods to SupabaseService to handle all fields
-          
           break;
           
         case 'ticket':
-          // For tickets, we need to handle different update methods based on what's changing
           if (status != null) {
             result = await _supabaseService.updateTicketStatus(
               ticketId: itemId,
@@ -931,16 +873,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
               priority: priority,
             );
           }
-          
-          // Handle other ticket updates as needed
-          
           break;
           
         case 'meeting':
-          // For meetings, we need to get the current meeting details first
           final meetingDetails = await _supabaseService.getMeetingDetails(itemId);
           if (meetingDetails != null) {
-            // Update with new values, keeping existing ones if not provided
             final updatedMeeting = await _supabaseService.updateMeeting(
               meetingId: itemId,
               title: title ?? meetingDetails['title'],
@@ -983,7 +920,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     }
   }
   
-  // Get card text based on function name and arguments
   String _getCardText(String functionName, Map<String, dynamic> arguments, Map<String, dynamic> result) {
     switch (functionName) {
       case 'create_task':
@@ -1012,7 +948,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   void _navigateToItem(ChatMessage message) {
     try {
       if (message.cardType == 'task' && message.cardData != null && message.cardData!['task'] != null) {
-        // Navigate to task detail screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1020,7 +955,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         );
       } else if (message.cardType == 'ticket' && message.cardData != null && message.cardData!['ticket'] != null) {
-        // Navigate to ticket detail screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1028,7 +962,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         );
       } else if (message.cardType == 'meeting' && message.cardData != null && message.cardData!['meeting'] != null) {
-        // Navigate to meeting detail screen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1036,7 +969,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           ),
         );
       } else {
-        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Could not navigate to the item. Details missing.'),
@@ -1068,14 +1000,12 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return;
     }
     
-    // Show the listening animation dialog
     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: true,
         builder: (context) => _buildListeningDialog(),
         ).then((_) {
-          // Stop listening if dialog was dismissed
           if (_isListening && _speech.isListening) {
             _speech.stop();
             setState(() => _isListening = false);
@@ -1093,9 +1023,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       listenMode: stt.ListenMode.dictation,
       partialResults: true,
       cancelOnError: true,
-      onSoundLevelChange: (level) {
-        // You can use this to update animation intensity if needed
-      },
+      onSoundLevelChange: (level) {},
     );
   }
 
@@ -1167,62 +1095,60 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             ),
           ),
           Expanded(
-            child:
-                _messages.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 64,
-                            color: Colors.grey.shade700,
+            child: _messages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 64,
+                          color: Colors.grey.shade700,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Start a conversation with Ell-ena',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 16,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Start a conversation with Ell-ena',
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                    : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _messages.length + (_isProcessing ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (_isProcessing && index == _messages.length) {
-                          // Show typing indicator
-                          return Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade800,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: LoadingAnimationWidget.staggeredDotsWave(
-                                color: Colors.green,
-                                size: 24,
-                              ),
-                            ),
-                          );
-                        }
-                        
-                        final message = _messages[index];
-                        if (message.isCard == true) {
-                          return _ItemCard(
-                            message: message,
-                            onViewItem: () => _navigateToItem(message),
-                          );
-                        }
-                        return _ChatBubble(message: message);
-                      },
+                        ),
+                      ],
                     ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length + (_isProcessing ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isProcessing && index == _messages.length) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade800,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: LoadingAnimationWidget.staggeredDotsWave(
+                              color: Colors.green,
+                              size: 24,
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      final message = _messages[index];
+                      if (message.isCard == true) {
+                        return _ItemCard(
+                          message: message,
+                          onViewItem: () => _navigateToItem(message),
+                        );
+                      }
+                      return _ChatBubble(message: message);
+                    },
+                  ),
           ),
           Container(
             padding: const EdgeInsets.all(16),
@@ -1318,6 +1244,9 @@ class _ChatBubble extends StatelessWidget {
           const SizedBox(width: 8),
           Flexible(
             child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: message.isUser ? Colors.green : Colors.grey.shade800,
@@ -1333,33 +1262,27 @@ class _ChatBubble extends StatelessWidget {
     );
   }
   
-  // Build formatted text that handles markdown-like formatting
   Widget _buildFormattedText(String text) {
-    // Check if text contains formatting indicators
     final containsFormatting = text.contains('*') || 
                               text.contains('•') || 
                               text.contains('📅') ||
                               text.contains('🕒');
     
     if (!containsFormatting) {
-      // Simple text without formatting
       return Text(text, style: const TextStyle(color: Colors.white));
     }
     
-    // Split the text by lines to handle each line separately
     final lines = text.split('\n');
     final widgets = <Widget>[];
     
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i];
       
-      // Handle empty lines
       if (line.isEmpty) {
         widgets.add(const SizedBox(height: 8));
         continue;
       }
       
-      // Handle headers (lines with asterisks)
       if (line.startsWith('*') && line.endsWith('*')) {
         final content = line.substring(1, line.length - 1).trim();
         widgets.add(
@@ -1376,7 +1299,6 @@ class _ChatBubble extends StatelessWidget {
           ),
         );
       }
-      // Handle bullet points
       else if (line.startsWith('•')) {
         widgets.add(
           Padding(
@@ -1397,7 +1319,6 @@ class _ChatBubble extends StatelessWidget {
           ),
         );
       }
-      // Handle emoji indicators (like meeting date/time)
       else if (line.startsWith('📅') || line.startsWith('🕒')) {
         widgets.add(
           Padding(
@@ -1413,9 +1334,7 @@ class _ChatBubble extends StatelessWidget {
           ),
         );
       }
-      // Handle section headers (lines with asterisks like *Key Points:*)
       else if (line.contains('*')) {
-        // Replace asterisks with empty string and make bold
         final content = line.replaceAll('*', '');
         widgets.add(
           Padding(
@@ -1430,7 +1349,6 @@ class _ChatBubble extends StatelessWidget {
           ),
         );
       }
-      // Handle separator lines
       else if (line.startsWith('---')) {
         widgets.add(
           Padding(
@@ -1442,7 +1360,6 @@ class _ChatBubble extends StatelessWidget {
           ),
         );
       }
-      // Regular text
       else {
         widgets.add(
           Padding(
@@ -1463,25 +1380,35 @@ class _ChatBubble extends StatelessWidget {
   }
   
   Widget _buildAvatar({required bool isUser}) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: isUser ? Colors.green.shade700 : Colors.grey.shade700,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isUser ? Colors.green.shade300 : Colors.grey.shade500,
-          width: 1,
+    if (isUser) {
+      return UserAvatar(
+        avatarUrl: message.avatarUrl,
+        fullName: message.fullName ?? 'You',
+        size: 36,
+        showBorder: true,
+        borderColor: Colors.green.shade300,
+      );
+    } else {
+      return Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade700,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.grey.shade500,
+            width: 1,
+          ),
         ),
-      ),
-      child: Center(
-        child: Icon(
-          isUser ? Icons.person : Icons.smart_toy,
-          color: Colors.white,
-          size: 20,
+        child: Center(
+          child: Icon(
+            Icons.smart_toy,
+            color: Colors.white,
+            size: 20,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }
 
@@ -1493,7 +1420,6 @@ class _ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Set icon and title based on card type
     IconData icon;
     String title;
     
@@ -1628,7 +1554,8 @@ class ChatMessage {
   final bool isCard;
   final String? cardType;
   final Map<String, dynamic>? cardData;
-  final String? avatarUrl; // Add avatar URL for profile pictures
+  final String? avatarUrl;
+  final String? fullName;
 
   ChatMessage({
     required this.text,
@@ -1638,10 +1565,10 @@ class ChatMessage {
     this.cardType,
     this.cardData,
     this.avatarUrl,
+    this.fullName,
   });
 }
 
-// Extension to capitalize first letter of a string
 extension StringExtension on String {
   String capitalize() {
     return "${this[0].toUpperCase()}${substring(1)}";
