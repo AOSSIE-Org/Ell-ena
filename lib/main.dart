@@ -19,7 +19,12 @@ void main() async {
     debugPrint('Error initializing services: $e');
   }
   
-  runApp(const MyApp());
+  runApp(
+    WidgetsBindingObserverWidget(
+      child: const MyApp(),
+    ),
+  );
+
 }
 
 class MyApp extends StatelessWidget {
@@ -77,6 +82,48 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+class WidgetsBindingObserverWidget extends StatefulWidget {
+    final Widget child;
+
+    const WidgetsBindingObserverWidget({
+      super.key,
+      required this.child,
+    });
+
+    @override
+    State<WidgetsBindingObserverWidget> createState() =>
+        _WidgetsBindingObserverWidgetState();
+  }
+
+  class _WidgetsBindingObserverWidgetState
+      extends State<WidgetsBindingObserverWidget>
+      with WidgetsBindingObserver {
+
+    @override
+    void initState() {
+      super.initState();
+      WidgetsBinding.instance.addObserver(this);
+    }
+
+    @override
+    void didChangeAppLifecycleState(AppLifecycleState state) {
+      if (state == AppLifecycleState.detached) {
+        SupabaseService().dispose(); // ✅ ONLY IMPORTANT LINE
+      }
+    }
+
+    @override
+    void dispose() {
+      WidgetsBinding.instance.removeObserver(this);
+      super.dispose();
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      return widget.child;
+    }
+  }
 
 // Simple singleton RouteObserver to allow screens to refresh on focus
 class AppRouteObserver extends RouteObserver<ModalRoute<void>> {
