@@ -67,7 +67,10 @@ BEGIN
     FROM teams
     WHERE id = NEW.team_id;
 
-    IF team_prefix IS NULL OR team_prefix = '' THEN
+    -- Distinguish missing team vs empty name
+    IF team_prefix IS NULL THEN
+        RAISE EXCEPTION 'Team with id % does not exist. Cannot generate ticket number.', NEW.team_id;
+    ELSIF team_prefix = '' THEN
         team_prefix := 'TKT';
     END IF;
 
