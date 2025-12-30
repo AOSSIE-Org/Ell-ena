@@ -127,20 +127,6 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE POLICY tickets_delete_policy ON tickets
-    FOR DELETE
-    USING (
-        auth.uid() = created_by OR 
-        auth.uid() = assigned_to OR
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = tickets.team_id 
-            AND users.role = 'admin'
-        )
-    );
-
-ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
 
 -- Trigger for data integrity validation
 CREATE TRIGGER trg_validate_ticket_user_team
@@ -149,32 +135,6 @@ FOR EACH ROW
 EXECUTE FUNCTION validate_ticket_user_team();
 
 -- Updated_at auto-update function
-
-CREATE POLICY ticket_comments_update_policy ON ticket_comments
-    FOR UPDATE
-    USING (
-        auth.uid() = user_id OR
-        EXISTS (
-            SELECT 1 FROM tickets 
-            JOIN users ON users.team_id = tickets.team_id
-            WHERE tickets.id = ticket_comments.ticket_id 
-            AND users.id = auth.uid() 
-            AND users.role = 'admin'
-        )
-    );
-
-CREATE POLICY ticket_comments_delete_policy ON ticket_comments
-    FOR DELETE
-    USING (
-        auth.uid() = user_id OR
-        EXISTS (
-            SELECT 1 FROM tickets 
-            JOIN users ON users.team_id = tickets.team_id
-            WHERE tickets.id = ticket_comments.ticket_id 
-            AND users.id = auth.uid() 
-            AND users.role = 'admin'
-        )
-    );
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
