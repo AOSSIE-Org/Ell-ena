@@ -17,6 +17,29 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Trigger to prevent team_id change if user has tickets
+CREATE OR REPLACE FUNCTION prevent_user_team_change_if_tickets_exist()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
+        IF EXISTS (
+            SELECT 1 FROM tickets
+            WHERE created_by = OLD.id
+               OR assigned_to = OLD.id
+        ) THEN
+            RAISE EXCEPTION
+                'Cannot change team for user because tickets exist';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_prevent_user_team_change
+BEFORE UPDATE OF team_id ON users
+FOR EACH ROW
+EXECUTE FUNCTION prevent_user_team_change_if_tickets_exist();
+
 -- Tickets table
 CREATE TABLE IF NOT EXISTS tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -63,8 +86,6 @@ DECLARE
     team_prefix TEXT;
     next_number INT;
 BEGIN
-
-    -- Get team prefix
     SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
     INTO team_prefix
     FROM teams
@@ -74,11 +95,10 @@ BEGIN
         team_prefix := 'TKT';
     END IF;
 
-
-PERFORM pg_advisory_xact_lock(
-    ('x' || substr(replace(NEW.team_id::text, '-', ''), 1, 16))::bit(64)::bigint,
-    ('x' || substr(replace(NEW.team_id::text, '-', ''), 17, 16))::bit(64)::bigint
-);
+    PERFORM pg_advisory_xact_lock(
+        ('x' || substr(replace(NEW.team_id::text, '-', ''), 1, 16))::bit(64)::bigint,
+        ('x' || substr(replace(NEW.team_id::text, '-', ''), 17, 16))::bit(64)::bigint
+    );
 
     SELECT COALESCE(
         MAX(
@@ -105,7 +125,7 @@ BEFORE INSERT ON tickets
 FOR EACH ROW
 EXECUTE FUNCTION generate_ticket_number();
 
--- Data integrity validation function
+-- Data integrity validation function for tickets
 CREATE OR REPLACE FUNCTION validate_ticket_user_team()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -136,7 +156,6 @@ FOR EACH ROW
 EXECUTE FUNCTION validate_ticket_user_team();
 
 -- Updated_at auto-update function
-
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
