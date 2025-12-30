@@ -17,29 +17,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Trigger to prevent team_id change if user has tickets
-CREATE OR REPLACE FUNCTION prevent_user_team_change_if_tickets_exist()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
-        IF EXISTS (
-            SELECT 1 FROM tickets
-            WHERE created_by = OLD.id
-               OR assigned_to = OLD.id
-        ) THEN
-            RAISE EXCEPTION
-                'Cannot change team for user because tickets exist';
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_prevent_user_team_change
-BEFORE UPDATE OF team_id ON users
-FOR EACH ROW
-EXECUTE FUNCTION prevent_user_team_change_if_tickets_exist();
-
 -- Tickets table
 CREATE TABLE IF NOT EXISTS tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,12 +43,12 @@ CREATE TABLE IF NOT EXISTS ticket_comments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Indexes for RLS performance
+-- Core RLS performance indexes
 CREATE INDEX IF NOT EXISTS idx_tickets_team_id ON tickets(team_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_comments_ticket_id ON ticket_comments(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
 
--- Optional indexes for query optimization
+-- Query optimization indexes
 CREATE INDEX IF NOT EXISTS idx_users_id_team_id ON users(id, team_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_team_status ON tickets(team_id, status);
 CREATE INDEX IF NOT EXISTS idx_tickets_team_created ON tickets(team_id, created_at);
@@ -79,7 +56,6 @@ CREATE INDEX IF NOT EXISTS idx_tickets_created_by ON tickets(created_by);
 CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to ON tickets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_ticket_comments_user_id ON ticket_comments(user_id);
 
--- Ticket number generator function
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -115,17 +91,11 @@ BEGIN
     WHERE ticket_number LIKE team_prefix || '-%';
 
     NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 5, '0');
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for ticket number generation
-CREATE TRIGGER set_ticket_number
-BEFORE INSERT ON tickets
-FOR EACH ROW
-EXECUTE FUNCTION generate_ticket_number();
-
--- Data integrity validation function for tickets
 CREATE OR REPLACE FUNCTION validate_ticket_user_team()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -149,13 +119,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for data integrity validation
-CREATE TRIGGER trg_validate_ticket_user_team
-BEFORE INSERT OR UPDATE ON tickets
-FOR EACH ROW
-EXECUTE FUNCTION validate_ticket_user_team();
+CREATE OR REPLACE FUNCTION prevent_user_team_change_if_tickets_exist()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
+        IF EXISTS (
+            SELECT 1 FROM tickets
+            WHERE created_by = OLD.id
+               OR assigned_to = OLD.id
+        ) THEN
+            RAISE EXCEPTION 'Cannot change team for user because tickets exist';
+        END IF;
+    END IF;
 
--- Updated_at auto-update function
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -164,7 +144,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers for updated_at auto-update
+CREATE TRIGGER set_ticket_number
+BEFORE INSERT ON tickets
+FOR EACH ROW
+EXECUTE FUNCTION generate_ticket_number();
+
+CREATE TRIGGER trg_validate_ticket_user_team
+BEFORE INSERT OR UPDATE ON tickets
+FOR EACH ROW
+EXECUTE FUNCTION validate_ticket_user_team();
+
+CREATE TRIGGER trg_prevent_user_team_change
+BEFORE UPDATE OF team_id ON users
+FOR EACH ROW
+EXECUTE FUNCTION prevent_user_team_change_if_tickets_exist();
+
 CREATE TRIGGER update_tickets_updated_at
 BEFORE UPDATE ON tickets
 FOR EACH ROW
@@ -180,11 +174,9 @@ BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
--- Enable Row Level Security
 ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
 
--- Tickets RLS policies
 CREATE POLICY tickets_view_policy ON tickets
 FOR SELECT
 USING (
@@ -229,7 +221,17 @@ WITH CHECK (
     )
 );
 
--- Ticket comments RLS policies
+CREATE POLICY tickets_delete_policy ON tickets
+FOR DELETE
+USING (
+    EXISTS (
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+        AND users.team_id = tickets.team_id
+        AND users.role = 'admin'
+    )
+);
+
 CREATE POLICY ticket_comments_view_policy ON ticket_comments
 FOR SELECT
 USING (
@@ -256,6 +258,15 @@ WITH CHECK (
 CREATE POLICY ticket_comments_update_policy ON ticket_comments
 FOR UPDATE
 USING (
+    auth.uid() = user_id
+    AND EXISTS (
+        SELECT 1 FROM tickets
+        JOIN users ON users.team_id = tickets.team_id
+        WHERE tickets.id = ticket_comments.ticket_id
+        AND users.id = auth.uid()
+    )
+)
+WITH CHECK (
     auth.uid() = user_id
     AND EXISTS (
         SELECT 1 FROM tickets
