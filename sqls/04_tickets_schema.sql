@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS tickets (
     category TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
     approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
-    created_by UUID REFERENCES auth.users(id),
-    assigned_to UUID REFERENCES auth.users(id),
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS tickets (
 CREATE TABLE IF NOT EXISTS ticket_comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id),
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     content TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -62,7 +62,6 @@ RETURNS TRIGGER AS $$
 DECLARE
     team_prefix TEXT;
     next_number INT;
-    lock_key BIGINT;
 BEGIN
 
     -- Get team prefix
@@ -76,8 +75,10 @@ BEGIN
     END IF;
 
 
-    lock_key := ('x' || replace(NEW.team_id::text, '-', ''))::bit(64)::bigint;
-    PERFORM pg_advisory_xact_lock(lock_key);
+PERFORM pg_advisory_xact_lock(
+    ('x' || substr(replace(NEW.team_id::text, '-', ''), 1, 16))::bit(64)::bigint,
+    ('x' || substr(replace(NEW.team_id::text, '-', ''), 17, 16))::bit(64)::bigint
+);
 
     SELECT COALESCE(
         MAX(
