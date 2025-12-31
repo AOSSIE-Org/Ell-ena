@@ -8,9 +8,13 @@ import '../profile/profile_screen.dart';
 import '../chat/chat_screen.dart';
 import 'dashboard_screen.dart';
 
+import 'package:get/get.dart';
+import '../../controllers/language_controller.dart';
+import '../../utils/language/sentence_manager.dart';
+
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
-  
+
   const HomeScreen({super.key, this.arguments});
 
   @override
@@ -27,8 +31,11 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isFabExpanded = false;
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
+  final LanguageController _languageController = Get.find<LanguageController>();
 
   List<Widget> _screens = [];
+
+  // ... (initState and other methods remain the same)
 
   @override
   void initState() {
@@ -42,34 +49,35 @@ class _HomeScreenState extends State<HomeScreen>
       curve: Curves.easeOut,
       reverseCurve: Curves.easeIn,
     );
-    
+
     // Initialize screens
     _initializeScreens();
-    
+
     // Handle initial arguments if provided
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.arguments != null) {
-        if (widget.arguments!.containsKey('screen') && widget.arguments!['screen'] is int) {
+        if (widget.arguments!.containsKey('screen') &&
+            widget.arguments!['screen'] is int) {
           setState(() {
             _selectedIndex = widget.arguments!['screen'];
           });
         }
-        
+
         // Handle initial message for chat screen
-        if (widget.arguments!.containsKey('initial_message') && 
-            widget.arguments!['initial_message'] is String && 
+        if (widget.arguments!.containsKey('initial_message') &&
+            widget.arguments!['initial_message'] is String &&
             _selectedIndex == 3) {
           // Update the chat screen with the initial message
           setState(() {
-            _screens[3] = ChatScreen(
-              arguments: {'initial_message': widget.arguments!['initial_message']}
-            );
+            _screens[3] = ChatScreen(arguments: {
+              'initial_message': widget.arguments!['initial_message']
+            });
           });
         }
       }
     });
   }
-  
+
   void _initializeScreens() {
     _screens = [
       const DashboardScreen(),
@@ -141,30 +149,37 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       body: IndexedStack(index: _selectedIndex, children: _screens),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2D2D2D),
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.white70,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Workspace'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
+      bottomNavigationBar: Obx(() {
+        final s = SentenceManager(
+                currentLanguage: _languageController.selectedLanguage.value)
+            .sentences;
+        return BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) => setState(() => _selectedIndex = index),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: const Color(0xFF2D2D2D),
+          selectedItemColor: Colors.green,
+          unselectedItemColor: Colors.white70,
+          items: [
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.dashboard),
+              label: s.dashboard,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.calendar_today),
+              label: s.calendar,
+            ),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.work), label: s.workspace),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: s.chat,
+            ),
+            BottomNavigationBarItem(
+                icon: const Icon(Icons.person), label: s.profile),
+          ],
+        );
+      }),
     );
   }
 }
