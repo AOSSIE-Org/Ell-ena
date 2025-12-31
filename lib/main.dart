@@ -19,6 +19,9 @@ void main() async {
     debugPrint('Error initializing services: $e');
   }
 
+  // Initialize LanguageController once before running the app
+  Get.put(LanguageController());
+
   runApp(const MyApp());
 }
 
@@ -27,9 +30,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize LanguageController
-    Get.put(LanguageController());
-
     return GetMaterialApp(
       title: 'Ell-ena',
       debugShowCheckedModeBanner: false,

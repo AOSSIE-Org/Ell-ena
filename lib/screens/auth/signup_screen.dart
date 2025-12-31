@@ -254,160 +254,164 @@ class _SignupScreenState extends State<SignupScreen>
                 // Join Team Tab
                 Form(
                   key: _joinTeamFormKey,
-                  child: Column(
-                    children: [
-                      CustomTextField(
-                        controller: _teamIdController,
-                        label: s.teamIdLabel,
-                        icon: Icons.people_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterTeamId;
-                          }
-                          if (value.length != 6) {
-                            return s.teamIdLength;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _nameController,
-                        label: s.fullNameLabel,
-                        icon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterName;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _emailController,
-                        label: s.email,
-                        icon: Icons.email_outlined,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterEmail;
-                          }
-                          if (!value.contains('@')) {
-                            return s.validEmail;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _passwordController,
-                        label: s.password,
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterPassword;
-                          }
-                          if (value.length < 6) {
-                            return s.passwordLength;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _confirmPasswordController,
-                        label: s.confirmPasswordLabel,
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.confirmPasswordValidator;
-                          }
-                          if (value != _passwordController.text) {
-                            return s.passwordsDoNotMatch;
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        CustomTextField(
+                          controller: _teamIdController,
+                          label: s.teamIdLabel,
+                          icon: Icons.people_outline,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterTeamId;
+                            }
+                            if (value.length != 6) {
+                              return s.teamIdLength;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _nameController,
+                          label: s.fullNameLabel,
+                          icon: Icons.person_outline,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterName;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _emailController,
+                          label: s.email,
+                          icon: Icons.email_outlined,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterEmail;
+                            }
+                            if (!value.contains('@')) {
+                              return s.validEmail;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _passwordController,
+                          label: s.password,
+                          icon: Icons.lock_outline,
+                          isPassword: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterPassword;
+                            }
+                            if (value.length < 6) {
+                              return s.passwordLength;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _confirmPasswordController,
+                          label: s.confirmPasswordLabel,
+                          icon: Icons.lock_outline,
+                          isPassword: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.confirmPasswordValidator;
+                            }
+                            if (value != _passwordController.text) {
+                              return s.passwordsDoNotMatch;
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 // Create Team Tab
                 Form(
                   key: _createTeamFormKey,
-                  child: Column(
-                    children: [
-                      CustomTextField(
-                        controller: _teamNameController,
-                        label: s.teamNameLabel,
-                        icon: Icons.group,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterTeamName;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _nameController,
-                        label: s.adminNameLabel,
-                        icon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterAdminName;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _emailController,
-                        label: s.adminEmailLabel,
-                        icon: Icons.email_outlined,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterAdminEmail;
-                          }
-                          if (!value.contains('@')) {
-                            return s.validEmail;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _passwordController,
-                        label: s.password,
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.enterPassword;
-                          }
-                          if (value.length < 6) {
-                            return s.passwordLength;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: _confirmPasswordController,
-                        label: s.confirmPasswordLabel,
-                        icon: Icons.lock_outline,
-                        isPassword: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return s.confirmPasswordValidator;
-                          }
-                          if (value != _passwordController.text) {
-                            return s.passwordsDoNotMatch;
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        CustomTextField(
+                          controller: _teamNameController,
+                          label: s.teamNameLabel,
+                          icon: Icons.group,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterTeamName;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _nameController,
+                          label: s.adminNameLabel,
+                          icon: Icons.person_outline,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterAdminName;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _emailController,
+                          label: s.adminEmailLabel,
+                          icon: Icons.email_outlined,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterAdminEmail;
+                            }
+                            if (!value.contains('@')) {
+                              return s.validEmail;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _passwordController,
+                          label: s.password,
+                          icon: Icons.lock_outline,
+                          isPassword: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.enterPassword;
+                            }
+                            if (value.length < 6) {
+                              return s.passwordLength;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _confirmPasswordController,
+                          label: s.confirmPasswordLabel,
+                          icon: Icons.lock_outline,
+                          isPassword: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return s.confirmPasswordValidator;
+                            }
+                            if (value != _passwordController.text) {
+                              return s.passwordsDoNotMatch;
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

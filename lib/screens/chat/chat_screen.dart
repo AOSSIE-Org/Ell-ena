@@ -1580,15 +1580,15 @@ class _ChatBubble extends StatelessWidget {
 class _ItemCard extends StatelessWidget {
   final ChatMessage message;
   final VoidCallback onViewItem;
-  final LanguageController _languageController = Get.find<LanguageController>();
 
-  _ItemCard({required this.message, required this.onViewItem});
+  const _ItemCard({required this.message, required this.onViewItem});
 
   @override
   Widget build(BuildContext context) {
+    final languageController = Get.find<LanguageController>();
     return Obx(() {
       final s = SentenceManager(
-              currentLanguage: _languageController.selectedLanguage.value)
+              currentLanguage: languageController.selectedLanguage.value)
           .sentences;
 
       // Set icon and title based on card type

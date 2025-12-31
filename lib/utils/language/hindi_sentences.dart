@@ -552,6 +552,10 @@ class HindiSentences extends Sentences {
   @override
   String get errorLaunchingUrl => 'लिंक खोलने में त्रुटि';
   @override
+  String get durationMustBePositive => 'अवधि 0 से अधिक होनी चाहिए';
+  @override
+  String get enterValidNumber => 'कृपया एक मान्य संख्या दर्ज करें';
+  @override
   String get transcription => 'अनुलेखन';
   @override
   String get aiSummary => 'AI सारांश';

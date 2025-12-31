@@ -445,7 +445,6 @@ class EnglishSentences extends Sentences {
 
   // Details & Cards
   @override
-  @override
   String get noDescription => 'No description';
   @override
   String get noDueDate => 'No due date';
@@ -481,6 +480,8 @@ class EnglishSentences extends Sentences {
   String get taskRejected => 'Task Rejected';
 
   // Meetings
+  @override
+  String get durationMustBeGreaterThanZero => 'Duration must be greater than 0';
   @override
   String get meetingsTitle => 'Meetings';
   @override
@@ -548,6 +549,10 @@ class EnglishSentences extends Sentences {
   String get errorDeletingMeeting => 'Error deleting meeting';
   @override
   String get errorLaunchingUrl => 'Error launching URL';
+  @override
+  String get durationMustBePositive => 'Duration must be greater than 0';
+  @override
+  String get enterValidNumber => 'Please enter a valid number';
   @override
   String get transcription => 'Transcription';
   @override

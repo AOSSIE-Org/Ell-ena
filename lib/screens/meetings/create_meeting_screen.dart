@@ -355,10 +355,10 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                             try {
                               int duration = int.parse(value);
                               if (duration <= 0) {
-                                return 'Duration must be greater than 0';
+                                return s.durationMustBePositive;
                               }
                             } catch (e) {
-                              return 'Please enter a valid number';
+                              return s.enterValidNumber;
                             }
                           }
                           return null;

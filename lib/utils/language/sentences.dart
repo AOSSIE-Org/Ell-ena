@@ -294,6 +294,8 @@ abstract class Sentences {
   String get errorUpdatingMeeting;
   String get errorDeletingMeeting;
   String get errorLaunchingUrl;
+  String get durationMustBePositive;
+  String get enterValidNumber;
   String get transcription;
   String get aiSummary;
   String get keyDiscussionPoints;
