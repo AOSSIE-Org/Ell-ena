@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/custom_widgets.dart';
+import '../../utils/language/sentence_manager.dart';
 
 class CreateTicketScreen extends StatefulWidget {
   const CreateTicketScreen({super.key});
@@ -13,425 +16,437 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _supabaseService = SupabaseService();
-  
-  String _selectedPriority = 'medium';
-  String _selectedCategory = 'Bug';
+
+  bool _isLoading = false;
+  String _priority = 'medium';
+  String _category = 'Bug';
+  String? _assignedTo;
   List<Map<String, dynamic>> _teamMembers = [];
-  String? _selectedAssignee;
-  bool _isLoading = true;
-  
+  bool _isLoadingMembers = true;
+
   @override
   void initState() {
     super.initState();
     _loadTeamMembers();
   }
-  
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTeamMembers() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
     try {
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null && userProfile['team_id'] != null) {
-        // Load team members cache first
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
-        
-        // Get team members from cache
-        final teamMembers = _supabaseService.teamMembersCache;
-        
         if (mounted) {
           setState(() {
-            _teamMembers = teamMembers;
-            _isLoading = false;
+            _teamMembers = _supabaseService.teamMembersCache;
+            _isLoadingMembers = false;
           });
         }
-      } else if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoadingMembers = false;
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading team members: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingMembers = false;
         });
       }
     }
   }
-  
+
   Future<void> _createTicket() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
+    final s = SentenceManager.instance;
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final result = await _supabaseService.createTicket(
+      await _supabaseService.createTicket(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        priority: _selectedPriority,
-        category: _selectedCategory,
-        assignedToUserId: _selectedAssignee,
+        priority: _priority,
+        category: _category,
+        assignedToUserId: _assignedTo,
       );
-      
-      if (result['success']) {
-        if (mounted) {
-          Navigator.pop(context, true);
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to create ticket: ${result['error']}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+
+      if (mounted) {
+        Navigator.pop(context, true);
       }
     } catch (e) {
       debugPrint('Error creating ticket: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating ticket: $e'),
+            content: Text('${s.errorPrefix}$e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ticketCategories = _supabaseService.getTicketCategories();
-    
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text('Create Ticket'),
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else
-            IconButton(
-              onPressed: _createTicket,
-              icon: const Icon(Icons.check),
-              tooltip: 'Create Ticket',
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Title
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                      labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText: 'Enter ticket title',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.title, color: Colors.grey),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Description
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText: 'Enter ticket description (max 75 words recommended)',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.description, color: Colors.grey),
-                      alignLabelWithHint: true,
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 5,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a description';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Priority
-                  Text(
-                    'Priority',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildPriorityOption('low', 'Low', Colors.green.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('medium', 'Medium', Colors.orange.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('high', 'High', Colors.red.shade400),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Category
-                  Text(
-                    'Category',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedCategory,
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedCategory = value;
-                            });
-                          }
-                        },
-                        items: ticketCategories.map((category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        dropdownColor: const Color(0xFF2D2D2D),
-                        style: const TextStyle(color: Colors.white),
-                        isExpanded: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Assignee
-                  Text(
-                    'Assign To (Optional)',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedAssignee,
-                        hint: Text(
-                          'Select team member',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedAssignee = value;
-                          });
-                        },
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Unassigned'),
-                          ),
-                          ..._teamMembers.map((member) {
-                            return DropdownMenuItem<String?>(
-                              value: member['id'],
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 12,
-                                    backgroundColor: Colors.green.shade700,
-                                    child: Text(
-                                      member['full_name'] != null && member['full_name'].isNotEmpty
-                                          ? member['full_name'][0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(member['full_name'] ?? 'Unknown'),
-                                  if (member['role'] == 'admin')
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.shade400.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'Admin',
-                                        style: TextStyle(
-                                          color: Colors.orange.shade400,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                        dropdownColor: const Color(0xFF2D2D2D),
-                        style: const TextStyle(color: Colors.white),
-                        isExpanded: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Submit button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _createTicket,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      disabledBackgroundColor: Colors.grey.shade800,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Create Ticket',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-  
-  Widget _buildPriorityOption(String value, String label, Color color) {
-    final isSelected = _selectedPriority == value;
-    
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedPriority = value;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.2) : const Color(0xFF2D2D2D),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? color : Colors.transparent,
-              width: 2,
-            ),
+    return Obx(() {
+      final s = SentenceManager.instance;
+      return Scaffold(
+        backgroundColor: const Color(0xFF1A1A1A),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
-          child: Column(
-            children: [
-              Icon(
-                value == 'high'
-                    ? Icons.priority_high
-                    : value == 'medium'
-                        ? Icons.remove_circle_outline
-                        : Icons.arrow_downward,
-                color: isSelected ? color : Colors.grey,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? color : Colors.grey,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
+          title: Text(
+            s.createTicketTitle,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
+        body: _isLoading
+            ? const Center(child: CustomLoading())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTextField(
+                        controller: _titleController,
+                        label: s.ticketTitleLabel,
+                        hint: s.enterTicketTitle,
+                        maxLines: 1,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterTicketTitle;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _descriptionController,
+                        label: s.ticketDescriptionLabel,
+                        hint: s.enterTicketDescription,
+                        maxLines: 5,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterTicketDescription;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDropdown<String>(
+                              value: _priority,
+                              items: const ['high', 'medium', 'low'],
+                              label: s.ticketPriorityLabel,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _priority = value);
+                                }
+                              },
+                              itemLabelBuilder: (item) {
+                                switch (item) {
+                                  case 'high':
+                                    return s.priorityHigh;
+                                  case 'medium':
+                                    return s.priorityMedium;
+                                  case 'low':
+                                    return s.priorityLow;
+                                  default:
+                                    return item;
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDropdown<String>(
+                              value: _category,
+                              items: const [
+                                'Bug',
+                                'Feature Request',
+                                'UI/UX',
+                                'Performance',
+                                'Documentation',
+                                'Security'
+                              ],
+                              label: s.ticketCategoryLabel,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _category = value);
+                                }
+                              },
+                              itemLabelBuilder: (item) => item,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        s.ticketAssigneeLabel,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _isLoadingMembers
+                          ? const Center(child: CircularProgressIndicator())
+                          : Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2D2D2D),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade800),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _assignedTo,
+                                  isExpanded: true,
+                                  dropdownColor: const Color(0xFF2D2D2D),
+                                  hint: Text(
+                                    s.selectTicketAssignee,
+                                    style:
+                                        TextStyle(color: Colors.grey.shade500),
+                                  ),
+                                  icon: const Icon(Icons.arrow_drop_down,
+                                      color: Colors.white),
+                                  items: [
+                                    DropdownMenuItem<String>(
+                                      value: null,
+                                      child: Row(
+                                        children: [
+                                          const CircleAvatar(
+                                            radius: 12,
+                                            backgroundColor: Colors.grey,
+                                            child: Icon(Icons.person_off,
+                                                size: 14, color: Colors.white),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            s.unassigned,
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    ..._teamMembers.map((member) {
+                                      return DropdownMenuItem<String>(
+                                        value: member['id'],
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 12,
+                                              backgroundColor:
+                                                  Colors.blue.shade700,
+                                              child: Text(
+                                                (member['full_name'] as String)
+                                                        .isNotEmpty
+                                                    ? (member['full_name']
+                                                            as String)[0]
+                                                        .toUpperCase()
+                                                    : '?',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              member['full_name'] ??
+                                                  s.unknownMember,
+                                              style: const TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                            if (member['role'] == 'admin') ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red
+                                                      .withOpacity(0.2),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  'ADMIN',
+                                                  style: TextStyle(
+                                                    color: Colors.red.shade400,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _assignedTo = value;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _createTicket,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade600,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            s.createTicketTitle,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+      );
+    });
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required int maxLines,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          style: const TextStyle(color: Colors.white),
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey.shade600),
+            filled: true,
+            fillColor: const Color(0xFF2D2D2D),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.green, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 1),
+            ),
+            contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+      ],
     );
   }
-} 
+
+  Widget _buildDropdown<T>({
+    required T value,
+    required List<T> items,
+    required String label,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) itemLabelBuilder,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2D2D2D),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<T>(
+              value: value,
+              isExpanded: true,
+              dropdownColor: const Color(0xFF2D2D2D),
+              style: const TextStyle(color: Colors.white),
+              items: items.map((T item) {
+                return DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(itemLabelBuilder(item)),
+                );
+              }).toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

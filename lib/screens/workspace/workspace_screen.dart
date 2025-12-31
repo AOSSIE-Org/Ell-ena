@@ -9,6 +9,10 @@ import '../chat/chat_screen.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
 
+import 'package:get/get.dart';
+import '../../controllers/language_controller.dart';
+import '../../utils/language/sentence_manager.dart';
+
 class WorkspaceScreen extends StatefulWidget {
   const WorkspaceScreen({super.key});
 
@@ -23,6 +27,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   TimeOfDay? _selectedTime;
   String? _selectedPriority;
   bool _isLoading = true;
+  final LanguageController _languageController = Get.find<LanguageController>();
 
   @override
   void initState() {
@@ -39,6 +44,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
       }
     });
   }
+
+  // ... (dispose and other methods)
 
   @override
   void dispose() {
@@ -64,6 +71,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     }
   }
 
+  // ... (dialog methods)
   void _showCreateTaskDialog() {
     Navigator.push(
       context,
@@ -164,17 +172,25 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
             bottom: false,
             left: false,
             right: false,
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.green,
-              labelColor: Colors.green,
-              unselectedLabelColor: Colors.white70,
-              tabs: const [
-                Tab(icon: Icon(Icons.task), text: 'Tasks'),
-                Tab(icon: Icon(Icons.confirmation_number), text: 'Tickets'),
-                Tab(icon: Icon(Icons.group), text: 'Meetings'),
-              ],
-            ),
+            child: Obx(() {
+              final s = SentenceManager(
+                      currentLanguage:
+                          _languageController.selectedLanguage.value)
+                  .sentences;
+              return TabBar(
+                controller: _tabController,
+                indicatorColor: Colors.green,
+                labelColor: Colors.green,
+                unselectedLabelColor: Colors.white70,
+                tabs: [
+                  Tab(icon: const Icon(Icons.task), text: s.tasks),
+                  Tab(
+                      icon: const Icon(Icons.confirmation_number),
+                      text: s.tickets),
+                  Tab(icon: const Icon(Icons.group), text: s.meetings),
+                ],
+              );
+            }),
           ),
         ),
       ),

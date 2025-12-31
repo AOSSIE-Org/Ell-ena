@@ -1,8 +1,9 @@
-
 import 'package:flutter/material.dart';
 import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:get/get.dart';
+import '../../utils/language/sentence_manager.dart';
 import '../../services/supabase_service.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
@@ -56,16 +57,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _onRefresh() async {
     await _loadData();
   }
-  
+
   void _showTeamSwitcher() {
     showDialog(
       context: context,
       builder: (context) {
+        final s = SentenceManager.instance;
         return AlertDialog(
           backgroundColor: const Color(0xFF2D2D2D),
-          title: const Text(
-            'Switch Team',
-            style: TextStyle(
+          title: Text(
+            s.switchTeamTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -79,32 +81,33 @@ class _DashboardScreenState extends State<DashboardScreen>
               itemBuilder: (context, index) {
                 final team = _userTeams[index];
                 final isCurrentTeam = team['id'] == _currentTeamId;
-                
+
                 return ListTile(
                   title: Text(
-                    team['name'] ?? 'Team',
+                    team['name'] ?? s.teamDefaultName,
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight: isCurrentTeam ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isCurrentTeam ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   subtitle: Text(
-                    'Team Code: ${team['team_code'] ?? 'N/A'}',
+                    '${s.teamCodePrefix}: ${team['team_code'] ?? 'N/A'}',
                     style: TextStyle(
                       color: Colors.grey.shade400,
                       fontSize: 12,
                     ),
                   ),
                   leading: CircleAvatar(
-                    backgroundColor: isCurrentTeam 
-                        ? Colors.green.shade400 
+                    backgroundColor: isCurrentTeam
+                        ? Colors.green.shade400
                         : Colors.grey.shade700,
                     child: Text(
                       (team['name'] as String? ?? 'T')[0].toUpperCase(),
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  trailing: isCurrentTeam 
+                  trailing: isCurrentTeam
                       ? Icon(Icons.check, color: Colors.green.shade400)
                       : null,
                   onTap: () {
@@ -123,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 Navigator.pop(context);
               },
               child: Text(
-                'Cancel',
+                s.cancel,
                 style: TextStyle(color: Colors.grey.shade400),
               ),
             ),
@@ -132,16 +135,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       },
     );
   }
-  
+
   Future<void> _switchTeam(String teamId) async {
     try {
       setState(() {
         _isLoading = true;
       });
-      
+
       final supa = SupabaseService();
       final result = await supa.switchTeam(teamId);
-      
+
       if (result['success'] == true) {
         // Reload data with new team
         await _loadData();
@@ -149,7 +152,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error switching team: ${result['error']}'),
+              content: Text(
+                  '${SentenceManager.instance.teamSwitchError}${result['error']}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -161,7 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error switching team: $e'),
@@ -182,23 +186,25 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       // Get user profile with team information
       final profile = await supa.getCurrentUserProfile(forceRefresh: true);
-      
+
       // Set username
       _userName = (profile?['full_name'] as String?)?.trim();
-      
+
       // Set current team
       if (profile != null && profile['team_id'] != null) {
         _currentTeamId = profile['team_id'];
         _currentTeamName = profile['teams']?['name'] ?? 'My Team';
       }
-      
+
       // Fetch all teams associated with the user's email
       final userEmail = profile?['email'] as String?;
       if (userEmail != null) {
         try {
           final teamsResponse = await supa.getUserTeams(userEmail);
-          if (teamsResponse['success'] == true && teamsResponse['teams'] != null) {
-            _userTeams = List<Map<String, dynamic>>.from(teamsResponse['teams']);
+          if (teamsResponse['success'] == true &&
+              teamsResponse['teams'] != null) {
+            _userTeams =
+                List<Map<String, dynamic>>.from(teamsResponse['teams']);
           }
         } catch (e) {
           debugPrint('Error fetching user teams: $e');
@@ -222,12 +228,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       final meetings = List<Map<String, dynamic>>.from(results[2] as List);
 
       _tasksTotal = tasks.length;
-      _tasksInProgress = tasks.where((t) => t['status'] == 'in_progress').length;
+      _tasksInProgress =
+          tasks.where((t) => t['status'] == 'in_progress').length;
       _tasksCompleted = tasks.where((t) => t['status'] == 'completed').length;
 
       // Build completion series for last 7 days
       final now = DateTime.now();
-      final Map<int, int> dayIndexToCompleted = {for (var i = 0; i < 7; i++) i: 0};
+      final Map<int, int> dayIndexToCompleted = {
+        for (var i = 0; i < 7; i++) i: 0
+      };
       for (final t in tasks) {
         if (t['status'] == 'completed') {
           final ts = (t['updated_at'] ?? t['created_at'])?.toString();
@@ -235,7 +244,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             final updated = DateTime.tryParse(ts);
             if (updated != null) {
               final diffDays = now
-                  .difference(DateTime(updated.year, updated.month, updated.day))
+                  .difference(
+                      DateTime(updated.year, updated.month, updated.day))
                   .inDays;
               if (diffDays >= 0 && diffDays < 7) {
                 final idx = 6 - diffDays; // earlier days on the left
@@ -251,29 +261,42 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
 
       _ticketsOpen = tickets.where((t) => t['status'] == 'open').length;
-      _ticketsInProgress = tickets.where((t) => t['status'] == 'in_progress').length;
+      _ticketsInProgress =
+          tickets.where((t) => t['status'] == 'in_progress').length;
       _ticketsResolved = tickets.where((t) => t['status'] == 'resolved').length;
 
       // Upcoming meetings (next 14 days)
       final upcoming = <Map<String, dynamic>>[];
       for (final m in meetings) {
         final md = DateTime.tryParse(m['meeting_date']?.toString() ?? '');
-        if (md != null && md.isAfter(now.subtract(const Duration(days: 1))) && md.isBefore(now.add(const Duration(days: 14)))) {
+        if (md != null &&
+            md.isAfter(now.subtract(const Duration(days: 1))) &&
+            md.isBefore(now.add(const Duration(days: 14)))) {
           upcoming.add(m);
         }
       }
       upcoming.sort((a, b) {
-        final ad = DateTime.tryParse(a['meeting_date']?.toString() ?? '') ?? now;
-        final bd = DateTime.tryParse(b['meeting_date']?.toString() ?? '') ?? now;
+        final ad =
+            DateTime.tryParse(a['meeting_date']?.toString() ?? '') ?? now;
+        final bd =
+            DateTime.tryParse(b['meeting_date']?.toString() ?? '') ?? now;
         return ad.compareTo(bd);
       });
       // legacy meetings list no longer used
 
       // Recent
-      tasks.sort((a, b) => (DateTime.tryParse((b['updated_at'] ?? b['created_at'])?.toString() ?? '') ?? now)
-          .compareTo(DateTime.tryParse((a['updated_at'] ?? a['created_at'])?.toString() ?? '') ?? now));
-      tickets.sort((a, b) => (DateTime.tryParse((b['updated_at'] ?? b['created_at'])?.toString() ?? '') ?? now)
-          .compareTo(DateTime.tryParse((a['updated_at'] ?? a['created_at'])?.toString() ?? '') ?? now));
+      tasks.sort((a, b) => (DateTime.tryParse(
+                  (b['updated_at'] ?? b['created_at'])?.toString() ?? '') ??
+              now)
+          .compareTo(DateTime.tryParse(
+                  (a['updated_at'] ?? a['created_at'])?.toString() ?? '') ??
+              now));
+      tickets.sort((a, b) => (DateTime.tryParse(
+                  (b['updated_at'] ?? b['created_at'])?.toString() ?? '') ??
+              now)
+          .compareTo(DateTime.tryParse(
+                  (a['updated_at'] ?? a['created_at'])?.toString() ?? '') ??
+              now));
       _recentTasks = tasks.take(3).toList();
       _recentTickets = tickets.take(3).toList();
 
@@ -281,7 +304,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       final List<Map<String, dynamic>> items = [];
       for (final m in meetings) {
         final dt = DateTime.tryParse(m['meeting_date']?.toString() ?? '');
-        if (dt != null && dt.isAfter(now.subtract(const Duration(days: 1))) && dt.isBefore(now.add(const Duration(days: 14)))) {
+        if (dt != null &&
+            dt.isAfter(now.subtract(const Duration(days: 1))) &&
+            dt.isBefore(now.add(const Duration(days: 14)))) {
           items.add({
             'type': 'meeting',
             'id': m['id'],
@@ -296,7 +321,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (t['status'] == 'completed') continue;
         final due = DateTime.tryParse(t['due_date']?.toString() ?? '');
         if (due != null) {
-          final sameDay = due.year == now.year && due.month == now.month && due.day == now.day;
+          final sameDay = due.year == now.year &&
+              due.month == now.month &&
+              due.day == now.day;
           if (sameDay) {
             items.add({
               'type': 'task',
@@ -313,9 +340,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       for (final tk in tickets) {
         // Tickets don't have due_date in schema; approximate with created today and open/in_progress
         final created = DateTime.tryParse(tk['created_at']?.toString() ?? '');
-        final isActionable = tk['status'] == 'open' || tk['status'] == 'in_progress';
+        final isActionable =
+            tk['status'] == 'open' || tk['status'] == 'in_progress';
         if (created != null && isActionable) {
-          final sameDay = created.year == now.year && created.month == now.month && created.day == now.day;
+          final sameDay = created.year == now.year &&
+              created.month == now.month &&
+              created.day == now.day;
           if (sameDay) {
             items.add({
               'type': 'ticket',
@@ -329,7 +359,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           }
         }
       }
-      items.sort((a, b) => (a['at'] as DateTime).compareTo(b['at'] as DateTime));
+      items
+          .sort((a, b) => (a['at'] as DateTime).compareTo(b['at'] as DateTime));
       _upcomingItems = items.take(8).toList();
 
       if (mounted) {
@@ -356,197 +387,208 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: Colors.green,
-        backgroundColor: const Color(0xFF2D2D2D),
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            expandedHeight: 140,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF2E7D32),
-                          const Color(0xFF1B5E20),
-                        ],
+      body: Obx(() {
+        final s = SentenceManager.instance;
+        return RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: Colors.green,
+          backgroundColor: const Color(0xFF2D2D2D),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                expandedHeight: 140,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF2E7D32),
+                              const Color(0xFF1B5E20),
+                            ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(24),
+                            bottomRight: Radius.circular(24),
+                          ),
+                        ),
                       ),
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
+                      CustomPaint(
+                        painter: DotPatternPainter(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                        size: Size(MediaQuery.of(context).size.width, 140),
                       ),
-                    ),
-                  ),
-                  CustomPaint(
-                    painter: DotPatternPainter(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                    size: Size(MediaQuery.of(context).size.width, 140),
-                  ),
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                      SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                  
-                                    const Text(
-                                      'Welcome back,',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Row(
+                                    child: const Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Flexible(
-                                          child: Text(
-                                            _userName ?? '—',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
+                                        Text(
+                                          '${s.welcomeBack},',
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(
-                                              0.2,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.trending_up,
-                                                color:
-                                                    Colors.greenAccent.shade100,
-                                                size: 14,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
-                                                style: TextStyle(
-                                                  color: Colors.greenAccent.shade100,
-                                                  fontSize: 12,
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                _userName ?? '—',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 20,
                                                   fontWeight: FontWeight.bold,
                                                 ),
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (_userTeams.length > 1)
-                                      GestureDetector(
-                                        onTap: _showTeamSwitcher,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                _currentTeamName ?? 'My Team',
-                                                style: TextStyle(
-                                                  color: Colors.white.withOpacity(0.9),
-                                                  fontSize: 14,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(
+                                                  0.2,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  12,
                                                 ),
                                               ),
-                                              const SizedBox(width: 4),
-                                              Icon(
-                                                Icons.swap_horiz,
-                                                color: Colors.white.withOpacity(0.9),
-                                                size: 16,
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.trending_up,
+                                                    color: Colors
+                                                        .greenAccent.shade100,
+                                                    size: 14,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
+                                                    style: TextStyle(
+                                                      color: Colors
+                                                          .greenAccent.shade100,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                  ],
-                                ),
+                                        if (_userTeams.length > 1)
+                                          GestureDetector(
+                                            onTap: _showTeamSwitcher,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.only(top: 4),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    _currentTeamName ??
+                                                        s.myTeam,
+                                                    style: TextStyle(
+                                                      color: Colors.white
+                                                          .withOpacity(0.9),
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Icon(
+                                                    Icons.swap_horiz,
+                                                    color: Colors.white
+                                                        .withOpacity(0.9),
+                                                    size: 16,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Transform.translate(
-              offset: const Offset(0, -10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildOverviewCards(),
-                    const SizedBox(height: 24),
-                    _buildAnalyticsSection(),
-                    const SizedBox(height: 24),
-                    _buildUpcomingSection(),
-                    const SizedBox(height: 24),
-                    _buildRecentActivity(),
-                    const SizedBox(height: 24),
-                  ],
                 ),
               ),
-            ),
+              SliverToBoxAdapter(
+                child: Transform.translate(
+                  offset: const Offset(0, -10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildOverviewCards(),
+                        const SizedBox(height: 24),
+                        _buildAnalyticsSection(),
+                        const SizedBox(height: 24),
+                        _buildUpcomingSection(),
+                        const SizedBox(height: 24),
+                        _buildRecentActivity(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
+        );
+      }),
     );
   }
 
@@ -569,9 +611,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Today\'s Overview',
-                style: TextStyle(
+              Text(
+                SentenceManager.instance.todaysOverview,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -613,19 +655,19 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: [
               _buildOverviewItem(
                 _tasksTotal.toString(),
-                'Total Tasks',
+                SentenceManager.instance.totalTasks,
                 Icons.task_alt,
                 Colors.green.shade400,
               ),
               _buildOverviewItem(
                 _tasksInProgress.toString(),
-                'In Progress',
+                SentenceManager.instance.statusInProgress,
                 Icons.pending_actions,
                 Colors.orange.shade400,
               ),
               _buildOverviewItem(
                 _tasksCompleted.toString(),
-                'Completed',
+                SentenceManager.instance.statusCompleted,
                 Icons.check_circle_outline,
                 Colors.blue.shade400,
               ),
@@ -637,19 +679,19 @@ class _DashboardScreenState extends State<DashboardScreen>
             children: [
               _buildOverviewItem(
                 _ticketsOpen.toString(),
-                'Open Tickets',
+                SentenceManager.instance.openTickets,
                 Icons.bug_report,
                 Colors.red.shade400,
               ),
               _buildOverviewItem(
                 _ticketsInProgress.toString(),
-                'Tickets In Progress',
+                SentenceManager.instance.ticketsInProgress,
                 Icons.hourglass_bottom,
                 Colors.amber.shade400,
               ),
               _buildOverviewItem(
                 _ticketsResolved.toString(),
-                'Resolved',
+                SentenceManager.instance.statusResolved,
                 Icons.verified,
                 Colors.teal.shade300,
               ),
@@ -706,23 +748,22 @@ class _DashboardScreenState extends State<DashboardScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Task Completion by Day',
-                style: TextStyle(
+              Text(
+                SentenceManager.instance.taskCompletionByDay,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               if (_selectedTimeRange == 1)
-  Text(
-    DateFormat('MMMM yyyy').format(DateTime.now()),
-    style: TextStyle(
-      color: Colors.grey.shade400,
-      fontSize: 13,
-    ),
-  ),
-
+                Text(
+                  DateFormat('MMMM yyyy').format(DateTime.now()),
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                ),
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
@@ -732,8 +773,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _timeRangeButton('Week', 0),
-                    _timeRangeButton('Month', 1),
+                    _timeRangeButton(SentenceManager.instance.week, 0),
+                    _timeRangeButton(SentenceManager.instance.month, 1),
                   ],
                 ),
               ),
@@ -745,159 +786,163 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: _taskCompletionSpots.isEmpty
                 ? Center(
                     child: Text(
-                      'No completions yet',
+                      SentenceManager.instance.noCompletionsYet,
                       style: TextStyle(color: Colors.grey.shade500),
                     ),
                   )
-                : _selectedTimeRange == 0 
-                  // Bar Chart for Weekly view
-                  ? BarChart(
-                    BarChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 1,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(
-                            color: Colors.grey.shade800,
-                            strokeWidth: 1,
-                          );
-                        },
-                      ),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                value.toInt().toString(),
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 12,
-                                ),
+                : _selectedTimeRange == 0
+                    // Bar Chart for Weekly view
+                    ? BarChart(
+                        BarChartData(
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval: 1,
+                            getDrawingHorizontalLine: (value) {
+                              return FlLine(
+                                color: Colors.grey.shade800,
+                                strokeWidth: 1,
                               );
                             },
                           ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            getTitlesWidget: (value, meta) {
-                              final now = DateTime.now();
-                              final idx = value.toInt();
-                              if (idx < 0 || idx > 6) return const SizedBox();
-                              final day = now.subtract(Duration(days: 6 - idx));
-                              return Text(
-                                DateFormat('E').format(day),
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 12,
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    value.toInt().toString(),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                getTitlesWidget: (value, meta) {
+                                  final now = DateTime.now();
+                                  final idx = value.toInt();
+                                  if (idx < 0 || idx > 6)
+                                    return const SizedBox();
+                                  final day =
+                                      now.subtract(Duration(days: 6 - idx));
+                                  return Text(
+                                    DateFormat('E').format(day),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          barGroups: _taskCompletionSpots.map((spot) {
+                            return BarChartGroupData(
+                              x: spot.x.toInt(),
+                              barRods: [
+                                BarChartRodData(
+                                  toY: spot.y,
+                                  color: Colors.green.shade400,
+                                  width: 16,
+                                  borderRadius: BorderRadius.circular(4),
+                                  backDrawRodData: BackgroundBarChartRodData(
+                                    show: true,
+                                    toY:
+                                        5, // Maximum expected value or slightly higher
+                                    color:
+                                        Colors.green.shade400.withOpacity(0.1),
+                                  ),
                                 ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      )
+                    // Line Chart for Monthly view
+                    : LineChart(
+                        LineChartData(
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval: 1,
+                            getDrawingHorizontalLine: (value) {
+                              return FlLine(
+                                color: Colors.grey.shade800,
+                                strokeWidth: 1,
                               );
                             },
                           ),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      barGroups: _taskCompletionSpots.map((spot) {
-                        return BarChartGroupData(
-                          x: spot.x.toInt(),
-                          barRods: [
-                            BarChartRodData(
-                              toY: spot.y,
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    value.toInt().toString(),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                interval: 5,
+                                reservedSize: 32,
+                                getTitlesWidget: (value, meta) {
+                                  final day = value.toInt() + 1;
+
+                                  return Text(
+                                    day.toString(),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade400,
+                                      fontSize: 11,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: _taskCompletionSpots,
+                              isCurved: true,
                               color: Colors.green.shade400,
-                              width: 16,
-                              borderRadius: BorderRadius.circular(4),
-                              backDrawRodData: BackgroundBarChartRodData(
+                              barWidth: 3,
+                              dotData: FlDotData(show: true),
+                              belowBarData: BarAreaData(
                                 show: true,
-                                toY: 5, // Maximum expected value or slightly higher
                                 color: Colors.green.shade400.withOpacity(0.1),
                               ),
                             ),
                           ],
-                        );
-                      }).toList(),
-                    ),
-                  )
-                  // Line Chart for Monthly view
-                  : LineChart(
-                    LineChartData(
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        horizontalInterval: 1,
-                        getDrawingHorizontalLine: (value) {
-                          return FlLine(
-                            color: Colors.grey.shade800,
-                            strokeWidth: 1,
-                          );
-                        },
-                      ),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                value.toInt().toString(),
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 12,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: 5, 
-                            reservedSize: 32,
-                            getTitlesWidget: (value, meta) {
-                              final day = value.toInt() + 1;
-
-                              return Text(
-                                day.toString(),
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 11,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
                         ),
                       ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: _taskCompletionSpots,
-                          isCurved: true,
-                          color: Colors.green.shade400,
-                          barWidth: 3,
-                          dotData: FlDotData(show: true),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.green.shade400.withOpacity(0.1),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
           ),
         ],
       ),
@@ -926,7 +971,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 if (updated == null) continue;
 
                 final diffDays = now
-                    .difference(DateTime(updated.year, updated.month, updated.day))
+                    .difference(
+                        DateTime(updated.year, updated.month, updated.day))
                     .inDays;
 
                 if (diffDays >= 0 && diffDays < 7) {
@@ -939,7 +985,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
             _taskCompletionSpots = List.generate(
               7,
-              (i) => FlSpot(i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
+              (i) => FlSpot(
+                  i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
             );
           } else {
             // Month → current calendar month
@@ -966,44 +1013,42 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   List<FlSpot> _buildCurrentMonthSpots(List<Map<String, dynamic>> tasks) {
-  final now = DateTime.now();
+    final now = DateTime.now();
 
-  final firstDayOfMonth = DateTime(now.year, now.month, 1);
-  final firstDayNextMonth = DateTime(now.year, now.month + 1, 1);
-  final daysInMonth =
-      firstDayNextMonth.difference(firstDayOfMonth).inDays;
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final firstDayNextMonth = DateTime(now.year, now.month + 1, 1);
+    final daysInMonth = firstDayNextMonth.difference(firstDayOfMonth).inDays;
 
-  final Map<int, int> dayCounts = {
-    for (int i = 0; i < daysInMonth; i++) i: 0,
-  };
+    final Map<int, int> dayCounts = {
+      for (int i = 0; i < daysInMonth; i++) i: 0,
+    };
 
-  for (final t in tasks) {
-    if (t['status'] != 'completed') continue;
+    for (final t in tasks) {
+      if (t['status'] != 'completed') continue;
 
-    final ts = (t['updated_at'] ?? t['created_at'])?.toString();
-    final date = ts != null ? DateTime.tryParse(ts) : null;
-    if (date == null) continue;
+      final ts = (t['updated_at'] ?? t['created_at'])?.toString();
+      final date = ts != null ? DateTime.tryParse(ts) : null;
+      if (date == null) continue;
 
-    if (date.year == now.year && date.month == now.month) {
-      final index = date.day - 1;
-      dayCounts[index] = (dayCounts[index] ?? 0) + 1;
+      if (date.year == now.year && date.month == now.month) {
+        final index = date.day - 1;
+        dayCounts[index] = (dayCounts[index] ?? 0) + 1;
+      }
     }
+
+    return List.generate(
+      daysInMonth,
+      (i) => FlSpot(i.toDouble(), (dayCounts[i] ?? 0).toDouble()),
+    );
   }
-
-  return List.generate(
-    daysInMonth,
-    (i) => FlSpot(i.toDouble(), (dayCounts[i] ?? 0).toDouble()),
-  );
-}
-
 
   Widget _buildUpcomingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Upcoming',
-          style: TextStyle(
+        Text(
+          SentenceManager.instance.upcoming,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -1021,7 +1066,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
-                      'Nothing due today or scheduled soon',
+                      SentenceManager.instance.nothingScheduled,
                       style: TextStyle(color: Colors.grey.shade400),
                     ),
                   ),
@@ -1030,7 +1075,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   children: List.generate(_upcomingItems.length, (index) {
                     final item = _upcomingItems[index];
                     final dt = item['at'] as DateTime?;
-                    final timeLabel = dt != null ? DateFormat('MMM d • h:mm a').format(dt) : '';
+                    final timeLabel = dt != null
+                        ? DateFormat('MMM d • h:mm a').format(dt)
+                        : '';
                     final IconData icon = item['icon'] as IconData;
                     final Color color = item['color'] as Color;
                     return InkWell(
@@ -1043,7 +1090,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                             icon,
                             color,
                           ),
-                          if (index < _upcomingItems.length - 1) const Divider(color: Colors.grey),
+                          if (index < _upcomingItems.length - 1)
+                            const Divider(color: Colors.grey),
                         ],
                       ),
                     );
@@ -1124,9 +1172,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Recent Activity',
-          style: TextStyle(
+        Text(
+          SentenceManager.instance.recentActivity,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -1149,8 +1197,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final items = <Map<String, dynamic>>[];
     for (final t in _recentTasks) {
       items.add({
-        'type': 'Task',
-        'title': t['title'] ?? 'Task',
+        'type': SentenceManager.instance.task,
+        'title': t['title'] ?? SentenceManager.instance.task,
         'status': t['status'] ?? 'todo',
         'time': t['updated_at'] ?? t['created_at'],
         'icon': Icons.task_alt,
@@ -1159,8 +1207,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     for (final tk in _recentTickets) {
       items.add({
-        'type': 'Ticket',
-        'title': tk['title'] ?? 'Ticket',
+        'type': SentenceManager.instance.ticket,
+        'title': tk['title'] ?? SentenceManager.instance.ticket,
         'status': tk['status'] ?? 'open',
         'time': tk['updated_at'] ?? tk['created_at'],
         'icon': Icons.confirmation_number,
@@ -1168,8 +1216,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       });
     }
     items.sort((a, b) {
-      final ta = DateTime.tryParse(a['time']?.toString() ?? '') ?? DateTime.now();
-      final tb = DateTime.tryParse(b['time']?.toString() ?? '') ?? DateTime.now();
+      final ta =
+          DateTime.tryParse(a['time']?.toString() ?? '') ?? DateTime.now();
+      final tb =
+          DateTime.tryParse(b['time']?.toString() ?? '') ?? DateTime.now();
       return tb.compareTo(ta);
     });
     final limited = items.take(5).toList();
@@ -1178,7 +1228,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Text('No recent activity', style: TextStyle(color: Colors.grey.shade400)),
+          child: Text(SentenceManager.instance.noRecentActivity,
+              style: TextStyle(color: Colors.grey.shade400)),
         ),
       );
     }
@@ -1187,7 +1238,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: List.generate(limited.length, (index) {
         final a = limited[index];
         final date = DateTime.tryParse(a['time']?.toString() ?? '');
-        final timeLabel = date != null ? DateFormat('MMM d, h:mm a').format(date) : '';
+        final timeLabel =
+            date != null ? DateFormat('MMM d, h:mm a').format(date) : '';
         return Column(
           children: [
             Padding(
@@ -1200,7 +1252,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       color: (a['color'] as Color).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(a['icon'] as IconData, color: a['color'] as Color, size: 20),
+                    child: Icon(a['icon'] as IconData,
+                        color: a['color'] as Color, size: 20),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1216,8 +1269,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                         ),
                         Text(
-                          'Status: ${a['status']}',
-                          style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          '${SentenceManager.instance.ticketStatusLabel}: ${a['status']}',
+                          style: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 14),
                         ),
                       ],
                     ),
@@ -1246,11 +1300,10 @@ class DotPatternPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 2
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
 
     const spacing = 30.0;
     const dotSize = 2.0;
@@ -1265,4 +1318,3 @@ class DotPatternPainter extends CustomPainter {
   @override
   bool shouldRepaint(DotPatternPainter oldDelegate) => false;
 }
-

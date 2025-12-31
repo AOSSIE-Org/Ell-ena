@@ -7,6 +7,9 @@ import '../home/home_screen.dart';
 import 'login_screen.dart';
 import 'verify_otp_screen.dart';
 import 'team_selection_dialog.dart';
+import '../../controllers/language_controller.dart';
+import 'package:get/get.dart';
+import '../../utils/language/sentence_manager.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -28,6 +31,7 @@ class _SignupScreenState extends State<SignupScreen>
   bool _isLoading = false;
   late TabController _tabController;
   final _supabaseService = SupabaseService();
+  final LanguageController _languageController = Get.find<LanguageController>();
 
   @override
   void initState() {
@@ -64,8 +68,11 @@ class _SignupScreenState extends State<SignupScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent. Please check your inbox.'),
+          SnackBar(
+            content: Text(SentenceManager(
+                    currentLanguage: _languageController.selectedLanguage.value)
+                .sentences
+                .sentVerificationEmail),
             backgroundColor: Colors.green,
           ),
         );
@@ -109,8 +116,12 @@ class _SignupScreenState extends State<SignupScreen>
       if (!teamExists) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Team ID not found. Please check and try again.'),
+            SnackBar(
+              content: Text(SentenceManager(
+                      currentLanguage:
+                          _languageController.selectedLanguage.value)
+                  .sentences
+                  .teamIdNotFound),
               backgroundColor: Colors.red,
             ),
           );
@@ -126,8 +137,11 @@ class _SignupScreenState extends State<SignupScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent. Please check your inbox.'),
+          SnackBar(
+            content: Text(SentenceManager(
+                    currentLanguage: _languageController.selectedLanguage.value)
+                .sentences
+                .sentVerificationEmail),
             backgroundColor: Colors.green,
           ),
         );
@@ -182,7 +196,12 @@ class _SignupScreenState extends State<SignupScreen>
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
+              content: Text(result['error'] ??
+                  SentenceManager(
+                          currentLanguage:
+                              _languageController.selectedLanguage.value)
+                      .sentences
+                      .googleSignInFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -192,7 +211,8 @@ class _SignupScreenState extends State<SignupScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(
+                '${SentenceManager(currentLanguage: _languageController.selectedLanguage.value).sentences.errorPrefix}$e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -206,257 +226,262 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   Widget build(BuildContext context) {
-    return AuthScreenWrapper(
-      title: 'Create Account',
-      subtitle: 'Join Ell-ena to get started',
-      children: [
-        TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Join the Team'),
-            Tab(text: 'Create the Team'),
-          ],
-          labelColor: Colors.green.shade400,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.green.shade400,
-          indicatorSize: TabBarIndicatorSize.tab,
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 350, // Adjust height as needed
-          child: TabBarView(
+    return Obx(() {
+      final s = SentenceManager(
+              currentLanguage: _languageController.selectedLanguage.value)
+          .sentences;
+      return AuthScreenWrapper(
+        title: s.createAccountTitle,
+        subtitle: s.joinAppSubtitle,
+        children: [
+          TabBar(
             controller: _tabController,
+            tabs: [
+              Tab(text: s.joinTeamTab),
+              Tab(text: s.createTeamTab),
+            ],
+            labelColor: Colors.green.shade400,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.green.shade400,
+            indicatorSize: TabBarIndicatorSize.tab,
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 350, // Adjust height as needed
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Join Team Tab
+                Form(
+                  key: _joinTeamFormKey,
+                  child: Column(
+                    children: [
+                      CustomTextField(
+                        controller: _teamIdController,
+                        label: s.teamIdLabel,
+                        icon: Icons.people_outline,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterTeamId;
+                          }
+                          if (value.length != 6) {
+                            return s.teamIdLength;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _nameController,
+                        label: s.fullNameLabel,
+                        icon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterName;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _emailController,
+                        label: s.email,
+                        icon: Icons.email_outlined,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterEmail;
+                          }
+                          if (!value.contains('@')) {
+                            return s.validEmail;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _passwordController,
+                        label: s.password,
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterPassword;
+                          }
+                          if (value.length < 6) {
+                            return s.passwordLength;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _confirmPasswordController,
+                        label: s.confirmPasswordLabel,
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.confirmPasswordValidator;
+                          }
+                          if (value != _passwordController.text) {
+                            return s.passwordsDoNotMatch;
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                // Create Team Tab
+                Form(
+                  key: _createTeamFormKey,
+                  child: Column(
+                    children: [
+                      CustomTextField(
+                        controller: _teamNameController,
+                        label: s.teamNameLabel,
+                        icon: Icons.group,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterTeamName;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _nameController,
+                        label: s.adminNameLabel,
+                        icon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterAdminName;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _emailController,
+                        label: s.adminEmailLabel,
+                        icon: Icons.email_outlined,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterAdminEmail;
+                          }
+                          if (!value.contains('@')) {
+                            return s.validEmail;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _passwordController,
+                        label: s.password,
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.enterPassword;
+                          }
+                          if (value.length < 6) {
+                            return s.passwordLength;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _confirmPasswordController,
+                        label: s.confirmPasswordLabel,
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return s.confirmPasswordValidator;
+                          }
+                          if (value != _passwordController.text) {
+                            return s.passwordsDoNotMatch;
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          CustomButton(
+            text: _tabController.index == 0 ? s.joinTeamBtn : s.createTeamBtn,
+            onPressed: _isLoading
+                ? null
+                : (_tabController.index == 0
+                    ? _handleJoinTeam
+                    : _handleCreateTeam),
+            isLoading: _isLoading,
+          ),
+          const SizedBox(height: 24),
+          // OR divider
+          Row(
             children: [
-              // Join Team Tab
-              Form(
-                key: _joinTeamFormKey,
-                child: Column(
-                  children: [
-                    CustomTextField(
-                      controller: _teamIdController,
-                      label: 'Team ID',
-                      icon: Icons.people_outline,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter team ID';
-                        }
-                        if (value.length != 6) {
-                          return 'Team ID must be 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      icon: Icons.person_outline,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _emailController,
-                      label: 'Email',
-                      icon: Icons.email_outlined,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _confirmPasswordController,
-                      label: 'Confirm Password',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
+              Expanded(child: Divider(color: Colors.grey.shade700)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  s.or,
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              // Create Team Tab
-              Form(
-                key: _createTeamFormKey,
-                child: Column(
-                  children: [
-                    CustomTextField(
-                      controller: _teamNameController,
-                      label: 'Team Name',
-                      icon: Icons.group,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter team name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _nameController,
-                      label: 'Admin Name',
-                      icon: Icons.person_outline,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter admin name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _emailController,
-                      label: 'Admin Email',
-                      icon: Icons.email_outlined,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter admin email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      controller: _confirmPasswordController,
-                      label: 'Confirm Password',
-                      icon: Icons.lock_outline,
-                      isPassword: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              Expanded(child: Divider(color: Colors.grey.shade700)),
             ],
           ),
-        ),
-        const SizedBox(height: 24),
-        CustomButton(
-          text: _tabController.index == 0 ? 'Join Team' : 'Create Team',
-          onPressed: _isLoading
-              ? null
-              : (_tabController.index == 0
-                  ? _handleJoinTeam
-                  : _handleCreateTeam),
-          isLoading: _isLoading,
-        ),
-        const SizedBox(height: 24),
-        // OR divider
-        Row(
-          children: [
-            Expanded(child: Divider(color: Colors.grey.shade700)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'OR',
+          const SizedBox(height: 24),
+          // Google Sign-Up Button
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: _isLoading ? null : _handleGoogleSignIn,
+              icon: const FaIcon(
+                FontAwesomeIcons.google,
+                size: 20,
+              ),
+              label: Text(
+                s.signUpGoogle,
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-            ),
-            Expanded(child: Divider(color: Colors.grey.shade700)),
-          ],
-        ),
-        const SizedBox(height: 24),
-        // Google Sign-Up Button
-        Center(
-          child: OutlinedButton.icon(
-            onPressed: _isLoading ? null : _handleGoogleSignIn,
-            icon: const FaIcon(
-              FontAwesomeIcons.google,
-              size: 20,
-            ),
-            label: const Text(
-              'Sign up with Google',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: BorderSide(color: Colors.green.shade400, width: 2),
-              padding: const EdgeInsets.symmetric(
-                vertical: 16,
-                horizontal: 24,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.green.shade400, width: 2),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        CustomButton(
-          text: 'Already have an account? Sign In',
-          onPressed: () {
-            NavigationService().navigateToReplacement(
-              const LoginScreen(),
-            );
-          },
-          isOutlined: true,
-        ),
-      ],
-    );
+          const SizedBox(height: 16),
+          CustomButton(
+            text: s.alreadyHaveAccount,
+            onPressed: () {
+              NavigationService().navigateToReplacement(
+                const LoginScreen(),
+              );
+            },
+            isOutlined: true,
+          ),
+        ],
+      );
+    });
   }
 }

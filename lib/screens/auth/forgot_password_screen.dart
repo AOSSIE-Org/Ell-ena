@@ -3,6 +3,9 @@ import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
 import 'verify_otp_screen.dart';
+import '../../controllers/language_controller.dart';
+import 'package:get/get.dart';
+import '../../utils/language/sentence_manager.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -15,6 +18,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _supabaseService = SupabaseService();
+  final LanguageController _languageController = Get.find<LanguageController>();
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -30,22 +34,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _isLoading = true;
         _errorMessage = null;
       });
-      
+
       try {
         // Request password reset email from Supabase
         await _supabaseService.client.auth.resetPasswordForEmail(
           _emailController.text,
         );
-        
+
         if (mounted) {
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reset code sent to your email'),
+            SnackBar(
+              content: Text(SentenceManager(
+                      currentLanguage:
+                          _languageController.selectedLanguage.value)
+                  .sentences
+                  .resetCodeSent),
               backgroundColor: Colors.green,
             ),
           );
-          
+
           // Navigate to verification screen
           NavigationService().navigateTo(
             VerifyOTPScreen(
@@ -58,17 +66,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (mounted) {
           // Show user-friendly error message
           setState(() {
-            String errorMsg = 'An error occurred. Please try again.';
-            
+            final s = SentenceManager(
+                    currentLanguage: _languageController.selectedLanguage.value)
+                .sentences;
+            String errorMsg = s.errorOccurred;
+
             // Parse the error message to be more user-friendly
             if (e.toString().contains('Invalid email')) {
-              errorMsg = 'Invalid email address';
+              errorMsg = s.invalidEmailError;
             } else if (e.toString().contains('Email not found')) {
-              errorMsg = 'Email address not found';
+              errorMsg = s.emailNotFoundError;
             } else if (e.toString().contains('Rate limit')) {
-              errorMsg = 'Too many attempts. Please try again later.';
+              errorMsg = s.tooManyAttempts;
             }
-            
+
             _errorMessage = errorMsg;
           });
         }
@@ -82,55 +93,60 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthScreenWrapper(
-      title: 'Reset Password',
-      subtitle: 'Enter your email to receive a reset code',
-      children: [
-        if (_errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
+    return Obx(() {
+      final s = SentenceManager(
+              currentLanguage: _languageController.selectedLanguage.value)
+          .sentences;
+      return AuthScreenWrapper(
+        title: s.resetPasswordTitle,
+        subtitle: s.resetPasswordSubtitle,
+        children: [
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                CustomTextField(
+                  label: s.email,
+                  icon: Icons.email_outlined,
+                  controller: _emailController,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return s.enterEmail;
+                    }
+                    if (!value.contains('@')) {
+                      return s.validEmail;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+                CustomButton(
+                  text: s.sendResetCodeBtn,
+                  onPressed: _isLoading ? null : _handleResetPassword,
+                  isLoading: _isLoading,
+                ),
+                const SizedBox(height: 16),
+                CustomButton(
+                  text: s.backToLoginBtn,
+                  onPressed: () {
+                    NavigationService().goBack();
+                  },
+                  isOutlined: true,
+                ),
+              ],
             ),
           ),
-        Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              CustomTextField(
-                label: 'Email',
-                icon: Icons.email_outlined,
-                controller: _emailController,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              CustomButton(
-                text: 'Send Reset Code',
-                onPressed: _isLoading ? null : _handleResetPassword,
-                isLoading: _isLoading,
-              ),
-              const SizedBox(height: 16),
-              CustomButton(
-                text: 'Back to Login',
-                onPressed: () {
-                  NavigationService().goBack();
-                },
-                isOutlined: true,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }

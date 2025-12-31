@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -7,18 +5,20 @@ import 'screens/chat/chat_screen.dart';
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
+import 'package:get/get.dart';
+import 'controllers/language_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await SupabaseService().initialize();
-    
+
     await AIService().initialize();
   } catch (e) {
     debugPrint('Error initializing services: $e');
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -27,7 +27,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    // Initialize LanguageController
+    Get.put(LanguageController());
+
+    return GetMaterialApp(
       title: 'Ell-ena',
       debugShowCheckedModeBanner: false,
       navigatorKey: NavigationService().navigatorKey,
