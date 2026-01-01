@@ -340,118 +340,142 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return _events[normalizedDay] ?? [];
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: const Color(0xFF1A1A1A),
-    body: _isLoading
-        ? const CalendarLoadingSkeleton()
-        : SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                _buildCalendar(),
-                const SizedBox(height: 12),
-                Expanded(child: _buildTimeScale()),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A1A),
+      body: _isLoading
+          ? const CalendarLoadingSkeleton()
+          : SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  _buildCalendar(),
+                  const SizedBox(height: 12),
+                  Expanded(child: _buildTimeScale()),
+                ],
+              ),
             ),
-          ),
-  );
-}
+    );
+  }
 
-Widget _buildCalendar() {
-  return Container(
-    margin: const EdgeInsets.symmetric(horizontal: 8), 
-    decoration: BoxDecoration(
-      color: const Color(0xFF2D2D2D),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TableCalendar(
-        firstDay: DateTime.utc(2024, 1, 1),
-        lastDay: DateTime.utc(2025, 12, 31),
-        focusedDay: _focusedDay,
-        calendarFormat: _calendarFormat,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        eventLoader: _getEventsForDay,
-        onDaySelected: (selectedDay, focusedDay) {
-          setState(() {
-            _selectedDay = selectedDay;
-            _focusedDay = focusedDay;
-          });
-        },
-        onFormatChanged: (format) {
-          setState(() {
-            _calendarFormat = format;
-          });
-        },
-        calendarBuilders: CalendarBuilders(
-          markerBuilder: (context, date, events) {
-            if (events.isEmpty) return const SizedBox.shrink();
+  Widget _buildCalendar() {
+    final now = DateTime.now();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8), 
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D2D2D),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: TableCalendar(
+          // FIX: Use dynamic dates that always include the current year
+          firstDay: DateTime(now.year - 1, 1, 1),
+          lastDay: DateTime(now.year + 1, 12, 31),
+          focusedDay: _focusedDay,
+          calendarFormat: _calendarFormat,
+          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+          eventLoader: _getEventsForDay,
+          onDaySelected: (selectedDay, focusedDay) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+            });
+          },
+          onFormatChanged: (format) {
+            setState(() {
+              _calendarFormat = format;
+            });
+          },
+          // FIX: Add page change handling to ensure focusedDay stays within bounds
+          onPageChanged: (focusedDay) {
+            // Ensure focusedDay is within bounds
+            final now = DateTime.now();
+            final firstDay = DateTime(now.year - 1, 1, 1);
+            final lastDay = DateTime(now.year + 1, 12, 31);
             
-            return Positioned(
-              bottom: 1,
-              child: Container(
-                height: 16,
-                width: events.length > 3 ? 35 : (events.length * 8 + 10),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    '${events.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+            // Clamp focusedDay to be within bounds
+            DateTime clampedFocusedDay = focusedDay;
+            if (focusedDay.isBefore(firstDay)) {
+              clampedFocusedDay = firstDay;
+            } else if (focusedDay.isAfter(lastDay)) {
+              clampedFocusedDay = lastDay;
+            }
+            
+            if (clampedFocusedDay != focusedDay) {
+              setState(() {
+                _focusedDay = clampedFocusedDay;
+              });
+            }
+          },
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (context, date, events) {
+              if (events.isEmpty) return const SizedBox.shrink();
+              
+              return Positioned(
+                bottom: 1,
+                child: Container(
+                  height: 16,
+                  width: events.length > 3 ? 35 : (events.length * 8 + 10),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${events.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
-        ),
-        calendarStyle: const CalendarStyle(
-          defaultTextStyle: TextStyle(color: Colors.white),
-          weekendTextStyle: TextStyle(color: Colors.white70),
-          selectedTextStyle: TextStyle(color: Colors.black),
-          todayTextStyle: TextStyle(color: Colors.black),
-          outsideTextStyle: TextStyle(color: Colors.white38),
-          selectedDecoration: BoxDecoration(
-            color: Colors.green,
-            shape: BoxShape.circle,
+              );
+            },
           ),
-          todayDecoration: BoxDecoration(
-            color: Colors.greenAccent,
-            shape: BoxShape.circle,
+          calendarStyle: const CalendarStyle(
+            defaultTextStyle: TextStyle(color: Colors.white),
+            weekendTextStyle: TextStyle(color: Colors.white70),
+            selectedTextStyle: TextStyle(color: Colors.black),
+            todayTextStyle: TextStyle(color: Colors.black),
+            outsideTextStyle: TextStyle(color: Colors.white38),
+            selectedDecoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
+            todayDecoration: BoxDecoration(
+              color: Colors.greenAccent,
+              shape: BoxShape.circle,
+            ),
+            markersMaxCount: 0,
+            markerDecoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
           ),
-          markersMaxCount: 0,
-          markerDecoration: BoxDecoration(
-            color: Colors.green,
-            shape: BoxShape.circle,
+          headerStyle: const HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
+            rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
           ),
-        ),
-        headerStyle: const HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+          daysOfWeekStyle: const DaysOfWeekStyle(
+            weekdayStyle: TextStyle(color: Colors.white),
+            weekendStyle: TextStyle(color: Colors.white70),
           ),
-          leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
-          rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
-        ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(color: Colors.white),
-          weekendStyle: TextStyle(color: Colors.white70),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildTimeScale() {
     return ListView.builder(
