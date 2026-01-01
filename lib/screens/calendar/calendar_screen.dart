@@ -44,8 +44,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Ensure _focusedDay is within bounds on initialization
+    _clampFocusedDay();
+    
     _selectedDay = _focusedDay;
     _loadCurrentUserInfo();
+  }
+  
+  // Clamp _focusedDay to be within valid range
+  void _clampFocusedDay() {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year - 1, 1, 1);
+    final lastDay = DateTime(now.year + 1, 12, 31);
+    
+    if (_focusedDay.isBefore(firstDay)) {
+      _focusedDay = firstDay;
+    } else if (_focusedDay.isAfter(lastDay)) {
+      _focusedDay = lastDay;
+    }
   }
   
   Future<void> _loadCurrentUserInfo() async {
@@ -389,7 +406,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _calendarFormat = format;
             });
           },
-          // FIX: Add page change handling to ensure focusedDay stays within bounds
+          // FIX: Always update _focusedDay on page change
           onPageChanged: (focusedDay) {
             // Ensure focusedDay is within bounds
             final now = DateTime.now();
@@ -404,11 +421,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               clampedFocusedDay = lastDay;
             }
             
-            if (clampedFocusedDay != focusedDay) {
-              setState(() {
-                _focusedDay = clampedFocusedDay;
-              });
-            }
+            setState(() {
+              _focusedDay = clampedFocusedDay;
+            });
           },
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
