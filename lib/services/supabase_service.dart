@@ -484,6 +484,91 @@ class SupabaseService {
     }
   }
 
+  Future<Map<String, dynamic>> changeTeamMemberRole({
+    required String userId,
+    required String newRole, // 'admin' or 'member'
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase not initialized',
+        };
+      }
+
+      final currentUser = _client.auth.currentUser;
+      if (currentUser == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      // Verify current user is an admin and both users are in the same team
+      final currentUserProfile = await _client
+          .from('users')
+          .select('role, team_id')
+          .eq('id', currentUser.id)
+          .single();
+
+      if (currentUserProfile['role'] != 'admin') {
+        return {
+          'success': false,
+          'error': 'Only admins can change member roles',
+        };
+      }
+
+      final targetUserProfile = await _client
+          .from('users')
+          .select('team_id, role')
+          .eq('id', userId)
+          .single();
+
+      if (currentUserProfile['team_id'] != targetUserProfile['team_id']) {
+        return {
+          'success': false,
+          'error': 'Users must be in the same team',
+        };
+      }
+
+      // Validate new role
+      if (newRole != 'admin' && newRole != 'member') {
+        return {
+          'success': false,
+          'error': 'Invalid role: $newRole',
+        };
+      }
+
+      // Update the role
+      final response = await _client
+          .from('users')
+          .update({'role': newRole})
+          .eq('id', userId)
+          .select();
+
+      if (response.isEmpty) {
+        return {
+          'success': false,
+          'error':
+              'Update failed - RLS policy may be blocking. Please check database permissions.',
+        };
+      }
+
+      debugPrint('Successfully updated role to $newRole for user $userId');
+      return {
+        'success': true,
+        'message': 'Role updated successfully',
+      };
+    } catch (e, stackTrace) {
+      debugPrint('Error changing user role: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
   Future<bool> teamExists(String teamId) async {
     try {
       if (!_isInitialized) return false;
