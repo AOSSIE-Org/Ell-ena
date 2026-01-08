@@ -66,10 +66,8 @@ I’ve made demo videos for Ell-ena and separated them by features. So, we can d
 
 ## ✨ Database Schema
 
-Ell-ena uses PostgreSQL (via Supabase) with strict Row-Level Security (RLS) and
-AI-optimized vector search tables.
+Ell-ena uses PostgreSQL (via Supabase) with strict Row-Level Security (RLS) and AI-optimized vector search tables.
 
-📌 **Database Schema Diagram & Docs**  
 👉 [View Database Schema](https://dbdiagram.io/d/69525ba139fa3db27bb9e56c)
 
 ## ✨ Key Features
@@ -251,4 +249,5 @@ Reference designs for the project can be found here:
 
 
 **Note:** This project is part of **GSoC'25 under AOSSIE** and is actively under development.
+
 
