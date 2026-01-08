@@ -106,16 +106,6 @@ CREATE POLICY tickets_delete_policy ON tickets
         )
     );
 
-CREATE POLICY tickets_delete_policy ON tickets
-    FOR DELETE
-    USING (
-        auth.uid() = created_by OR
-        auth.uid() IN (
-            SELECT id FROM users 
-            WHERE team_id = tickets.team_id AND role = 'admin'
-        )
-    );
-
 ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY ticket_comments_view_policy ON ticket_comments
@@ -165,12 +155,6 @@ CREATE POLICY ticket_comments_delete_policy ON ticket_comments
             AND users.id = auth.uid() 
             AND users.role = 'admin'
         )
-    );
-
-CREATE POLICY ticket_comments_delete_policy ON ticket_comments
-    FOR DELETE
-    USING (
-        auth.uid() = user_id
     );
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
