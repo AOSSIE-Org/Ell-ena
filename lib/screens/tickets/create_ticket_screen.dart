@@ -204,7 +204,25 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                   setState(() => _category = value);
                                 }
                               },
-                              itemLabelBuilder: (item) => item,
+                              itemLabelBuilder: (item) {
+                                // Map English category keys to localized labels
+                                switch (item) {
+                                  case 'Bug':
+                                    return s.categoryBug;
+                                  case 'Feature Request':
+                                    return s.categoryFeatureRequest;
+                                  case 'UI/UX':
+                                    return s.categoryUiUx;
+                                  case 'Performance':
+                                    return s.categoryPerformance;
+                                  case 'Documentation':
+                                    return s.categoryDocumentation;
+                                  case 'Security':
+                                    return s.categorySecurity;
+                                  default:
+                                    return item;
+                                }
+                              },
                             ),
                           ),
                         ],
@@ -305,7 +323,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                                       BorderRadius.circular(4),
                                                 ),
                                                 child: Text(
-                                                  'ADMIN',
+                                                  // 'ADMIN',
+                                                  s.teamAdmin,
                                                   style: TextStyle(
                                                     color: Colors.red.shade400,
                                                     fontSize: 10,

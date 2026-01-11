@@ -576,6 +576,25 @@ class _TicketCard extends StatelessWidget {
     return '${words.take(wordLimit).join(' ')}...';
   }
 
+  String _getLocalizedCategory(String category) {
+    switch (category) {
+      case 'Bug':
+        return s.categoryBug;
+      case 'Feature Request':
+        return s.categoryFeatureRequest;
+      case 'UI/UX':
+        return s.categoryUiUx;
+      case 'Performance':
+        return s.categoryPerformance;
+      case 'Documentation':
+        return s.categoryDocumentation;
+      case 'Security':
+        return s.categorySecurity;
+      default:
+        return s.categoryOther;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String title = ticket['title'] ?? s.untitledTicket;
@@ -820,7 +839,7 @@ class _TicketCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              category,
+                              _getLocalizedCategory(category),
                               style: TextStyle(
                                 color: Colors.purple.shade300,
                                 fontSize: 12,

@@ -374,6 +374,26 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     }
   }
 
+  String _getLocalizedCategory(String category) {
+    final s = SentenceManager.instance;
+    switch (category) {
+      case 'Bug':
+        return s.categoryBug;
+      case 'Feature Request':
+        return s.categoryFeatureRequest;
+      case 'UI/UX':
+        return s.categoryUiUx;
+      case 'Performance':
+        return s.categoryPerformance;
+      case 'Documentation':
+        return s.categoryDocumentation;
+      case 'Security':
+        return s.categorySecurity;
+      default:
+        return s.categoryOther;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Obx wrapping handled inside specific widgets if needed, but here structure is simple stateful.
@@ -660,7 +680,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  _ticket!['category'] ?? 'Other',
+                                  _getLocalizedCategory(
+                                      _ticket!['category'] ?? 'Other'),
                                   style: TextStyle(
                                     color: Colors.purple.shade300,
                                     fontSize: 12,

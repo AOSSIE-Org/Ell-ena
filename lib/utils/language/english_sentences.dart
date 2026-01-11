@@ -662,6 +662,23 @@ class EnglishSentences extends Sentences {
   String get selectTicketCategory => 'Select category';
   @override
   String get selectTicketAssignee => 'Select team member';
+
+  // Ticket Categories
+  @override
+  String get categoryBug => 'Bug';
+  @override
+  String get categoryFeatureRequest => 'Feature Request';
+  @override
+  String get categoryUiUx => 'UI/UX';
+  @override
+  String get categoryPerformance => 'Performance';
+  @override
+  String get categoryDocumentation => 'Documentation';
+  @override
+  String get categorySecurity => 'Security';
+  @override
+  String get categoryOther => 'Other';
+
   @override
   String get priorityHigh => 'High';
   @override

@@ -663,6 +663,23 @@ class HindiSentences extends Sentences {
   String get selectTicketCategory => 'श्रेणी चुनें';
   @override
   String get selectTicketAssignee => 'टीम सदस्य चुनें';
+
+  // Ticket Categories
+  @override
+  String get categoryBug => 'बग';
+  @override
+  String get categoryFeatureRequest => 'फीचर अनुरोध';
+  @override
+  String get categoryUiUx => 'यूआई/यूएक्स';
+  @override
+  String get categoryPerformance => 'प्रदर्शन';
+  @override
+  String get categoryDocumentation => 'दस्तावेज़ीकरण';
+  @override
+  String get categorySecurity => 'सुरक्षा';
+  @override
+  String get categoryOther => 'अन्य';
+
   @override
   String get priorityHigh => 'उच्च';
   @override

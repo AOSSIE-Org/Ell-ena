@@ -352,6 +352,16 @@ abstract class Sentences {
   String get selectTicketPriority;
   String get selectTicketCategory;
   String get selectTicketAssignee;
+
+  // Ticket Categories
+  String get categoryBug;
+  String get categoryFeatureRequest;
+  String get categoryUiUx;
+  String get categoryPerformance;
+  String get categoryDocumentation;
+  String get categorySecurity;
+  String get categoryOther;
+
   String get priorityHigh;
   String get priorityMedium;
   String get priorityLow;

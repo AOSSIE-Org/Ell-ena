@@ -815,7 +815,7 @@ class _TaskCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        if (assigneeName != 'Unassigned')
+                        if (assigneeName != s.unassigned)
                           Row(
                             children: [
                               CircleAvatar(
