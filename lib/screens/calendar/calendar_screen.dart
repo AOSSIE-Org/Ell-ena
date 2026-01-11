@@ -370,7 +370,7 @@ Widget _buildCalendar() {
       padding: const EdgeInsets.all(8.0),
       child: TableCalendar(
         firstDay: DateTime.utc(2024, 1, 1),
-        lastDay: DateTime.utc(2025, 12, 31),
+        lastDay: DateTime.utc(DateTime.now().year + 5, 12, 31), // Dynamic: always 5 years ahead
         focusedDay: _focusedDay,
         calendarFormat: _calendarFormat,
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
