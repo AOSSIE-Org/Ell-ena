@@ -391,6 +391,9 @@ abstract class Sentences {
   String get changePriority;
   String get approveTicket;
   String get rejectTicket;
+  String get approvalStatusPending;
+  String get approvalStatusApproved;
+  String get approvalStatusRejected;
   String get errorUpdatingTicket;
   String get errorAssigningTicket;
   String get commentsTitle;

@@ -740,6 +740,12 @@ class HindiSentences extends Sentences {
   @override
   String get rejectTicket => 'अस्वीकार करें';
   @override
+  String get approvalStatusPending => 'लंबित';
+  @override
+  String get approvalStatusApproved => 'स्वीकृत';
+  @override
+  String get approvalStatusRejected => 'अस्वीकृत';
+  @override
   String get errorUpdatingTicket => 'टिकट अद्यतन करने में त्रुटि';
   @override
   String get errorAssigningTicket => 'टिकट सौंपने में त्रुटि';

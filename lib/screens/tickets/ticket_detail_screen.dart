@@ -394,6 +394,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     }
   }
 
+  String _getLocalizedApprovalStatus(String approvalStatus) {
+    final s = SentenceManager.instance;
+    switch (approvalStatus) {
+      case 'pending':
+        return s.approvalStatusPending;
+      case 'approved':
+        return s.approvalStatusApproved;
+      case 'rejected':
+        return s.approvalStatusRejected;
+      default:
+        return s.approvalStatusPending;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Obx wrapping handled inside specific widgets if needed, but here structure is simple stateful.
@@ -661,7 +675,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      approvalStatus.toUpperCase(),
+                                      _getLocalizedApprovalStatus(
+                                          approvalStatus),
                                       style: TextStyle(
                                         color: approvalColor,
                                         fontSize: 10,
@@ -941,12 +956,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       controller: _commentController,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: s
-                            .commentsTitle, // Or 'Add a comment...' if key exists. 'commentsTitle' is 'Comments', so maybe acceptable as hint?
-                        // Actually I don't have 'addCommentHint' key anymore?
-                        // I'll check if I have a better key.
-                        // 'enterTicketDescription' might be close but not exact.
-                        // I will use 's.commentsTitle' for now as placeholder for "Comments".
+                        hintText: s.addCommentHint,
                         hintStyle: TextStyle(color: Colors.grey.shade600),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),

@@ -588,6 +588,19 @@ class _TaskCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String _getLocalizedApprovalStatus(String approvalStatus, dynamic s) {
+    switch (approvalStatus) {
+      case 'pending':
+        return s.approvalStatusPending;
+      case 'approved':
+        return s.approvalStatusApproved;
+      case 'rejected':
+        return s.approvalStatusRejected;
+      default:
+        return s.approvalStatusPending;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Get Controller
@@ -767,7 +780,7 @@ class _TaskCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            approvalStatus.toUpperCase(),
+                            _getLocalizedApprovalStatus(approvalStatus, s),
                             style: TextStyle(
                               color: approvalColor,
                               fontWeight: FontWeight.bold,

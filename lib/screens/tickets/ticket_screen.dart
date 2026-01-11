@@ -595,13 +595,25 @@ class _TicketCard extends StatelessWidget {
     }
   }
 
+  String _getLocalizedApprovalStatus(String approvalStatus) {
+    switch (approvalStatus) {
+      case 'pending':
+        return s.approvalStatusPending;
+      case 'approved':
+        return s.approvalStatusApproved;
+      case 'rejected':
+        return s.approvalStatusRejected;
+      default:
+        return s.approvalStatusPending;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String title = ticket['title'] ?? s.untitledTicket;
     final String description = ticket['description'] ?? s.noDescription;
     // Limit description to 75 words
     final String limitedDescription = _limitWords(description, 75);
-    final String status = ticket['status'] ?? 'open';
     final String priority = ticket['priority'] ?? 'medium';
     final String category = ticket['category'] ?? 'Bug';
     final String approvalStatus = ticket['approval_status'] ?? 'pending';
@@ -802,7 +814,7 @@ class _TicketCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          approvalStatus.toUpperCase(),
+                          _getLocalizedApprovalStatus(approvalStatus),
                           style: TextStyle(
                             color: approvalColor,
                             fontWeight: FontWeight.bold,

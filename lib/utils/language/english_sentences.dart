@@ -481,8 +481,6 @@ class EnglishSentences extends Sentences {
 
   // Meetings
   @override
-  String get durationMustBeGreaterThanZero => 'Duration must be greater than 0';
-  @override
   String get meetingsTitle => 'Meetings';
   @override
   String get upcomingMeetings => 'Upcoming';
@@ -738,6 +736,12 @@ class EnglishSentences extends Sentences {
   String get approveTicket => 'Approve';
   @override
   String get rejectTicket => 'Reject';
+  @override
+  String get approvalStatusPending => 'Pending';
+  @override
+  String get approvalStatusApproved => 'Approved';
+  @override
+  String get approvalStatusRejected => 'Rejected';
   @override
   String get errorUpdatingTicket => 'Error updating ticket';
   @override
