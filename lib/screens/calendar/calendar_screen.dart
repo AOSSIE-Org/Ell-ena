@@ -658,34 +658,226 @@ class _CalendarScreenState extends State<CalendarScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDialogOption(
-              'Schedule a Meeting',
-              Icons.people,
-              Colors.blue,
-              () => _handleCreate(EventType.meeting, selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Schedule a Meeting',
+              icon: Icons.people,
+              color: Colors.blue,
+              selectedTime: selectedTime,
+              eventType: EventType.meeting,
             ),
             const SizedBox(height: 8),
-            _buildDialogOption(
-              'Create a Task',
-              Icons.task,
-              Colors.green,
-              () => _handleCreate(EventType.task, selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Create a Task',
+              icon: Icons.task,
+              color: Colors.green,
+              selectedTime: selectedTime,
+              eventType: EventType.task,
             ),
             const SizedBox(height: 8),
-            _buildDialogOption(
-              'Create a Ticket',
-              Icons.confirmation_number,
-              Colors.orange,
-              () => _handleCreate(EventType.ticket, selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Create a Ticket',
+              icon: Icons.confirmation_number,
+              color: Colors.orange,
+              selectedTime: selectedTime,
+              eventType: EventType.ticket,
             ),
             const SizedBox(height: 8),
-            _buildDialogOption(
-              'Create with Ell-ena AI',
-              Icons.smart_toy,
-              Colors.purple,
-              () => _handleCreateWithAI(selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Create with Ell-ena AI',
+              icon: Icons.smart_toy,
+              color: Colors.purple,
+              selectedTime: selectedTime,
+              eventType: null, // Special case for AI
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwipeableDialogOption({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required TimeOfDay selectedTime,
+    required EventType? eventType,
+  }) {
+    final uniqueKey = Key(title);
+    
+    return Dismissible(
+      key: uniqueKey,
+      direction: DismissDirection.horizontal,
+      background: Container(
+        decoration: BoxDecoration(
+          color: Colors.purple.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 20),
+              child: Row(
+                children: [
+                  Icon(Icons.smart_toy, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create with AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 20),
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        // Prevent automatic dismissal - we'll handle it manually
+        return true;
+      },
+      onDismissed: (direction) {
+        // Handle swipe actions
+        if (direction == DismissDirection.endToStart) {
+          // Swipe left → Regular creation
+          if (eventType != null) {
+            Navigator.of(context).pop(); // Close dialog first
+            _handleCreate(eventType, selectedTime);
+          } else {
+            // For AI option, regular creation is also AI (but with tap message)
+            Navigator.of(context).pop(); // Close dialog first
+            _handleCreateWithAISwipe(selectedTime, title: title);
+          }
+        } else if (direction == DismissDirection.startToEnd) {
+          // Swipe right → AI creation
+          Navigator.of(context).pop(); // Close dialog first
+          _handleCreateWithAISwipe(selectedTime, title: title);
+        }
+      },
+      child: GestureDetector(
+        onTap: () {
+          if (eventType != null) {
+            Navigator.of(context).pop(); // Close dialog first
+            _handleCreate(eventType, selectedTime);
+          } else {
+            // For AI option, tap also goes to AI
+            Navigator.of(context).pop(); // Close dialog first
+            _handleCreateWithAISwipe(selectedTime, title: title);
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF3D3D3D),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Icon(icon, color: color),
+            title: Text(title, style: const TextStyle(color: Colors.white)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Left swipe indicator
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.swipe_left, color: color.withOpacity(0.7), size: 16),
+                    Text(
+                      'Create',
+                      style: TextStyle(
+                        color: color.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                // Right swipe indicator
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.swipe_right, color: Colors.purple.withOpacity(0.7), size: 16),
+                    Text(
+                      'AI',
+                      style: TextStyle(
+                        color: Colors.purple.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleCreateWithAISwipe(TimeOfDay selectedTime, {required String title}) {
+    if (_selectedDay == null) return;
+    
+    final selectedDateTime = DateTime(
+      _selectedDay!.year,
+      _selectedDay!.month,
+      _selectedDay!.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+    
+    // Format the date for the AI
+    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDateTime);
+    final formattedTime = selectedTime.format(context);
+    
+    // Generate different messages based on the title being swiped
+    String message;
+    
+    if (title.toLowerCase().contains('meeting')) {
+      message = 'I need to schedule a meeting on $formattedDate at $formattedTime';
+    } else if (title.toLowerCase().contains('task')) {
+      message = 'I need to create a task on $formattedDate at $formattedTime';
+    } else if (title.toLowerCase().contains('ticket')) {
+      message = 'I need to create a ticket on $formattedDate at $formattedTime';
+    } else {
+      message = 'I need to create something with AI on $formattedDate at $formattedTime';
+    }
+    
+    // Navigate to chat screen with the generated message
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          arguments: {'initial_message': message}
         ),
       ),
     );
@@ -724,8 +916,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _handleCreate(EventType type, TimeOfDay selectedTime) async {
-    Navigator.of(context).pop(); // Close dialog
-    
     if (_selectedDay == null) return;
     
     final selectedDateTime = DateTime(
@@ -773,8 +963,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // Handle creation with AI assistant
   void _handleCreateWithAI(TimeOfDay selectedTime) {
-    Navigator.of(context).pop(); // Close dialog
-    
     if (_selectedDay == null) return;
     
     final selectedDateTime = DateTime(
