@@ -889,38 +889,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildDialogOption(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _handleCreate(EventType type, TimeOfDay selectedTime) async {
     if (_selectedDay == null) return;
     
@@ -965,34 +933,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (result == true) {
       await _loadEventsWithCache(); // Use cache loading
     }
-  }
-
-  // Handle creation with AI assistant
-  void _handleCreateWithAI(TimeOfDay selectedTime) {
-    if (_selectedDay == null) return;
-    
-    final selectedDateTime = DateTime(
-      _selectedDay!.year,
-      _selectedDay!.month,
-      _selectedDay!.day,
-      selectedTime.hour,
-      selectedTime.minute,
-    );
-    
-    // Format the date for the AI
-    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDateTime);
-    final formattedTime = selectedTime.format(context);
-    final message = 'I need to create a task for $formattedDate at $formattedTime';
-    
-    // Use the NavigationService to navigate to the chat screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          arguments: {'initial_message': message}
-        ),
-      ),
-    );
   }
 }
 
