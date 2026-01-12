@@ -764,27 +764,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
       confirmDismiss: (direction) async {
-        // Prevent automatic dismissal - we'll handle it manually
-        return true;
-      },
-      onDismissed: (direction) {
-        // Handle swipe actions
+        // Handle navigation immediately and prevent default dismissal
         if (direction == DismissDirection.endToStart) {
           // Swipe left → Regular creation
           if (eventType != null) {
             Navigator.of(context).pop(); // Close dialog first
-            _handleCreate(eventType, selectedTime);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _handleCreate(eventType, selectedTime);
+            });
           } else {
             // For AI option, regular creation is also AI (but with tap message)
             Navigator.of(context).pop(); // Close dialog first
-            _handleCreateWithAISwipe(selectedTime, title: title);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _handleCreateWithAISwipe(selectedTime, title: title);
+            });
           }
         } else if (direction == DismissDirection.startToEnd) {
           // Swipe right → AI creation
           Navigator.of(context).pop(); // Close dialog first
-          _handleCreateWithAISwipe(selectedTime, title: title);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _handleCreateWithAISwipe(selectedTime, title: title);
+          });
         }
+        // Return false to prevent the Dismissible's default dismissal behavior
+        // since we're handling navigation manually
+        return false;
       },
+      // Removed the onDismissed callback since we're handling everything in confirmDismiss
       child: GestureDetector(
         onTap: () {
           if (eventType != null) {
