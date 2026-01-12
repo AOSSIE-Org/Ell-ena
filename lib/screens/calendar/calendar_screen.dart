@@ -776,14 +776,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
             // For AI option, regular creation is also AI (but with tap message)
             Navigator.of(context).pop(); // Close dialog first
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _handleCreateWithAISwipe(selectedTime, title: title);
+              _handleCreateWithAISwipe(selectedTime, eventType: eventType);
             });
           }
         } else if (direction == DismissDirection.startToEnd) {
           // Swipe right → AI creation
           Navigator.of(context).pop(); // Close dialog first
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _handleCreateWithAISwipe(selectedTime, title: title);
+            _handleCreateWithAISwipe(selectedTime, eventType: eventType);
           });
         }
         // Return false to prevent the Dismissible's default dismissal behavior
@@ -799,7 +799,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           } else {
             // For AI option, tap also goes to AI
             Navigator.of(context).pop(); // Close dialog first
-            _handleCreateWithAISwipe(selectedTime, title: title);
+            _handleCreateWithAISwipe(selectedTime, eventType: eventType);
           }
         },
         child: Container(
@@ -850,7 +850,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  void _handleCreateWithAISwipe(TimeOfDay selectedTime, {required String title}) {
+  void _handleCreateWithAISwipe(TimeOfDay selectedTime, {required EventType? eventType}) {
     if (_selectedDay == null) return;
     
     final selectedDateTime = DateTime(
@@ -865,14 +865,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDateTime);
     final formattedTime = selectedTime.format(context);
     
-    // Generate different messages based on the title being swiped
+    // Generate different messages based on the event type
     String message;
     
-    if (title.toLowerCase().contains('meeting')) {
+    if (eventType == EventType.meeting) {
       message = 'I need to schedule a meeting on $formattedDate at $formattedTime';
-    } else if (title.toLowerCase().contains('task')) {
+    } else if (eventType == EventType.task) {
       message = 'I need to create a task on $formattedDate at $formattedTime';
-    } else if (title.toLowerCase().contains('ticket')) {
+    } else if (eventType == EventType.ticket) {
       message = 'I need to create a ticket on $formattedDate at $formattedTime';
     } else {
       message = 'I need to create something with AI on $formattedDate at $formattedTime';
