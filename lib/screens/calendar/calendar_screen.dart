@@ -713,10 +713,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(right: 20),
+              padding: const EdgeInsets.only(left: 20),
               child: Row(
                 children: [
                   Icon(Icons.smart_toy, color: Colors.white),
@@ -741,10 +741,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 20),
+              padding: const EdgeInsets.only(right: 20),
               child: Row(
                 children: [
                   Icon(icon, color: Colors.white),
@@ -770,20 +770,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
           if (eventType != null) {
             Navigator.of(context).pop(); // Close dialog first
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _handleCreate(eventType, selectedTime);
+              if (mounted) {
+                _handleCreate(eventType, selectedTime);
+              }
             });
           } else {
             // For AI option, regular creation is also AI (but with tap message)
             Navigator.of(context).pop(); // Close dialog first
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+              if (mounted) {
+                _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+              }
             });
           }
         } else if (direction == DismissDirection.startToEnd) {
           // Swipe right → AI creation
           Navigator.of(context).pop(); // Close dialog first
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+            if (mounted) {
+              _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+            }
           });
         }
         // Return false to prevent the Dismissible's default dismissal behavior
