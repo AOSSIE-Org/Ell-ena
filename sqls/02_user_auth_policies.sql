@@ -60,3 +60,6 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT ON user_teams TO anon, authenticated;
 GRANT ALL ON teams TO anon, authenticated;
 GRANT ALL ON users TO anon, authenticated; 
+
+
+
