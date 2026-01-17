@@ -369,9 +369,14 @@ Widget _buildCalendar() {
     child: Padding(
       padding: const EdgeInsets.all(8.0),
       child: TableCalendar(
-        firstDay: DateTime.utc(2024, 1, 1),
-        lastDay: DateTime.utc(2025, 12, 31),
+        // Dynamic date range from 100 years past to 100 years future
+        // This is lazy-loaded so it does not affect performance
+        firstDay: DateTime(DateTime.now().year - 100, 1, 1),
+        lastDay: DateTime(DateTime.now().year + 100, 12, 31),
         focusedDay: _focusedDay,
+        onPageChanged: (focusedDay) {
+          _focusedDay = focusedDay;
+        },
         calendarFormat: _calendarFormat,
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
         eventLoader: _getEventsForDay,
