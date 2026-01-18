@@ -12,7 +12,7 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final Function(String)? onChanged;
   final bool enabled;
-  
+
   final String? label;
   final IconData? icon;
   final bool? isPassword;
@@ -37,7 +37,7 @@ class CustomTextField extends StatelessWidget {
     final String effectiveHintText = label ?? hintText;
     final IconData? effectivePrefixIcon = icon ?? prefixIcon;
     final bool effectiveObscureText = isPassword ?? obscureText;
-    
+
     return TextFormField(
       controller: controller,
       obscureText: effectiveObscureText,
@@ -47,8 +47,9 @@ class CustomTextField extends StatelessWidget {
       enabled: enabled,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
-        hintText: effectiveHintText,
+        hintText: hintText,
         labelText: label,
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
         labelStyle: const TextStyle(color: Colors.grey),
         hintStyle: const TextStyle(color: Colors.grey),
         prefixIcon: effectivePrefixIcon != null
@@ -104,29 +105,27 @@ class CustomButton extends StatelessWidget {
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side:
-                isOutlined
-                    ? BorderSide(color: Colors.green.shade400)
-                    : BorderSide.none,
+            side: isOutlined
+                ? BorderSide(color: Colors.green.shade400)
+                : BorderSide.none,
           ),
         ),
-        child:
-            isLoading
-                ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-                : Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
                 ),
+              )
+            : Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
@@ -255,7 +254,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Main content
           Expanded(
             child: SingleChildScrollView(
@@ -265,8 +264,9 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                 children: [
                   // Stats row
                   Row(
-                    children: List.generate(3, (index) => 
-                      Expanded(
+                    children: List.generate(
+                      3,
+                      (index) => Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
                           child: _buildStatCard(),
@@ -275,7 +275,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Tasks section
                   const Text(
                     'Recent Tasks',
@@ -287,9 +287,9 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   ...List.generate(3, (index) => _buildTaskItem()),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Calendar section
                   const Text(
                     'Upcoming Events',
@@ -301,9 +301,9 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildCalendarWidget(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Activity section
                   const Text(
                     'Team Activity',
@@ -323,7 +323,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildStatCard() {
     return Container(
       height: 80,
@@ -357,7 +357,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildTaskItem() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -418,7 +418,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildCalendarWidget() {
     return Container(
       height: 200,
@@ -442,9 +442,11 @@ class DashboardLoadingSkeleton extends StatelessWidget {
               ),
               Row(
                 children: [
-                  Icon(Icons.arrow_back_ios, size: 14, color: Colors.grey.shade400),
+                  Icon(Icons.arrow_back_ios,
+                      size: 14, color: Colors.grey.shade400),
                   const SizedBox(width: 16),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
+                  Icon(Icons.arrow_forward_ios,
+                      size: 14, color: Colors.grey.shade400),
                 ],
               ),
             ],
@@ -511,7 +513,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildActivityItem() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -601,7 +603,8 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -625,7 +628,8 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                 const SizedBox(height: 16),
                 // Search bar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1A1A1A),
                     borderRadius: BorderRadius.circular(12),
@@ -647,7 +651,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Tabs
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -660,7 +664,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Content
           Expanded(
             child: ListView.builder(
@@ -675,14 +679,16 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildTab(String title, bool isSelected) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withOpacity(0.2) : const Color(0xFF2D2D2D),
+          color: isSelected
+              ? Colors.green.withOpacity(0.2)
+              : const Color(0xFF2D2D2D),
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,
@@ -696,7 +702,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildWorkspaceItem() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -830,7 +836,8 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                             color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.arrow_back, size: 16, color: Colors.white),
+                          child: const Icon(Icons.arrow_back,
+                              size: 16, color: Colors.white),
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -839,14 +846,15 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                             color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.arrow_forward, size: 16, color: Colors.white),
+                          child: const Icon(Icons.arrow_forward,
+                              size: 16, color: Colors.white),
                         ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Weekday headers
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -861,7 +869,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Calendar grid (4 weeks)
                 for (int week = 0; week < 4; week++)
                   Padding(
@@ -872,22 +880,27 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                         // Highlight a random day to simulate selected day
                         final isSelected = week == 1 && day == 3;
                         final hasEvents = (week + day) % 3 == 0;
-                        
+
                         return Column(
                           children: [
                             Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: isSelected ? Colors.green.withOpacity(0.2) : Colors.transparent,
+                                color: isSelected
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.transparent,
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
                               child: Text(
                                 '${week * 7 + day + 1}',
                                 style: TextStyle(
-                                  color: isSelected ? Colors.green : Colors.white,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color:
+                                      isSelected ? Colors.green : Colors.white,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -909,7 +922,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Time scale and events
           Expanded(
             child: ListView.builder(
@@ -918,7 +931,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
               itemBuilder: (context, index) {
                 final hour = 9 + index;
                 final hasEvent = index % 2 == 0;
-                
+
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -930,12 +943,14 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                         style: const TextStyle(color: Colors.white70),
                       ),
                     ),
-                    
+
                     // Event container
                     Expanded(
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16, left: 8),
-                        child: hasEvent ? _buildEventItem() : const SizedBox(height: 40),
+                        child: hasEvent
+                            ? _buildEventItem()
+                            : const SizedBox(height: 40),
                       ),
                     ),
                   ],
@@ -947,14 +962,14 @@ class CalendarLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildEventItem() {
     final eventTypes = ['Meeting', 'Task', 'Ticket'];
     final eventType = eventTypes[Random().nextInt(eventTypes.length)];
-    
+
     Color eventColor;
     IconData eventIcon;
-    
+
     switch (eventType) {
       case 'Meeting':
         eventColor = Colors.blue;
@@ -968,7 +983,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
         eventColor = Colors.orange;
         eventIcon = Icons.confirmation_number;
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
