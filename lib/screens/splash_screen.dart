@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     // Give a small delay to ensure everything is initialized
-    Timer(const Duration(seconds: 3), _checkSession);
+    Timer(const Duration(milliseconds: 1500), _checkSession);
   }
 
   Future<void> _checkSession() async {
@@ -61,8 +61,8 @@ class _SplashScreenState extends State<SplashScreen>
       int? screenIndex = _getScreenIndex(initialShortcut);
       debugPrint('[SplashScreen] Converted screen index: $screenIndex');
 
-      // Merge with any widget arguments
-      Map<String, dynamic> homeScreenArgs = widget.arguments ?? {};
+      // Create a copy of arguments to avoid mutating potentially unmodifiable map
+      Map<String, dynamic> homeScreenArgs = Map.from(widget.arguments ?? {});
       if (screenIndex != null) {
         homeScreenArgs['screen'] = screenIndex;
         homeScreenArgs['initial_route'] = initialShortcut;

@@ -111,11 +111,11 @@ class _LoginScreenState extends State<LoginScreen>
         }
       }
     } catch (e) {
-      print('[LoginScreen] Login error: $e');
+      print('[LoginScreen] Login error: $e'); // Log for debugging
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login failed: ${e.toString()}'),
+          const SnackBar(
+            content: Text('Login failed. Please check your credentials and try again.'),
             backgroundColor: Colors.red,
           ),
         );

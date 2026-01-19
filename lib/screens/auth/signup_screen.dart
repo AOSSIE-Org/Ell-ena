@@ -80,9 +80,13 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         );
       }
     } catch (e) {
+      print('[SignupScreen] Error sending OTP: $e'); // Log for debugging
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Failed to send verification email. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -108,6 +112,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     setState(() => _isLoading = true);
 
     try {
+      // Check if the team exists
       final teamExists = await _supabaseService.teamExists(_teamIdController.text);
 
       if (!teamExists) {
@@ -130,6 +135,16 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
       };
 
       await _sendOtpAndNavigate('signup_join', userData);
+    } catch (e) {
+      print('[SignupScreen] Error checking team: $e'); // Log for debugging
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to verify team. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
