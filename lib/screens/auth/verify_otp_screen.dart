@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/app_shortcuts_service.dart'; // Add this import
 import '../home/home_screen.dart';
 import '../auth/set_new_password_screen.dart';
 
@@ -31,6 +32,16 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   final _supabaseService = SupabaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Debug print to track the flow
+    print('[VerifyOTPScreen] initState called');
+    print('[VerifyOTPScreen] verifyType: ${widget.verifyType}');
+    print('[VerifyOTPScreen] userData: ${widget.userData}');
+  }
 
   @override
   void dispose() {
@@ -68,8 +79,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
               _showTeamIdDialog(result['teamId']);
             }
           } else if (widget.verifyType == 'signup_join') {
-            // Navigate directly to home for team joiners
-            NavigationService().navigateToReplacement(const HomeScreen());
+            // Navigate to home for team joiners with shortcut handling
+            _navigateToHomeScreen();
           } else if (widget.verifyType == 'reset_password') {
             // Navigate to reset password screen
             NavigationService().navigateTo(
@@ -112,6 +123,55 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           });
         }
       }
+    }
+  }
+  
+  void _navigateToHomeScreen() {
+    // Get any pending shortcut from AppShortcutsService
+    final pendingShortcut = AppShortcutsService.getPendingShortcut();
+    print('[VerifyOTPScreen] Pending shortcut: $pendingShortcut');
+    
+    // Check if we have initial_args in userData (passed from SignupScreen)
+    Map<String, dynamic> homeScreenArgs = {};
+    
+    if (widget.userData.containsKey('initial_args')) {
+      homeScreenArgs = widget.userData['initial_args'] as Map<String, dynamic>;
+      print('[VerifyOTPScreen] Found initial_args: $homeScreenArgs');
+    }
+    
+    // If we have a pending shortcut, use it (it takes priority)
+    if (pendingShortcut != null) {
+      final screenIndex = _getScreenIndex(pendingShortcut);
+      if (screenIndex != null) {
+        homeScreenArgs['screen'] = screenIndex;
+        homeScreenArgs['initial_route'] = pendingShortcut;
+      }
+    }
+    
+    // If we don't have any arguments, default to dashboard
+    if (homeScreenArgs.isEmpty) {
+      homeScreenArgs = {'screen': 0};
+    }
+    
+    print('[VerifyOTPScreen] Navigating to HomeScreen with args: $homeScreenArgs');
+    
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(arguments: homeScreenArgs),
+      ),
+    );
+  }
+  
+  int? _getScreenIndex(String? route) {
+    if (route == null) return null;
+    
+    switch (route) {
+      case 'dashboard': return 0;
+      case 'calendar': return 1;
+      case 'workspace': return 2;
+      case 'chat': return 3;
+      case 'profile': return 4;
+      default: return null;
     }
   }
   
@@ -238,7 +298,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                NavigationService().navigateToReplacement(const HomeScreen());
+                Navigator.of(context).pop(); // Close the dialog
+                _navigateToHomeScreen(); // Navigate to home screen with shortcut handling
               },
               child: Text(
                 'Continue',

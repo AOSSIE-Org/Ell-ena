@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/app_shortcuts_service.dart';
 import '../home/home_screen.dart';
 import 'login_screen.dart';
 import 'verify_otp_screen.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  final Map<String, dynamic>? arguments;
+  
+  const SignupScreen({super.key, this.arguments});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -30,6 +33,9 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    
+    print('[SignupScreen] initState called with arguments: ${widget.arguments}');
+    
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
@@ -68,15 +74,25 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           ),
         );
         
+        // FIX: Explicitly cast to Map<String, dynamic> or create as dynamic map
+        final Map<String, dynamic> userData = {
+          'teamName': _teamNameController.text,
+          'adminName': _nameController.text,
+          'password': _passwordController.text,
+        };
+        
+        // Add any existing arguments
+        if (widget.arguments != null) {
+          userData['initial_args'] = widget.arguments;
+        }
+        
+        print('[SignupScreen] Navigate to VerifyOTPScreen with userData: $userData');
+        
         NavigationService().navigateTo(
           VerifyOTPScreen(
             email: _emailController.text,
             verifyType: 'signup_create',
-            userData: {
-              'teamName': _teamNameController.text,
-              'adminName': _nameController.text,
-              'password': _passwordController.text,
-            },
+            userData: userData,
           ),
         );
       }
@@ -129,15 +145,25 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           ),
         );
         
+        // FIX: Explicitly cast to Map<String, dynamic>
+        final Map<String, dynamic> userData = {
+          'teamId': _teamIdController.text,
+          'fullName': _nameController.text,
+          'password': _passwordController.text,
+        };
+        
+        // Add any existing arguments
+        if (widget.arguments != null) {
+          userData['initial_args'] = widget.arguments;
+        }
+        
+        print('[SignupScreen] Navigate to VerifyOTPScreen with userData: $userData');
+        
         NavigationService().navigateTo(
           VerifyOTPScreen(
             email: _emailController.text,
             verifyType: 'signup_join',
-            userData: {
-              'teamId': _teamIdController.text,
-              'fullName': _nameController.text,
-              'password': _passwordController.text,
-            },
+            userData: userData,
           ),
         );
       }
@@ -154,7 +180,6 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     }
   }
 
- 
   @override
   Widget build(BuildContext context) {
     return AuthScreenWrapper(
@@ -174,7 +199,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         ),
         const SizedBox(height: 24),
         SizedBox(
-          height: 350, // Adjust height as needed
+          height: 350,
           child: TabBarView(
             controller: _tabController,
             children: [
@@ -353,7 +378,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           text: 'Already have an account? Sign In',
           onPressed: () {
             NavigationService().navigateToReplacement(
-              const LoginScreen(),
+              LoginScreen(arguments: widget.arguments),
             );
           },
           isOutlined: true,

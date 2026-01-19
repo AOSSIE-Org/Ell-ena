@@ -3,11 +3,14 @@ import 'dart:async';
 import 'onboarding/onboarding_screen.dart';
 import '../services/navigation_service.dart';
 import '../services/supabase_service.dart';
+import '../services/app_shortcuts_service.dart'; // Add this import
 import 'home/home_screen.dart';
 import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final Map<String, dynamic>? arguments;
+
+  const SplashScreen({super.key, this.arguments});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -23,6 +26,10 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    
+    // Debug print
+    print('[SplashScreen] initState called with arguments: ${widget.arguments}');
+    
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -38,6 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
+    // Give a small delay to ensure everything is initialized
     Timer(const Duration(seconds: 3), () {
       _checkSession();
     });
@@ -47,26 +55,38 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final currentUser = _supabaseService.client.auth.currentUser;
       
-      final args = ModalRoute.of(context)?.settings.arguments;
+      // Get initial shortcut from AppShortcutsService
+      final initialShortcut = AppShortcutsService.getPendingShortcut();
+      print('[SplashScreen] Initial shortcut: $initialShortcut');
       
+      // Convert shortcut to screen index
+      int? screenIndex = _getScreenIndex(initialShortcut);
+      print('[SplashScreen] Converted screen index: $screenIndex');
+      
+      // Merge with any widget arguments
+      Map<String, dynamic>? homeScreenArgs = widget.arguments ?? {};
+      if (screenIndex != null) {
+        homeScreenArgs['screen'] = screenIndex;
+        homeScreenArgs['initial_route'] = initialShortcut;
+      }
+      
+      print('[SplashScreen] HomeScreen arguments: $homeScreenArgs');
+
       if (currentUser != null) {
-        if (args != null && args is Map<String, dynamic>) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(arguments: args),
-            ),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-            ),
-          );
-        }
-      } else {
+        // User is logged in, go to HomeScreen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const LoginScreen(),
+            builder: (context) => HomeScreen(arguments: homeScreenArgs),
+          ),
+        );
+      } else {
+        // User is not logged in, go to LoginScreen
+        // But still pass arguments so they can be used after login
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(
+              arguments: homeScreenArgs,
+            ),
           ),
         );
       }
@@ -77,6 +97,19 @@ class _SplashScreenState extends State<SplashScreen>
           builder: (context) => const OnboardingScreen(),
         ),
       );
+    }
+  }
+
+  int? _getScreenIndex(String? route) {
+    if (route == null) return null;
+    
+    switch (route) {
+      case 'dashboard': return 0;
+      case 'calendar': return 1;
+      case 'workspace': return 2;
+      case 'chat': return 3;
+      case 'profile': return 4;
+      default: return null;
     }
   }
 

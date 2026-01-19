@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Dashboard Shortcut -->
+    <shortcut
+        android:shortcutId="dashboard"
+        android:enabled="true"
+        android:icon="@drawable/ic_dashboard"
+        android:shortcutShortLabel="@string/shortcut_dashboard_short"
+        android:shortcutLongLabel="@string/shortcut_dashboard_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="org.aossie.ell_ena"
+            android:targetClass="org.aossie.ell_ena.MainActivity">
+            <data android:scheme="app" android:host="shortcut" android:path="/dashboard" />
+            <extra android:name="screen" android:value="0"/>
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Calendar Shortcut -->
+    <shortcut
+        android:shortcutId="calendar"
+        android:enabled="true"
+        android:icon="@drawable/ic_calendar"
+        android:shortcutShortLabel="@string/shortcut_calendar_short"
+        android:shortcutLongLabel="@string/shortcut_calendar_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="org.aossie.ell_ena"
+            android:targetClass="org.aossie.ell_ena.MainActivity">
+            <data android:scheme="app" android:host="shortcut" android:path="/calendar" />
+            <extra android:name="screen" android:value="1"/>
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Workspace Shortcut -->
+    <shortcut
+        android:shortcutId="workspace"
+        android:enabled="true"
+        android:icon="@drawable/ic_workspace"
+        android:shortcutShortLabel="@string/shortcut_workspace_short"
+        android:shortcutLongLabel="@string/shortcut_workspace_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="org.aossie.ell_ena"
+            android:targetClass="org.aossie.ell_ena.MainActivity">
+            <data android:scheme="app" android:host="shortcut" android:path="/workspace" />
+            <extra android:name="screen" android:value="2"/>
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Chat Shortcut -->
+    <shortcut
+        android:shortcutId="chat"
+        android:enabled="true"
+        android:icon="@drawable/ic_chat"
+        android:shortcutShortLabel="@string/shortcut_chat_short"
+        android:shortcutLongLabel="@string/shortcut_chat_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="org.aossie.ell_ena"
+            android:targetClass="org.aossie.ell_ena.MainActivity">
+            <data android:scheme="app" android:host="shortcut" android:path="/chat" />
+            <extra android:name="screen" android:value="3"/>
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <!-- Profile Shortcut -->
+    <shortcut
+        android:shortcutId="profile"
+        android:enabled="true"
+        android:icon="@drawable/ic_profile"
+        android:shortcutShortLabel="@string/shortcut_profile_short"
+        android:shortcutLongLabel="@string/shortcut_profile_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="org.aossie.ell_ena"
+            android:targetClass="org.aossie.ell_ena.MainActivity">
+            <data android:scheme="app" android:host="shortcut" android:path="/profile" />
+            <extra android:name="screen" android:value="4"/>
+        </intent>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+</shortcuts>

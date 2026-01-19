@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/app_shortcuts_service.dart'; // Add this import
 import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final Map<String, dynamic>? arguments;
+  
+  const LoginScreen({super.key, this.arguments});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -27,6 +30,10 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    
+    // Debug print to check arguments
+    print('[LoginScreen] initState called with arguments: ${widget.arguments}');
+    
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -73,8 +80,38 @@ class _LoginScreenState extends State<LoginScreen>
       );
       
       if (response.user != null) {
+        // Get any pending shortcut
+        final pendingShortcut = AppShortcutsService.getPendingShortcut();
+        print('[LoginScreen] Pending shortcut after login: $pendingShortcut');
+        
+        // Prepare arguments for HomeScreen
+        Map<String, dynamic> homeScreenArgs = widget.arguments ?? {};
+        
+        // If we have a pending shortcut, add it to arguments
+        if (pendingShortcut != null) {
+          final screenIndex = _getScreenIndex(pendingShortcut);
+          if (screenIndex != null) {
+            homeScreenArgs['screen'] = screenIndex;
+            homeScreenArgs['initial_route'] = pendingShortcut;
+          }
+        }
+        
+        // If no shortcut but we have arguments from widget, use them
+        if (homeScreenArgs.isEmpty) {
+          // Check if we have arguments passed to LoginScreen
+          if (widget.arguments != null && widget.arguments!.containsKey('screen')) {
+            homeScreenArgs = widget.arguments!;
+          }
+        }
+        
+        print('[LoginScreen] Navigating to HomeScreen with args: $homeScreenArgs');
+        
         if (mounted) {
-          NavigationService().navigateToReplacement(const HomeScreen());
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(arguments: homeScreenArgs),
+            ),
+          );
         }
       } else {
         if (mounted) {
@@ -87,15 +124,33 @@ class _LoginScreenState extends State<LoginScreen>
         }
       }
     } catch (e) {
+      print('[LoginScreen] Login error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Login failed: ${e.toString()}'), 
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  // Helper method to convert shortcut route to screen index
+  int? _getScreenIndex(String? route) {
+    if (route == null) return null;
+    
+    switch (route) {
+      case 'dashboard': return 0;
+      case 'calendar': return 1;
+      case 'workspace': return 2;
+      case 'chat': return 3;
+      case 'profile': return 4;
+      default: return null;
     }
   }
 
@@ -177,7 +232,10 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       TextButton(
                         onPressed: () {
-                          NavigationService().navigateTo(const SignupScreen());
+                          // Pass any arguments to SignupScreen if needed
+                          NavigationService().navigateTo(
+                            SignupScreen(arguments: widget.arguments),
+                          );
                         },
                         child: Text(
                           'Sign Up',

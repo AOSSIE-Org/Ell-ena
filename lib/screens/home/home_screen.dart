@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
+import '../../services/app_shortcuts_service.dart'; // Add this import
 import '../workspace/workspace_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../profile/profile_screen.dart';
@@ -10,7 +11,7 @@ import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
-  
+
   const HomeScreen({super.key, this.arguments});
 
   @override
@@ -42,34 +43,37 @@ class _HomeScreenState extends State<HomeScreen>
       curve: Curves.easeOut,
       reverseCurve: Curves.easeIn,
     );
-    
-    // Initialize screens
+
     _initializeScreens();
-    
+
     // Handle initial arguments if provided
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.arguments != null) {
-        if (widget.arguments!.containsKey('screen') && widget.arguments!['screen'] is int) {
+        if (widget.arguments!.containsKey('screen') &&
+            widget.arguments!['screen'] is int) {
           setState(() {
             _selectedIndex = widget.arguments!['screen'];
           });
         }
-        
-        // Handle initial message for chat screen
-        if (widget.arguments!.containsKey('initial_message') && 
-            widget.arguments!['initial_message'] is String && 
+
+        if (widget.arguments!.containsKey('initial_message') &&
+            widget.arguments!['initial_message'] is String &&
             _selectedIndex == 3) {
-          // Update the chat screen with the initial message
           setState(() {
             _screens[3] = ChatScreen(
-              arguments: {'initial_message': widget.arguments!['initial_message']}
+              arguments: {'initial_message': widget.arguments!['initial_message']},
             );
           });
         }
       }
     });
+
+    // Initialize shortcuts handler
+    AppShortcutsService.init((route) {
+      _handleShortcut(route);
+    });
   }
-  
+
   void _initializeScreens() {
     _screens = [
       const DashboardScreen(),
@@ -78,6 +82,46 @@ class _HomeScreenState extends State<HomeScreen>
       const ChatScreen(),
       const ProfileScreen(),
     ];
+  }
+
+  void _handleShortcut(String route) {
+    int index = 0;
+    
+    switch (route) {
+      case 'dashboard':
+        index = 0;
+        break;
+      case 'calendar':
+        index = 1;
+        // Reset calendar screen if needed
+        if (_screens[1] is CalendarScreen) {
+          setState(() {
+            _screens[1] = CalendarScreen();
+          });
+        }
+        break;
+      case 'workspace':
+        index = 2;
+        break;
+      case 'chat':
+        index = 3;
+        // Reset chat screen if needed
+        setState(() {
+          _screens[3] = ChatScreen();
+        });
+        break;
+      case 'profile':
+        index = 4;
+        break;
+      default:
+        index = 0;
+    }
+
+    if (mounted) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override
@@ -103,7 +147,6 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     _scrollToBottom();
-    // TODO: Implement AI response
   }
 
   void _scrollToBottom() {
@@ -122,7 +165,6 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _isListening = !_isListening;
     });
-    // TODO: Implement voice recognition
   }
 
   void _toggleFab() {
