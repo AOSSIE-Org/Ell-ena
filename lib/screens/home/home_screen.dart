@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
-import '../../services/app_shortcuts_service.dart'; // Add this import
+import '../../services/app_shortcuts_service.dart';
 import '../workspace/workspace_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../profile/profile_screen.dart';
@@ -29,11 +29,12 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _fabController;
   late Animation<double> _fabAnimation;
 
-  List<Widget> _screens = [];
+  late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
+
     _fabController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -46,35 +47,26 @@ class _HomeScreenState extends State<HomeScreen>
 
     _initializeScreens();
 
-    // Handle initial arguments if provided
+    // Handle initial arguments safely
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.arguments != null) {
-        if (widget.arguments!.containsKey('screen') &&
-            widget.arguments!['screen'] is int) {
-          setState(() {
-            _selectedIndex = widget.arguments!['screen'];
-          });
+      final args = widget.arguments;
+      if (args != null) {
+        if (args['screen'] is int) _selectedIndex = args['screen'];
+        if (args['initial_message'] is String && _selectedIndex == 3) {
+          _screens[3] = ChatScreen(
+            arguments: {'initial_message': args['initial_message']},
+          );
         }
-
-        if (widget.arguments!.containsKey('initial_message') &&
-            widget.arguments!['initial_message'] is String &&
-            _selectedIndex == 3) {
-          setState(() {
-            _screens[3] = ChatScreen(
-              arguments: {'initial_message': widget.arguments!['initial_message']},
-            );
-          });
-        }
+        setState(() {});
       }
     });
 
-    // Initialize shortcuts handler
-    AppShortcutsService.init((route) {
-      _handleShortcut(route);
-    });
+    // Initialize AppShortcutsService
+    AppShortcutsService.init(_handleShortcut);
   }
 
   void _initializeScreens() {
+    // Initialize screens once to prevent unnecessary rebuilds
     _screens = [
       const DashboardScreen(),
       const CalendarScreen(),
@@ -85,30 +77,21 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _handleShortcut(String route) {
-    int index = 0;
-    
+    int index;
     switch (route) {
       case 'dashboard':
         index = 0;
         break;
       case 'calendar':
         index = 1;
-        // Reset calendar screen if needed
-        if (_screens[1] is CalendarScreen) {
-          setState(() {
-            _screens[1] = CalendarScreen();
-          });
-        }
         break;
       case 'workspace':
         index = 2;
         break;
       case 'chat':
         index = 3;
-        // Reset chat screen if needed
-        setState(() {
-          _screens[3] = ChatScreen();
-        });
+        // Refresh chat screen if needed
+        _screens[3] = ChatScreen();
         break;
       case 'profile':
         index = 4;
@@ -117,11 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
         index = 0;
     }
 
-    if (mounted) {
-      setState(() {
-        _selectedIndex = index;
-      });
-    }
+    if (mounted) setState(() => _selectedIndex = index);
   }
 
   @override
@@ -133,16 +112,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
 
     setState(() {
-      _messages.add(
-        ChatMessage(
-          text: _messageController.text,
-          isUser: true,
-          timestamp: DateTime.now(),
-        ),
-      );
+      _messages.add(ChatMessage(
+        text: text,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
       _messageController.clear();
     });
 
@@ -162,9 +140,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _toggleListening() {
-    setState(() {
-      _isListening = !_isListening;
-    });
+    setState(() => _isListening = !_isListening);
   }
 
   void _toggleFab() {
@@ -199,18 +175,25 @@ class _HomeScreenState extends State<HomeScreen>
             icon: Icon(Icons.calendar_today),
             label: 'Calendar',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Workspace'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work),
+            label: 'Workspace',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             label: 'Chat',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
   }
 }
 
+// Chat bubble widget
 class _ChatBubble extends StatelessWidget {
   final ChatMessage message;
 
@@ -219,12 +202,14 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment:
+          message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: message.isUser ? Colors.green.shade400 : Colors.grey.shade800,
+          color:
+              message.isUser ? Colors.green.shade400 : Colors.grey.shade800,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(message.text, style: const TextStyle(color: Colors.white)),
@@ -233,6 +218,7 @@ class _ChatBubble extends StatelessWidget {
   }
 }
 
+// Chat message model
 class ChatMessage {
   final String text;
   final bool isUser;

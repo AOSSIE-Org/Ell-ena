@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+
 import 'onboarding/onboarding_screen.dart';
 import '../services/navigation_service.dart';
 import '../services/supabase_service.dart';
-import '../services/app_shortcuts_service.dart'; // Add this import
+import '../services/app_shortcuts_service.dart';
 import 'home/home_screen.dart';
 import 'auth/login_screen.dart';
 
@@ -26,13 +27,12 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    
-    // Debug print
-    print('[SplashScreen] initState called with arguments: ${widget.arguments}');
-    
+
+    debugPrint('[SplashScreen] initState called with arguments: ${widget.arguments}');
+
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1500),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -46,31 +46,29 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     // Give a small delay to ensure everything is initialized
-    Timer(const Duration(seconds: 3), () {
-      _checkSession();
-    });
+    Timer(const Duration(seconds: 3), _checkSession);
   }
-  
+
   Future<void> _checkSession() async {
     try {
       final currentUser = _supabaseService.client.auth.currentUser;
-      
+
       // Get initial shortcut from AppShortcutsService
       final initialShortcut = AppShortcutsService.getPendingShortcut();
-      print('[SplashScreen] Initial shortcut: $initialShortcut');
-      
+      debugPrint('[SplashScreen] Initial shortcut: $initialShortcut');
+
       // Convert shortcut to screen index
       int? screenIndex = _getScreenIndex(initialShortcut);
-      print('[SplashScreen] Converted screen index: $screenIndex');
-      
+      debugPrint('[SplashScreen] Converted screen index: $screenIndex');
+
       // Merge with any widget arguments
-      Map<String, dynamic>? homeScreenArgs = widget.arguments ?? {};
+      Map<String, dynamic> homeScreenArgs = widget.arguments ?? {};
       if (screenIndex != null) {
         homeScreenArgs['screen'] = screenIndex;
         homeScreenArgs['initial_route'] = initialShortcut;
       }
-      
-      print('[SplashScreen] HomeScreen arguments: $homeScreenArgs');
+
+      debugPrint('[SplashScreen] HomeScreen arguments: $homeScreenArgs');
 
       if (currentUser != null) {
         // User is logged in, go to HomeScreen
@@ -81,17 +79,14 @@ class _SplashScreenState extends State<SplashScreen>
         );
       } else {
         // User is not logged in, go to LoginScreen
-        // But still pass arguments so they can be used after login
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => LoginScreen(
-              arguments: homeScreenArgs,
-            ),
+            builder: (context) => LoginScreen(arguments: homeScreenArgs),
           ),
         );
       }
     } catch (e) {
-      debugPrint('Error checking session: $e');
+      debugPrint('[SplashScreen] Error checking session: $e');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const OnboardingScreen(),
@@ -102,14 +97,20 @@ class _SplashScreenState extends State<SplashScreen>
 
   int? _getScreenIndex(String? route) {
     if (route == null) return null;
-    
+
     switch (route) {
-      case 'dashboard': return 0;
-      case 'calendar': return 1;
-      case 'workspace': return 2;
-      case 'chat': return 3;
-      case 'profile': return 4;
-      default: return null;
+      case 'dashboard':
+        return 0;
+      case 'calendar':
+        return 1;
+      case 'workspace':
+        return 2;
+      case 'chat':
+        return 3;
+      case 'profile':
+        return 4;
+      default:
+        return null;
     }
   }
 
@@ -131,30 +132,33 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Colors.green.shade400, Colors.green.shade700],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 5,
+                Image.asset(
+                  'ELL-ena-logo/png/logo-removed-bg-cropped.png',
+                  width: 250,
+                  height: 250,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [Colors.green.shade400, Colors.green.shade700],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.task_alt,
-                    size: 80,
-                    color: Colors.white,
-                  ),
+                      child: const Icon(Icons.task_alt, size: 80, color: Colors.white),
+                    );
+                  },
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 const Text(
                   'Ell-ena',
                   style: TextStyle(

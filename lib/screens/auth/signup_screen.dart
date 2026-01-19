@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -10,7 +9,7 @@ import 'verify_otp_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
-  
+
   const SignupScreen({super.key, this.arguments});
 
   @override
@@ -33,13 +32,11 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    
+
     print('[SignupScreen] initState called with arguments: ${widget.arguments}');
-    
+
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {});
-    });
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -54,18 +51,13 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  // Handle team creation
-  Future<void> _handleCreateTeam() async {
-    if (!_createTeamFormKey.currentState!.validate()) return;
-
+  // Unified method to send verification OTP and navigate
+  Future<void> _sendOtpAndNavigate(String verifyType, Map<String, dynamic> userData) async {
     setState(() => _isLoading = true);
 
     try {
-      // Only send signup email without creating user upfront
-      await _supabaseService.client.auth.signInWithOtp(
-        email: _emailController.text,
-      );
-      
+      await _supabaseService.client.auth.signInWithOtp(email: _emailController.text);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -73,25 +65,16 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
             backgroundColor: Colors.green,
           ),
         );
-        
-        // FIX: Explicitly cast to Map<String, dynamic> or create as dynamic map
-        final Map<String, dynamic> userData = {
-          'teamName': _teamNameController.text,
-          'adminName': _nameController.text,
-          'password': _passwordController.text,
-        };
-        
-        // Add any existing arguments
-        if (widget.arguments != null) {
-          userData['initial_args'] = widget.arguments;
-        }
-        
+
+        // Merge existing arguments into userData
+        if (widget.arguments != null) userData['initial_args'] = widget.arguments;
+
         print('[SignupScreen] Navigate to VerifyOTPScreen with userData: $userData');
-        
+
         NavigationService().navigateTo(
           VerifyOTPScreen(
             email: _emailController.text,
-            verifyType: 'signup_create',
+            verifyType: verifyType,
             userData: userData,
           ),
         );
@@ -103,22 +86,30 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Handle joining a team
+  Future<void> _handleCreateTeam() async {
+    if (!_createTeamFormKey.currentState!.validate()) return;
+
+    final userData = {
+      'teamName': _teamNameController.text,
+      'adminName': _nameController.text,
+      'password': _passwordController.text,
+    };
+
+    await _sendOtpAndNavigate('signup_create', userData);
+  }
+
   Future<void> _handleJoinTeam() async {
     if (!_joinTeamFormKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      // First check if the team exists
       final teamExists = await _supabaseService.teamExists(_teamIdController.text);
-      
+
       if (!teamExists) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -127,56 +118,20 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               backgroundColor: Colors.red,
             ),
           );
-          setState(() => _isLoading = false);
         }
+        setState(() => _isLoading = false);
         return;
       }
-      
-      // Only send signup email without creating user upfront
-      await _supabaseService.client.auth.signInWithOtp(
-        email: _emailController.text,
-      );
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent. Please check your inbox.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // FIX: Explicitly cast to Map<String, dynamic>
-        final Map<String, dynamic> userData = {
-          'teamId': _teamIdController.text,
-          'fullName': _nameController.text,
-          'password': _passwordController.text,
-        };
-        
-        // Add any existing arguments
-        if (widget.arguments != null) {
-          userData['initial_args'] = widget.arguments;
-        }
-        
-        print('[SignupScreen] Navigate to VerifyOTPScreen with userData: $userData');
-        
-        NavigationService().navigateTo(
-          VerifyOTPScreen(
-            email: _emailController.text,
-            verifyType: 'signup_join',
-            userData: userData,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
-      }
+
+      final userData = {
+        'teamId': _teamIdController.text,
+        'fullName': _nameController.text,
+        'password': _passwordController.text,
+      };
+
+      await _sendOtpAndNavigate('signup_join', userData);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -203,7 +158,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
           child: TabBarView(
             controller: _tabController,
             children: [
-              // Join Team Tab
+              // Join Team Form
               Form(
                 key: _joinTeamFormKey,
                 child: Column(
@@ -213,12 +168,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       label: 'Team ID',
                       icon: Icons.people_outline,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter team ID';
-                        }
-                        if (value.length != 6) {
-                          return 'Team ID must be 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter team ID';
+                        if (value.length != 6) return 'Team ID must be 6 characters';
                         return null;
                       },
                     ),
@@ -228,9 +179,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       label: 'Full Name',
                       icon: Icons.person_outline,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your name';
                         return null;
                       },
                     ),
@@ -240,12 +189,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       label: 'Email',
                       icon: Icons.email_outlined,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your email';
+                        if (!value.contains('@')) return 'Please enter a valid email';
                         return null;
                       },
                     ),
@@ -256,12 +201,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your password';
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                     ),
@@ -272,19 +213,15 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
+                        if (value == null || value.isEmpty) return 'Please confirm your password';
+                        if (value != _passwordController.text) return 'Passwords do not match';
                         return null;
                       },
                     ),
                   ],
                 ),
               ),
-              // Create Team Tab
+              // Create Team Form
               Form(
                 key: _createTeamFormKey,
                 child: Column(
@@ -294,9 +231,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       label: 'Team Name',
                       icon: Icons.group,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter team name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter team name';
                         return null;
                       },
                     ),
@@ -306,9 +241,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       label: 'Admin Name',
                       icon: Icons.person_outline,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter admin name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter admin name';
                         return null;
                       },
                     ),
@@ -318,12 +251,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       label: 'Admin Email',
                       icon: Icons.email_outlined,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter admin email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter admin email';
+                        if (!value.contains('@')) return 'Please enter a valid email';
                         return null;
                       },
                     ),
@@ -334,12 +263,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your password';
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                     ),
@@ -350,12 +275,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
+                        if (value == null || value.isEmpty) return 'Please confirm your password';
+                        if (value != _passwordController.text) return 'Passwords do not match';
                         return null;
                       },
                     ),
@@ -368,8 +289,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
         const SizedBox(height: 24),
         CustomButton(
           text: _tabController.index == 0 ? 'Join Team' : 'Create Team',
-          onPressed: _isLoading 
-              ? null 
+          onPressed: _isLoading
+              ? null
               : (_tabController.index == 0 ? _handleJoinTeam : _handleCreateTeam),
           isLoading: _isLoading,
         ),
