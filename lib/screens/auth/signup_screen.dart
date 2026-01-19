@@ -6,6 +6,7 @@ import '../../services/app_shortcuts_service.dart';
 import '../home/home_screen.dart';
 import 'login_screen.dart';
 import 'verify_otp_screen.dart';
+import 'team_selection_dialog.dart';
 
 class SignupScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
@@ -16,7 +17,8 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderStateMixin {
+class _SignupScreenState extends State<SignupScreen>
+    with SingleTickerProviderStateMixin {
   final _joinTeamFormKey = GlobalKey<FormState>();
   final _createTeamFormKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -308,6 +310,53 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
               ? null
               : (_tabController.index == 0 ? _handleJoinTeam : _handleCreateTeam),
           isLoading: _isLoading,
+        ),
+        const SizedBox(height: 24),
+        // OR divider
+        Row(
+          children: [
+            Expanded(child: Divider(color: Colors.grey.shade700)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'OR',
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: Colors.grey.shade700)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        // Google Sign-Up Button
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: _isLoading ? null : _handleGoogleSignIn,
+            icon: const FaIcon(
+              FontAwesomeIcons.google,
+              size: 20,
+            ),
+            label: const Text(
+              'Sign up with Google',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.green.shade400, width: 2),
+              padding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         CustomButton(

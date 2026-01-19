@@ -35,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>> _recentTickets = [];
   List<FlSpot> _taskCompletionSpots = [];
   List<Map<String, dynamic>> _upcomingItems = [];
+  List<Map<String, dynamic>> _allTasks = [];
 
   @override
   void initState() {
@@ -216,6 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       ]);
 
       final tasks = List<Map<String, dynamic>>.from(results[0] as List);
+      _allTasks = tasks;
       final tickets = List<Map<String, dynamic>>.from(results[1] as List);
       final meetings = List<Map<String, dynamic>>.from(results[2] as List);
 
@@ -712,6 +714,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (_selectedTimeRange == 1)
+  Text(
+    DateFormat('MMMM yyyy').format(DateTime.now()),
+    style: TextStyle(
+      color: Colors.grey.shade400,
+      fontSize: 13,
+    ),
+  ),
+
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
@@ -849,17 +860,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 30,
+                            interval: 5, 
+                            reservedSize: 32,
                             getTitlesWidget: (value, meta) {
-                              final now = DateTime.now();
-                              final idx = value.toInt();
-                              if (idx < 0 || idx > 6) return const SizedBox();
-                              final day = now.subtract(Duration(days: 6 - idx));
+                              final day = value.toInt() + 1;
+
                               return Text(
-                                DateFormat('E').format(day),
+                                day.toString(),
                                 style: TextStyle(
                                   color: Colors.grey.shade400,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                 ),
                               );
                             },
@@ -897,7 +907,46 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _timeRangeButton(String text, int index) {
     final isSelected = _selectedTimeRange == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTimeRange = index),
+      //onTap: () => setState(() => _selectedTimeRange = index),
+      onTap: () {
+        setState(() {
+          _selectedTimeRange = index;
+
+          if (index == 0) {
+            // Week → reusing existing weekly logic
+            final now = DateTime.now();
+            final Map<int, int> dayIndexToCompleted = {
+              for (var i = 0; i < 7; i++) i: 0
+            };
+
+            for (final t in _allTasks) {
+              if (t['status'] == 'completed') {
+                final ts = (t['updated_at'] ?? t['created_at'])?.toString();
+                final updated = ts != null ? DateTime.tryParse(ts) : null;
+                if (updated == null) continue;
+
+                final diffDays = now
+                    .difference(DateTime(updated.year, updated.month, updated.day))
+                    .inDays;
+
+                if (diffDays >= 0 && diffDays < 7) {
+                  final idx = 6 - diffDays;
+                  dayIndexToCompleted[idx] =
+                      (dayIndexToCompleted[idx] ?? 0) + 1;
+                }
+              }
+            }
+
+            _taskCompletionSpots = List.generate(
+              7,
+              (i) => FlSpot(i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
+            );
+          } else {
+            // Month → current calendar month
+            _taskCompletionSpots = _buildCurrentMonthSpots(_allTasks);
+          }
+        });
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -915,6 +964,38 @@ class _DashboardScreenState extends State<DashboardScreen>
       ),
     );
   }
+
+  List<FlSpot> _buildCurrentMonthSpots(List<Map<String, dynamic>> tasks) {
+  final now = DateTime.now();
+
+  final firstDayOfMonth = DateTime(now.year, now.month, 1);
+  final firstDayNextMonth = DateTime(now.year, now.month + 1, 1);
+  final daysInMonth =
+      firstDayNextMonth.difference(firstDayOfMonth).inDays;
+
+  final Map<int, int> dayCounts = {
+    for (int i = 0; i < daysInMonth; i++) i: 0,
+  };
+
+  for (final t in tasks) {
+    if (t['status'] != 'completed') continue;
+
+    final ts = (t['updated_at'] ?? t['created_at'])?.toString();
+    final date = ts != null ? DateTime.tryParse(ts) : null;
+    if (date == null) continue;
+
+    if (date.year == now.year && date.month == now.month) {
+      final index = date.day - 1;
+      dayCounts[index] = (dayCounts[index] ?? 0) + 1;
+    }
+  }
+
+  return List.generate(
+    daysInMonth,
+    (i) => FlSpot(i.toDouble(), (dayCounts[i] ?? 0).toDouble()),
+  );
+}
+
 
   Widget _buildUpcomingSection() {
     return Column(
