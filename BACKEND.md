@@ -433,4 +433,3 @@ After setting up your backend:
 ---
 
 This guide should help you get started with the Ell-ena backend.
-  is it ok
