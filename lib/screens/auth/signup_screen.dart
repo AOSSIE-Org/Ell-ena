@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/app_shortcuts_service.dart';
 import '../home/home_screen.dart';
 import 'login_screen.dart';
 import 'verify_otp_screen.dart';
 import 'team_selection_dialog.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  final Map<String, dynamic>? arguments;
+
+  const SignupScreen({super.key, this.arguments});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -32,10 +34,11 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   void initState() {
     super.initState();
+
+    print('[SignupScreen] initState called with arguments: ${widget.arguments}');
+
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {});
-    });
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -50,17 +53,12 @@ class _SignupScreenState extends State<SignupScreen>
     super.dispose();
   }
 
-  // Handle team creation
-  Future<void> _handleCreateTeam() async {
-    if (!_createTeamFormKey.currentState!.validate()) return;
-
+  // Unified method to send verification OTP and navigate
+  Future<void> _sendOtpAndNavigate(String verifyType, Map<String, dynamic> userData) async {
     setState(() => _isLoading = true);
 
     try {
-      // Only send signup email without creating user upfront
-      await _supabaseService.client.auth.signInWithOtp(
-        email: _emailController.text,
-      );
+      await _supabaseService.client.auth.signInWithOtp(email: _emailController.text);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -70,41 +68,54 @@ class _SignupScreenState extends State<SignupScreen>
           ),
         );
 
+        // Merge existing arguments into userData
+        if (widget.arguments != null) userData['initial_args'] = widget.arguments;
+
+        print('[SignupScreen] Navigate to VerifyOTPScreen with userData: $userData');
+
         NavigationService().navigateTo(
           VerifyOTPScreen(
             email: _emailController.text,
-            verifyType: 'signup_create',
-            userData: {
-              'teamName': _teamNameController.text,
-              'adminName': _nameController.text,
-              'password': _passwordController.text,
-            },
+            verifyType: verifyType,
+            userData: userData,
           ),
         );
       }
     } catch (e) {
+      print('[SignupScreen] Error sending OTP: $e'); // Log for debugging
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Failed to send verification email. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Handle joining a team
+  Future<void> _handleCreateTeam() async {
+    if (!_createTeamFormKey.currentState!.validate()) return;
+
+    final userData = {
+      'teamName': _teamNameController.text,
+      'adminName': _nameController.text,
+      'password': _passwordController.text,
+    };
+
+    await _sendOtpAndNavigate('signup_create', userData);
+  }
+
   Future<void> _handleJoinTeam() async {
     if (!_joinTeamFormKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      // First check if the team exists
-      final teamExists =
-          await _supabaseService.teamExists(_teamIdController.text);
+      // Check if the team exists
+      final teamExists = await _supabaseService.teamExists(_teamIdController.text);
 
       if (!teamExists) {
         if (mounted) {
@@ -114,93 +125,30 @@ class _SignupScreenState extends State<SignupScreen>
               backgroundColor: Colors.red,
             ),
           );
-          setState(() => _isLoading = false);
         }
+        setState(() => _isLoading = false);
         return;
       }
 
-      // Only send signup email without creating user upfront
-      await _supabaseService.client.auth.signInWithOtp(
-        email: _emailController.text,
-      );
+      final userData = {
+        'teamId': _teamIdController.text,
+        'fullName': _nameController.text,
+        'password': _passwordController.text,
+      };
 
+      await _sendOtpAndNavigate('signup_join', userData);
+    } catch (e) {
+      print('[SignupScreen] Error checking team: $e'); // Log for debugging
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification email sent. Please check your inbox.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        NavigationService().navigateTo(
-          VerifyOTPScreen(
-            email: _emailController.text,
-            verifyType: 'signup_join',
-            userData: {
-              'teamId': _teamIdController.text,
-              'fullName': _nameController.text,
-              'password': _passwordController.text,
-            },
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await _supabaseService.signInWithGoogle();
-
-      if (mounted) {
-        if (result['success'] == true) {
-          if (result['isNewUser'] == true) {
-            // New user - show team selection dialog
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => TeamSelectionDialog(
-                userEmail: result['email'] ?? '',
-                googleRefreshToken: result['googleRefreshToken'],
-              ),
-            );
-          } else {
-            // Existing user - go to home
-            NavigationService().navigateToReplacement(const HomeScreen());
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Failed to verify team. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -223,11 +171,11 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         const SizedBox(height: 24),
         SizedBox(
-          height: 350, // Adjust height as needed
+          height: 350,
           child: TabBarView(
             controller: _tabController,
             children: [
-              // Join Team Tab
+              // Join Team Form
               Form(
                 key: _joinTeamFormKey,
                 child: Column(
@@ -237,12 +185,8 @@ class _SignupScreenState extends State<SignupScreen>
                       label: 'Team ID',
                       icon: Icons.people_outline,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter team ID';
-                        }
-                        if (value.length != 6) {
-                          return 'Team ID must be 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter team ID';
+                        if (value.length != 6) return 'Team ID must be 6 characters';
                         return null;
                       },
                     ),
@@ -252,9 +196,7 @@ class _SignupScreenState extends State<SignupScreen>
                       label: 'Full Name',
                       icon: Icons.person_outline,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your name';
                         return null;
                       },
                     ),
@@ -264,12 +206,8 @@ class _SignupScreenState extends State<SignupScreen>
                       label: 'Email',
                       icon: Icons.email_outlined,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your email';
+                        if (!value.contains('@')) return 'Please enter a valid email';
                         return null;
                       },
                     ),
@@ -280,12 +218,8 @@ class _SignupScreenState extends State<SignupScreen>
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your password';
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                     ),
@@ -296,19 +230,15 @@ class _SignupScreenState extends State<SignupScreen>
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
+                        if (value == null || value.isEmpty) return 'Please confirm your password';
+                        if (value != _passwordController.text) return 'Passwords do not match';
                         return null;
                       },
                     ),
                   ],
                 ),
               ),
-              // Create Team Tab
+              // Create Team Form
               Form(
                 key: _createTeamFormKey,
                 child: Column(
@@ -318,9 +248,7 @@ class _SignupScreenState extends State<SignupScreen>
                       label: 'Team Name',
                       icon: Icons.group,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter team name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter team name';
                         return null;
                       },
                     ),
@@ -330,9 +258,7 @@ class _SignupScreenState extends State<SignupScreen>
                       label: 'Admin Name',
                       icon: Icons.person_outline,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter admin name';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter admin name';
                         return null;
                       },
                     ),
@@ -342,12 +268,8 @@ class _SignupScreenState extends State<SignupScreen>
                       label: 'Admin Email',
                       icon: Icons.email_outlined,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter admin email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter admin email';
+                        if (!value.contains('@')) return 'Please enter a valid email';
                         return null;
                       },
                     ),
@@ -358,12 +280,8 @@ class _SignupScreenState extends State<SignupScreen>
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
+                        if (value == null || value.isEmpty) return 'Please enter your password';
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                     ),
@@ -374,12 +292,8 @@ class _SignupScreenState extends State<SignupScreen>
                       icon: Icons.lock_outline,
                       isPassword: true,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
+                        if (value == null || value.isEmpty) return 'Please confirm your password';
+                        if (value != _passwordController.text) return 'Passwords do not match';
                         return null;
                       },
                     ),
@@ -394,9 +308,7 @@ class _SignupScreenState extends State<SignupScreen>
           text: _tabController.index == 0 ? 'Join Team' : 'Create Team',
           onPressed: _isLoading
               ? null
-              : (_tabController.index == 0
-                  ? _handleJoinTeam
-                  : _handleCreateTeam),
+              : (_tabController.index == 0 ? _handleJoinTeam : _handleCreateTeam),
           isLoading: _isLoading,
         ),
         const SizedBox(height: 24),
@@ -451,7 +363,7 @@ class _SignupScreenState extends State<SignupScreen>
           text: 'Already have an account? Sign In',
           onPressed: () {
             NavigationService().navigateToReplacement(
-              const LoginScreen(),
+              LoginScreen(arguments: widget.arguments),
             );
           },
           isOutlined: true,

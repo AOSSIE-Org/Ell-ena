@@ -1,24 +1,28 @@
-
-
 import 'package:flutter/material.dart';
+
 import 'screens/splash_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/chat/chat_screen.dart';
+
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
+import 'services/app_shortcuts_service.dart'; // Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
-    await SupabaseService().initialize();
+    // Initialize app shortcuts service first
+    await AppShortcutsService.initialize();
     
+    // Initialize other services
+    await SupabaseService().initialize();
     await AIService().initialize();
   } catch (e) {
     debugPrint('Error initializing services: $e');
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -30,8 +34,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Ell-ena',
       debugShowCheckedModeBanner: false,
+
       navigatorKey: NavigationService().navigatorKey,
-      navigatorObservers: <NavigatorObserver>[AppRouteObserver.instance],
+      navigatorObservers: <NavigatorObserver>[
+        AppRouteObserver.instance,
+      ],
+
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
@@ -49,36 +57,82 @@ class MyApp extends StatelessWidget {
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
           ),
-          bodyLarge: TextStyle(fontSize: 16, letterSpacing: 0.5),
+          bodyLarge: TextStyle(
+            fontSize: 16,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
+
       home: const SplashScreen(),
+
       onGenerateRoute: (settings) {
-        if (settings.name == '/') {
-          return MaterialPageRoute(
-            builder: (context) => const SplashScreen(),
-            settings: settings,
-          );
-        } else if (settings.name == '/home') {
-          final args = settings.arguments as Map<String, dynamic>?;
-          return MaterialPageRoute(
-            builder: (context) => HomeScreen(arguments: args),
-            settings: settings,
-          );
-        } else if (settings.name == '/chat') {
-          final args = settings.arguments as Map<String, dynamic>?;
-          return MaterialPageRoute(
-            builder: (context) => ChatScreen(arguments: args),
-            settings: settings,
-          );
+        // Get initial shortcut if any
+        final initialShortcut = AppShortcutsService.getPendingShortcut();
+        
+        // Convert shortcut to screen index
+        int getScreenIndex(String? shortcut) {
+          switch (shortcut) {
+            case 'dashboard': return 0;
+            case 'calendar': return 1;
+            case 'workspace': return 2;
+            case 'chat': return 3;
+            case 'profile': return 4;
+            default: return 0;
+          }
         }
-        return null;
+        
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (_) => const SplashScreen(),
+              settings: settings,
+            );
+
+          case '/home':
+            Map<String, dynamic>? args;
+            
+            // If there's an initial shortcut, use it
+            if (initialShortcut != null) {
+              args = {
+                'screen': getScreenIndex(initialShortcut),
+                'initial_route': initialShortcut
+              };
+            }
+            
+            // Merge with any existing arguments
+            if (settings.arguments != null) {
+              args = {
+                ...args ?? {},
+                ...settings.arguments as Map<String, dynamic>,
+              };
+            }
+            
+            return MaterialPageRoute(
+              builder: (_) => HomeScreen(arguments: args),
+              settings: settings,
+            );
+
+          case '/chat':
+            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(
+              builder: (_) => ChatScreen(arguments: args),
+              settings: settings,
+            );
+
+          default:
+            return MaterialPageRoute(
+              builder: (_) => const SplashScreen(),
+              settings: settings,
+            );
+        }
       },
     );
   }
 }
 
-// Simple singleton RouteObserver to allow screens to refresh on focus
+/// Simple singleton RouteObserver
+/// Used so screens can refresh when they regain focus
 class AppRouteObserver extends RouteObserver<ModalRoute<void>> {
   AppRouteObserver._();
   static final AppRouteObserver instance = AppRouteObserver._();

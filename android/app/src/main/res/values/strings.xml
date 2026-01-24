@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ell-ena</string>
+    
+    <!-- App Shortcuts Labels -->
+    <string name="shortcut_dashboard_short">Dashboard</string>
+    <string name="shortcut_dashboard_long">Dashboard</string>
+    
+    <string name="shortcut_calendar_short">Calendar</string>
+    <string name="shortcut_calendar_long">Calendar</string>
+    
+    <string name="shortcut_workspace_short">Workspace</string>
+    <string name="shortcut_workspace_long">Workspace</string>
+    
+    <string name="shortcut_chat_short">Chat</string>
+    <string name="shortcut_chat_long">Chat</string>
+    
+    <string name="shortcut_profile_short">Profile</string>
+    <string name="shortcut_profile_long">Profile</string>
+</resources>

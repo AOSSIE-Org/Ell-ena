@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+
 import 'onboarding/onboarding_screen.dart';
 import '../services/navigation_service.dart';
 import '../services/supabase_service.dart';
+import '../services/app_shortcuts_service.dart';
 import 'home/home_screen.dart';
 import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final Map<String, dynamic>? arguments;
+
+  const SplashScreen({super.key, this.arguments});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -23,6 +27,9 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    debugPrint('[SplashScreen] initState called with arguments: ${widget.arguments}');
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -38,45 +45,72 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    Timer(const Duration(milliseconds: 1500), () {
-      _checkSession();
-    });
+    // Give a small delay to ensure everything is initialized
+    Timer(const Duration(milliseconds: 1500), _checkSession);
   }
 
   Future<void> _checkSession() async {
     try {
       final currentUser = _supabaseService.client.auth.currentUser;
 
-      final args = ModalRoute.of(context)?.settings.arguments;
+      // Get initial shortcut from AppShortcutsService
+      final initialShortcut = AppShortcutsService.getPendingShortcut();
+      debugPrint('[SplashScreen] Initial shortcut: $initialShortcut');
+
+      // Convert shortcut to screen index
+      int? screenIndex = _getScreenIndex(initialShortcut);
+      debugPrint('[SplashScreen] Converted screen index: $screenIndex');
+
+      // Create a copy of arguments to avoid mutating potentially unmodifiable map
+      Map<String, dynamic> homeScreenArgs = Map.from(widget.arguments ?? {});
+      if (screenIndex != null) {
+        homeScreenArgs['screen'] = screenIndex;
+        homeScreenArgs['initial_route'] = initialShortcut;
+      }
+
+      debugPrint('[SplashScreen] HomeScreen arguments: $homeScreenArgs');
 
       if (currentUser != null) {
-        if (args != null && args is Map<String, dynamic>) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(arguments: args),
-            ),
-          );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-            ),
-          );
-        }
-      } else {
+        // User is logged in, go to HomeScreen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const LoginScreen(),
+            builder: (context) => HomeScreen(arguments: homeScreenArgs),
+          ),
+        );
+      } else {
+        // User is not logged in, go to LoginScreen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(arguments: homeScreenArgs),
           ),
         );
       }
     } catch (e) {
-      debugPrint('Error checking session: $e');
+      debugPrint('[SplashScreen] Error checking session: $e');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const OnboardingScreen(),
         ),
       );
+    }
+  }
+
+  int? _getScreenIndex(String? route) {
+    if (route == null) return null;
+
+    switch (route) {
+      case 'dashboard':
+        return 0;
+      case 'calendar':
+        return 1;
+      case 'workspace':
+        return 2;
+      case 'chat':
+        return 3;
+      case 'profile':
+        return 4;
+      default:
+        return null;
     }
   }
 
@@ -108,10 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(
-                          colors: [
-                            Colors.green.shade400,
-                            Colors.green.shade700
-                          ],
+                          colors: [Colors.green.shade400, Colors.green.shade700],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -123,11 +154,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.task_alt,
-                        size: 80,
-                        color: Colors.white,
-                      ),
+                      child: const Icon(Icons.task_alt, size: 80, color: Colors.white),
                     );
                   },
                 ),
