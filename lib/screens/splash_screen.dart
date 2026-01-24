@@ -6,6 +6,10 @@ import '../services/supabase_service.dart';
 import 'home/home_screen.dart';
 import 'auth/login_screen.dart';
 
+import 'package:get/get.dart';
+import '../../controllers/language_controller.dart';
+import '../../utils/language/sentence_manager.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -19,10 +23,12 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   final _supabaseService = SupabaseService();
+  final LanguageController _languageController = Get.find<LanguageController>();
 
   @override
   void initState() {
     super.initState();
+    // ... existing initState code ...
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -142,14 +148,19 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  'Your AI-powered Task Assistant',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.green.shade400,
-                    letterSpacing: 1.2,
-                  ),
-                ),
+                Obx(() => Text(
+                      SentenceManager(
+                              currentLanguage:
+                                  _languageController.selectedLanguage.value)
+                          .sentences
+                          .appSlogan,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.green.shade400,
+                        letterSpacing: 1.2,
+                      ),
+                      textAlign: TextAlign.center,
+                    )),
                 const SizedBox(height: 60),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

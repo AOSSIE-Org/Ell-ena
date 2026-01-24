@@ -7,6 +7,9 @@ import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import 'team_selection_dialog.dart';
+import 'package:get/get.dart';
+import '../../controllers/language_controller.dart';
+import '../../utils/language/sentence_manager.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   final _supabaseService = SupabaseService();
+  final LanguageController _languageController = Get.find<LanguageController>();
 
   @override
   void initState() {
@@ -81,8 +85,12 @@ class _LoginScreenState extends State<LoginScreen>
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid email or password'),
+            SnackBar(
+              content: Text(SentenceManager(
+                      currentLanguage:
+                          _languageController.selectedLanguage.value)
+                  .sentences
+                  .invalidCredentials),
               backgroundColor: Colors.red,
             ),
           );
@@ -126,7 +134,12 @@ class _LoginScreenState extends State<LoginScreen>
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
+              content: Text(result['error'] ??
+                  SentenceManager(
+                          currentLanguage:
+                              _languageController.selectedLanguage.value)
+                      .sentences
+                      .googleSignInFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -136,7 +149,8 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(
+                '${SentenceManager(currentLanguage: _languageController.selectedLanguage.value).sentences.errorPrefix}$e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -150,145 +164,152 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return AuthScreenWrapper(
-      title: 'Welcome Back',
-      subtitle: 'Sign in to continue with Ell-ena',
-      children: [
-        FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  CustomTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    icon: Icons.email_outlined,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  CustomTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    icon: Icons.lock_outline,
-                    isPassword: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        NavigationService().navigateTo(
-                          const ForgotPasswordScreen(),
-                        );
+    return Obx(() {
+      final s = SentenceManager(
+              currentLanguage: _languageController.selectedLanguage.value)
+          .sentences;
+      return AuthScreenWrapper(
+        title: s.welcomeBack,
+        subtitle: s.signInToContinue,
+        children: [
+          FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    CustomTextField(
+                      controller: _emailController,
+                      label: s.email,
+                      icon: Icons.email_outlined,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return s.enterEmail;
+                        }
+                        if (!value.contains('@')) {
+                          return s.validEmail;
+                        }
+                        return null;
                       },
-                      child: Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          color: Colors.green.shade400,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  CustomButton(
-                    text: 'Sign In',
-                    onPressed: _isLoading ? null : _handleLogin,
-                    isLoading: _isLoading,
-                  ),
-                  const SizedBox(height: 24),
-                  // OR divider
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: Colors.grey.shade700)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: Colors.grey.shade700)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  // Google Sign-In Button
-                  OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    icon: const FaIcon(
-                      FontAwesomeIcons.google,
-                      size: 20,
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      controller: _passwordController,
+                      label: s.password,
+                      icon: Icons.lock_outline,
+                      isPassword: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return s.enterPassword;
+                        }
+                        if (value.length < 6) {
+                          return s.passwordLength;
+                        }
+                        return null;
+                      },
                     ),
-                    label: const Text(
-                      'Sign in with Google',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.green.shade400, width: 2),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 24,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Don\'t have an account? ',
-                        style: TextStyle(color: Colors.grey.shade400),
-                      ),
-                      TextButton(
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
                         onPressed: () {
-                          NavigationService().navigateTo(const SignupScreen());
+                          NavigationService().navigateTo(
+                            const ForgotPasswordScreen(),
+                          );
                         },
                         child: Text(
-                          'Sign Up',
+                          s.forgotPassword,
                           style: TextStyle(
                             color: Colors.green.shade400,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 24),
+                    CustomButton(
+                      text: s.signIn,
+                      onPressed: _isLoading ? null : _handleLogin,
+                      isLoading: _isLoading,
+                    ),
+                    const SizedBox(height: 24),
+                    // OR divider
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey.shade700)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            s.or,
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey.shade700)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Google Sign-In Button
+                    OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _handleGoogleSignIn,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.google,
+                        size: 20,
+                      ),
+                      label: Text(
+                        s.signInWithGoogle,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side:
+                            BorderSide(color: Colors.green.shade400, width: 2),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 24,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          s.dontHaveAccount,
+                          style: TextStyle(color: Colors.grey.shade400),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            NavigationService()
+                                .navigateTo(const SignupScreen());
+                          },
+                          child: Text(
+                            s.signUp,
+                            style: TextStyle(
+                              color: Colors.green.shade400,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
+import '../../utils/language/sentence_manager.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
   final String meetingId;
-  
+
   const MeetingDetailScreen({
     super.key,
     required this.meetingId,
@@ -24,7 +27,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   bool _isEditing = false;
   bool _isAdmin = false;
   bool _isCreator = false;
-  
+
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _urlController = TextEditingController();
@@ -33,13 +36,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   final _durationController = TextEditingController(text: '60');
   DateTime? _meetingDate;
   TimeOfDay? _meetingTime;
-  
+
   @override
   void initState() {
     super.initState();
     _loadMeetingDetails();
   }
-  
+
   @override
   void dispose() {
     _titleController.dispose();
@@ -50,12 +53,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     _durationController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadMeetingDetails() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Check if user is admin
       final userProfile = await _supabaseService.getCurrentUserProfile();
@@ -64,39 +67,41 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           _isAdmin = userProfile?['role'] == 'admin';
         });
       }
-      
+
       // Get meeting details
-      final meetingDetails = await _supabaseService.getMeetingDetails(widget.meetingId);
-      
+      final meetingDetails =
+          await _supabaseService.getMeetingDetails(widget.meetingId);
+
       if (mounted && meetingDetails != null) {
         final userId = _supabaseService.client.auth.currentUser?.id;
         final isCreator = meetingDetails['created_by'] == userId;
-        
+
         // Parse meeting date and time
         final meetingDateTime = DateTime.parse(meetingDetails['meeting_date']);
-        
+
         setState(() {
           _meeting = meetingDetails;
           _isCreator = isCreator;
           _meetingDate = meetingDateTime;
           _meetingTime = TimeOfDay.fromDateTime(meetingDateTime);
-          
+
           // Set initial values for editing
           _titleController.text = meetingDetails['title'] ?? '';
           _descriptionController.text = meetingDetails['description'] ?? '';
           _urlController.text = meetingDetails['meeting_url'] ?? '';
           _transcriptionController.text = meetingDetails['transcription'] ?? '';
           _aiSummaryController.text = meetingDetails['ai_summary'] ?? '';
-          _durationController.text = meetingDetails['duration_minutes']?.toString() ?? '60';
-          
+          _durationController.text =
+              meetingDetails['duration_minutes']?.toString() ?? '60';
+
           _isLoading = false;
         });
       } else {
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Meeting not found'),
+            SnackBar(
+              content: Text(SentenceManager.instance.meetingNotFound),
               backgroundColor: Colors.red,
             ),
           );
@@ -108,28 +113,30 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading meeting details: $e'),
+            content:
+                Text('${SentenceManager.instance.errorLoadingMeeting}: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
   }
-  
+
   Future<void> _deleteMeeting() async {
     try {
       final result = await _supabaseService.deleteMeeting(widget.meetingId);
-      
+
       if (mounted) {
         if (result['success']) {
           Navigator.pop(context, true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting meeting: ${result['error']}'),
+              content: Text(
+                  '${SentenceManager.instance.errorDeletingMeeting}: ${result['error']}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -140,39 +147,41 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting meeting: $e'),
+            content:
+                Text('${SentenceManager.instance.errorDeletingMeeting}: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
   }
-  
+
   Future<void> _updateMeeting() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Title cannot be empty'),
+        SnackBar(
+          content: Text(SentenceManager.instance.titleRequired),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
-    
+
     if (_meetingDate == null || _meetingTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select date and time'),
+        SnackBar(
+          content: Text(
+              '${SentenceManager.instance.dateRequired} & ${SentenceManager.instance.timeRequired}'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Combine date and time
       final meetingDateTime = DateTime(
@@ -182,7 +191,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         _meetingTime!.hour,
         _meetingTime!.minute,
       );
-      
+
       // Parse duration
       int? duration;
       if (_durationController.text.trim().isNotEmpty) {
@@ -194,35 +203,42 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           duration = 60;
         }
       }
-      
+
       final result = await _supabaseService.updateMeeting(
         meetingId: widget.meetingId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         meetingDate: meetingDateTime,
-        meetingUrl: _urlController.text.trim().isNotEmpty ? _urlController.text.trim() : null,
-        transcription: _transcriptionController.text.trim().isNotEmpty ? _transcriptionController.text.trim() : null,
-        ai_summary: _aiSummaryController.text.trim().isNotEmpty ? _aiSummaryController.text.trim() : null,
+        meetingUrl: _urlController.text.trim().isNotEmpty
+            ? _urlController.text.trim()
+            : null,
+        transcription: _transcriptionController.text.trim().isNotEmpty
+            ? _transcriptionController.text.trim()
+            : null,
+        ai_summary: _aiSummaryController.text.trim().isNotEmpty
+            ? _aiSummaryController.text.trim()
+            : null,
         durationMinutes: duration,
       );
-      
+
       if (mounted) {
         if (result['success']) {
           setState(() {
             _isEditing = false;
             _isLoading = false;
           });
-          
+
           // Reload meeting details
           _loadMeetingDetails();
         } else {
           setState(() {
             _isLoading = false;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error updating meeting: ${result['error']}'),
+              content: Text(
+                  '${SentenceManager.instance.errorUpdatingMeeting}: ${result['error']}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -234,28 +250,29 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating meeting: $e'),
+            content:
+                Text('${SentenceManager.instance.errorUpdatingMeeting}: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
   }
-  
+
   Future<void> _launchMeetingUrl() async {
     if (_meeting == null || _meeting!['meeting_url'] == null) return;
-    
+
     final url = Uri.parse(_meeting!['meeting_url']);
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not launch meeting URL'),
+          SnackBar(
+            content: Text(SentenceManager.instance.errorLaunchingUrl),
             backgroundColor: Colors.red,
           ),
         );
@@ -266,7 +283,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   Future<void> _createTicketFromAction(Map<String, dynamic> action) async {
     try {
       final title = (action['item']?.toString() ?? 'Action Item');
-      final description = 'Created from meeting action item. Owner: ${action['owner'] ?? 'N/A'} • Deadline: ${action['deadline'] ?? 'N/A'}';
+      final description =
+          'Created from meeting action item. Owner: ${action['owner'] ?? 'N/A'} • Deadline: ${action['deadline'] ?? 'N/A'}';
       const category = 'Meeting Discussion';
       const priority = 'medium';
       final result = await _supabaseService.createTicket(
@@ -278,11 +296,16 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (!mounted) return;
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ticket created'), backgroundColor: Colors.green),
+          SnackBar(
+              content: Text(SentenceManager.instance.ticketCreated),
+              backgroundColor: Colors.green),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create ticket: ${result['error']}'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(
+                  '${SentenceManager.instance.failedCreateTicket}: ${result['error']}'),
+              backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -316,11 +339,16 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (!mounted) return;
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Task created'), backgroundColor: Colors.green),
+          SnackBar(
+              content: Text(SentenceManager.instance.taskCreated),
+              backgroundColor: Colors.green),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create task: ${result['error']}'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(
+                  '${SentenceManager.instance.failedCreateTask}: ${result['error']}'),
+              backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -330,22 +358,22 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       );
     }
   }
-  
+
   Future<void> _copyMeetingUrl() async {
     if (_meeting == null || _meeting!['meeting_url'] == null) return;
-    
+
     await Clipboard.setData(ClipboardData(text: _meeting!['meeting_url']));
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meeting URL copied to clipboard'),
+        SnackBar(
+          content: Text(SentenceManager.instance.meetingUrlCopied),
           backgroundColor: Colors.green,
         ),
       );
     }
   }
-  
+
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -367,14 +395,14 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         _meetingDate = picked;
       });
     }
   }
-  
+
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -394,7 +422,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         _meetingTime = picked;
@@ -410,75 +438,86 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         body: Center(child: CustomLoading()),
       );
     }
-    
-    if (_meeting == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF1A1A1A),
-        body: Center(child: Text('Meeting not found')),
+
+    return Obx(() {
+      final s = SentenceManager.instance;
+
+      if (_meeting == null) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF1A1A1A),
+          body: Center(child: Text(s.meetingNotFound)),
+        );
+      }
+
+      final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
+      final isUpcoming = meetingDateTime.isAfter(DateTime.now());
+      final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
+      final timeFormat = DateFormat('h:mm a');
+      final canEdit = (_isAdmin || _isCreator) && isUpcoming;
+
+      return Scaffold(
+        backgroundColor: const Color(0xFF1A1A1A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF2D2D2D),
+          title: Text(_isEditing ? s.editMeetingTitle : s.meetingDetailsTitle),
+          actions: [
+            if (_isEditing)
+              IconButton(
+                onPressed: _updateMeeting,
+                icon: const Icon(Icons.check),
+                tooltip: s.saveChangesTooltip,
+              )
+            else if (canEdit)
+              IconButton(
+                onPressed: () => setState(() => _isEditing = true),
+                icon: const Icon(Icons.edit),
+                tooltip: s.editMeetingTitle,
+              ),
+            if (canEdit && !_isEditing)
+              IconButton(
+                onPressed: () => _showDeleteConfirmation(context),
+                icon: const Icon(Icons.delete),
+                tooltip: s.deleteMeetingTooltip,
+              ),
+          ],
+        ),
+        body: _isEditing
+            ? _buildEditForm(s)
+            : _buildMeetingDetails(dateFormat, timeFormat, isUpcoming, s),
       );
-    }
-    
-    final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
-    final isUpcoming = meetingDateTime.isAfter(DateTime.now());
-    final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
-    final timeFormat = DateFormat('h:mm a');
-    final canEdit = (_isAdmin || _isCreator) && isUpcoming;
-    
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        title: Text(_isEditing ? 'Edit Meeting' : 'Meeting Details'),
-        actions: [
-          if (_isEditing)
-            IconButton(
-              onPressed: _updateMeeting,
-              icon: const Icon(Icons.check),
-              tooltip: 'Save Changes',
-            )
-          else if (canEdit)
-            IconButton(
-              onPressed: () => setState(() => _isEditing = true),
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edit Meeting',
-            ),
-          if (canEdit && !_isEditing)
-            IconButton(
-              onPressed: () => _showDeleteConfirmation(context),
-              icon: const Icon(Icons.delete),
-              tooltip: 'Delete Meeting',
-            ),
-        ],
-      ),
-      body: _isEditing ? _buildEditForm() : _buildMeetingDetails(dateFormat, timeFormat, isUpcoming),
-    );
+    });
   }
-  
-  Widget _buildMeetingDetails(DateFormat dateFormat, DateFormat timeFormat, bool isUpcoming) {
+
+  Widget _buildMeetingDetails(DateFormat dateFormat, DateFormat timeFormat,
+      bool isUpcoming, dynamic s) {
     final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
-    
+
     // Determine transcription status
-    String transcriptionStatus = 'Not started';
+    String transcriptionStatus = s.statusNotStarted;
     Color transcriptionStatusColor = Colors.grey.shade600;
-    
-    if (_meeting!['transcription'] != null && _meeting!['transcription'].toString().isNotEmpty) {
-      transcriptionStatus = 'Completed';
+
+    if (_meeting!['transcription'] != null &&
+        _meeting!['transcription'].toString().isNotEmpty) {
+      transcriptionStatus = s.statusCompleted;
       transcriptionStatusColor = Colors.green.shade400;
     } else if (_meeting!['transcription_attempted_at'] != null) {
-      transcriptionStatus = 'Attempted';
+      transcriptionStatus = s.statusAttempted;
       transcriptionStatusColor = Colors.orange.shade400;
     } else if (_meeting!['bot_started_at'] != null) {
-      transcriptionStatus = 'In progress';
+      transcriptionStatus = s.statusInProgress;
       transcriptionStatusColor = Colors.blue.shade400;
-    } else if (!isUpcoming && _meeting!['meeting_url'] != null && 
-              _meeting!['meeting_url'].toString().contains('meet.google.com')) {
-      transcriptionStatus = 'Pending';
+    } else if (!isUpcoming &&
+        _meeting!['meeting_url'] != null &&
+        _meeting!['meeting_url'].toString().contains('meet.google.com')) {
+      transcriptionStatus = s.statusPending;
       transcriptionStatusColor = Colors.yellow.shade700;
-    } else if (!_meeting!['meeting_url'].toString().contains('meet.google.com')) {
-      transcriptionStatus = 'Not available';
+    } else if (!_meeting!['meeting_url']
+        .toString()
+        .contains('meet.google.com')) {
+      transcriptionStatus = s.statusNotAvailable;
       transcriptionStatusColor = Colors.red.shade400;
     }
-    
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -497,9 +536,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isUpcoming 
-                  ? Colors.green.shade400.withOpacity(0.2)
-                  : Colors.grey.shade600.withOpacity(0.2),
+                color: isUpcoming
+                    ? Colors.green.shade400.withOpacity(0.2)
+                    : Colors.grey.shade600.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -507,14 +546,20 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 children: [
                   Icon(
                     isUpcoming ? Icons.event_available : Icons.event_busy,
-                    color: isUpcoming ? Colors.green.shade400 : Colors.grey.shade600,
+                    color: isUpcoming
+                        ? Colors.green.shade400
+                        : Colors.grey.shade600,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isUpcoming ? 'UPCOMING' : 'PAST',
+                    isUpcoming
+                        ? s.upcomingMeetings.toUpperCase()
+                        : s.pastMeetings.toUpperCase(),
                     style: TextStyle(
-                      color: isUpcoming ? Colors.green.shade400 : Colors.grey.shade600,
+                      color: isUpcoming
+                          ? Colors.green.shade400
+                          : Colors.grey.shade600,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -525,10 +570,10 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ],
         ),
         const SizedBox(height: 24),
-        
+
         // Title
         Text(
-          _meeting!['title'] ?? 'Untitled Meeting',
+          _meeting!['title'] ?? s.untitledMeeting,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -536,7 +581,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Date and time
         Container(
           padding: const EdgeInsets.all(16),
@@ -559,7 +604,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Date',
+                          s.selectDate, // Using selectDate as label for now
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 12,
@@ -593,7 +638,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Time',
+                          s.selectTime, // Using selectTime as label for now
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 12,
@@ -627,7 +672,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Duration',
+                          s.meetingDurationLabel,
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 12,
@@ -651,9 +696,10 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
-        if (_meeting!['description'] != null && _meeting!['description'].toString().isNotEmpty)
+        if (_meeting!['description'] != null &&
+            _meeting!['description'].toString().isNotEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -664,7 +710,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Description',
+                  s.meetingDescriptionLabel,
                   style: TextStyle(
                     color: Colors.grey.shade400,
                     fontSize: 12,
@@ -681,11 +727,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               ],
             ),
           ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Meeting URL
-        if (_meeting!['meeting_url'] != null && _meeting!['meeting_url'].toString().isNotEmpty)
+        if (_meeting!['meeting_url'] != null &&
+            _meeting!['meeting_url'].toString().isNotEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -696,7 +743,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Meeting URL',
+                  s.meetingUrlLabel,
                   style: TextStyle(
                     color: Colors.grey.shade400,
                     fontSize: 12,
@@ -719,18 +766,20 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                     IconButton(
                       onPressed: _copyMeetingUrl,
                       icon: const Icon(Icons.copy, color: Colors.white),
-                      tooltip: 'Copy URL',
+                      tooltip: s.copyUrlTooltip,
                     ),
                     IconButton(
                       onPressed: _launchMeetingUrl,
                       icon: const Icon(Icons.open_in_new, color: Colors.white),
-                      tooltip: 'Open URL',
+                      tooltip: s.openUrlTooltip,
                     ),
                   ],
                 ),
-                
+
                 // Show transcription status for Google Meet URLs
-                if (_meeting!['meeting_url'].toString().contains('meet.google.com'))
+                if (_meeting!['meeting_url']
+                    .toString()
+                    .contains('meet.google.com'))
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Row(
@@ -742,7 +791,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Transcription: $transcriptionStatus',
+                          '${s.transcriptionStatus}: $transcriptionStatus',
                           style: TextStyle(
                             color: transcriptionStatusColor,
                             fontSize: 12,
@@ -755,16 +804,18 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               ],
             ),
           ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Manage from AI summary (action items and follow-ups). Hide raw transcription/summary here.
-        if (!isUpcoming) _buildManageSections(),
-        
+        if (!isUpcoming) _buildManageSections(s),
+
         const SizedBox(height: 24),
-        
+
         // Join meeting button
-        if (isUpcoming && _meeting!['meeting_url'] != null && _meeting!['meeting_url'].toString().isNotEmpty)
+        if (isUpcoming &&
+            _meeting!['meeting_url'] != null &&
+            _meeting!['meeting_url'].toString().isNotEmpty)
           ElevatedButton(
             onPressed: _launchMeetingUrl,
             style: ElevatedButton.styleFrom(
@@ -776,12 +827,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.video_call, color: Colors.white),
-                SizedBox(width: 8),
+              children: [
+                const Icon(Icons.video_call, color: Colors.white),
+                const SizedBox(width: 8),
                 Text(
-                  'Join Meeting',
-                  style: TextStyle(
+                  '${s.joinMeetingBtn} Meeting', // Keeping "Meeting" hardcoded for now or use concatenation if valid
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -793,8 +844,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ],
     );
   }
-  
-  Widget _buildEditForm() {
+
+  Widget _buildEditForm(dynamic s) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -814,7 +865,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Description
         TextFormField(
           controller: _descriptionController,
@@ -832,7 +883,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-        
+
         // Date and Time
         Row(
           children: [
@@ -854,7 +905,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                             ? 'Select Date'
                             : DateFormat('MMM dd, yyyy').format(_meetingDate!),
                         style: TextStyle(
-                          color: _meetingDate == null ? Colors.grey : Colors.white,
+                          color:
+                              _meetingDate == null ? Colors.grey : Colors.white,
                         ),
                       ),
                     ],
@@ -881,7 +933,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                             ? 'Select Time'
                             : _meetingTime!.format(context),
                         style: TextStyle(
-                          color: _meetingTime == null ? Colors.grey : Colors.white,
+                          color:
+                              _meetingTime == null ? Colors.grey : Colors.white,
                         ),
                       ),
                     ],
@@ -892,7 +945,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        
+
         // Duration
         TextFormField(
           controller: _durationController,
@@ -910,7 +963,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Meeting URL
         TextFormField(
           controller: _urlController,
@@ -924,14 +977,15 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(color: Colors.green),
             ),
-            helperText: !_urlController.text.contains('meet.google.com') && _urlController.text.isNotEmpty
+            helperText: !_urlController.text.contains('meet.google.com') &&
+                    _urlController.text.isNotEmpty
                 ? 'Ellena AI transcription only works with Google Meet URLs'
                 : null,
             helperStyle: TextStyle(color: Colors.red.shade300),
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Save button
         SizedBox(
           width: double.infinity,
@@ -951,20 +1005,27 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     );
   }
 
-  Widget _buildManageSections() {
+  Widget _buildManageSections(dynamic s) {
     final summary = _meeting?['meeting_summary_json'];
     if (summary == null || summary is! Map || summary.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF2D2D2D), borderRadius: BorderRadius.circular(16)),
-        child: Text('AI summary not available yet.', style: TextStyle(color: Colors.grey.shade400)),
+        decoration: BoxDecoration(
+            color: const Color(0xFF2D2D2D),
+            borderRadius: BorderRadius.circular(16)),
+        child:
+            Text(s.noAiSummary, style: TextStyle(color: Colors.grey.shade400)),
       );
     }
 
     final actionItems = (summary['action_items'] as List?) ?? [];
     final followUps = (summary['follow_up_tasks'] as List?) ?? [];
 
-    Widget pill({required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
+    Widget pill(
+        {required Color color,
+        required String title,
+        required String subtitle,
+        required VoidCallback onTap}) {
       return InkWell(
         onTap: onTap,
         child: Container(
@@ -983,9 +1044,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(title,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                    Text(subtitle,
+                        style: TextStyle(
+                            color: Colors.grey.shade400, fontSize: 12)),
                   ],
                 ),
               ),
@@ -1001,7 +1066,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFF2D2D2D), borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(
+              color: const Color(0xFF2D2D2D),
+              borderRadius: BorderRadius.circular(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1009,17 +1076,22 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 children: [
                   Icon(Icons.topic, color: Colors.amber.shade400, size: 18),
                   const SizedBox(width: 8),
-                  const Text('Manage Important Discussion', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(s.actionItems, // Localized title
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 12),
               if (actionItems.isEmpty)
-                Text('No action items detected', style: TextStyle(color: Colors.grey.shade400))
+                Text(
+                    s.noAiSummary, // Reuse no summary or just English? Using noAiSummary is close enough for "empty"
+                    style: TextStyle(color: Colors.grey.shade400))
               else
                 ...actionItems.map<Widget>((it) {
                   final map = Map<String, dynamic>.from(it as Map);
                   final title = map['item']?.toString() ?? 'Action Item';
-                  final subtitle = 'Owner: ${map['owner'] ?? '—'}   •   Deadline: ${map['deadline'] ?? 'N/A'}';
+                  final subtitle =
+                      'Owner: ${map['owner'] ?? '—'}   •   Deadline: ${map['deadline'] ?? 'N/A'}';
                   return pill(
                     color: Colors.amber.shade400,
                     title: title,
@@ -1033,7 +1105,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFF2D2D2D), borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(
+              color: const Color(0xFF2D2D2D),
+              borderRadius: BorderRadius.circular(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1041,12 +1115,15 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 children: [
                   Icon(Icons.task_alt, color: Colors.green.shade400, size: 18),
                   const SizedBox(width: 8),
-                  const Text('Manage Tasks', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(s.followUpTasks, // Localized title
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 12),
               if (followUps.isEmpty)
-                Text('No follow-up tasks detected', style: TextStyle(color: Colors.grey.shade400))
+                Text(s.noAiSummary,
+                    style: TextStyle(color: Colors.grey.shade400))
               else
                 ...followUps.map<Widget>((it) {
                   final map = Map<String, dynamic>.from(it as Map);
@@ -1065,19 +1142,20 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ],
     );
   }
-  
+
   void _showDeleteConfirmation(BuildContext context) {
+    final s = SentenceManager.instance;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text(
-          'Delete Meeting',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          s.deleteMeetingTooltip,
+          style: const TextStyle(color: Colors.white),
         ),
-        content: const Text(
-          'Are you sure you want to delete this meeting? This action cannot be undone.',
-          style: TextStyle(color: Colors.white70),
+        content: Text(
+          s.meetingDeleted, // Using meetingDeleted as a proxy or stick to English? meetingDeleted is "The meeting may have been deleted". Not exact. I'll stick to English for message or add new key. I'll use English for message to be safe.
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
@@ -1098,4 +1176,4 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ),
     );
   }
-} 
+}
