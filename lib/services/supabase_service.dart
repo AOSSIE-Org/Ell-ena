@@ -10,6 +10,7 @@ class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
   late final SupabaseClient _client;
   bool _isInitialized = false;
+  bool _disposed = false;
 
   List<Map<String, dynamic>> _teamMembersCache = [];
   String? _currentTeamId;
@@ -2192,7 +2193,10 @@ class SupabaseService {
       debugPrint('Processed meetings: ${processedMeetings.length}');
 
       // Update the stream
-      _meetingsStreamController.add(processedMeetings);
+      if (!_disposed && !_meetingsStreamController.isClosed) {
+        _meetingsStreamController.add(processedMeetings);
+      }
+
 
       return processedMeetings;
     } catch (e) {
@@ -2424,8 +2428,12 @@ class SupabaseService {
 
   // Clean up resources
   void dispose() {
+    if (_disposed) return;
+
     _tasksStreamController.close();
     _ticketsStreamController.close();
     _meetingsStreamController.close();
+
+    _disposed = true;
   }
 }
