@@ -2961,17 +2961,23 @@ class SupabaseService {
     }
   }
 
-  // Clear all caches
+  // Clear all caches (only user-related data)
   Future<void> clearAllCaches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
       
+      // Only remove user-related keys, not all preferences
+      // These are the keys we know this service uses
+      await prefs.remove('user_profile');
+      // Add other user-specific keys here if needed
+      // e.g., await prefs.remove('user_token');
+      
+      // Clear in-memory caches
       _teamMembersCache = [];
       _currentTeamId = null;
       _userProfileCache = null;
       
-      debugPrint('All caches cleared');
+      debugPrint('User caches cleared (app settings preserved)');
     } catch (e) {
       debugPrint('Error clearing caches: $e');
     }
