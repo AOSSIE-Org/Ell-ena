@@ -5,10 +5,11 @@ import 'ticket_detail_screen.dart';
 import 'create_ticket_screen.dart';
 
 class TicketScreen extends StatefulWidget {
-  static final GlobalKey<_TicketScreenState> globalKey = GlobalKey<_TicketScreenState>();
-  
+  static final GlobalKey<_TicketScreenState> globalKey =
+      GlobalKey<_TicketScreenState>();
+
   const TicketScreen({super.key});
-  
+
   // Static method to refresh tickets from anywhere
   static void refreshTickets() {
     final state = globalKey.currentState;
@@ -27,23 +28,23 @@ class _TicketScreenState extends State<TicketScreen> {
   String _selectedStatus = 'open';
   bool _isAdmin = false;
   List<Map<String, dynamic>> _tickets = [];
-  
+
   @override
   void initState() {
     super.initState();
     _loadInitialData();
   }
-  
+
   // Method to refresh tickets
   void refreshTickets() {
     _loadInitialData();
   }
-  
+
   Future<void> _loadInitialData() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Check if user is admin
       final userProfile = await _supabaseService.getCurrentUserProfile();
@@ -52,15 +53,16 @@ class _TicketScreenState extends State<TicketScreen> {
           _isAdmin = userProfile?['role'] == 'admin';
         });
       }
-      
+
       // Load team members first
       if (userProfile != null && userProfile['team_id'] != null) {
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
       }
-      
+
       // Initial load of tickets with filtering
-      final tickets = await _supabaseService.getTickets(filterByAssignment: true);
-      
+      final tickets =
+          await _supabaseService.getTickets(filterByAssignment: true);
+
       if (mounted) {
         setState(() {
           _tickets = tickets;
@@ -76,14 +78,14 @@ class _TicketScreenState extends State<TicketScreen> {
       }
     }
   }
-  
+
   Future<void> _updateTicketStatus(String ticketId, String status) async {
     try {
       await _supabaseService.updateTicketStatus(
         ticketId: ticketId,
         status: status,
       );
-      
+
       // Reload tickets after update
       _loadInitialData();
     } catch (e) {
@@ -98,14 +100,15 @@ class _TicketScreenState extends State<TicketScreen> {
       }
     }
   }
-  
-  Future<void> _updateTicketApproval(String ticketId, String approvalStatus) async {
+
+  Future<void> _updateTicketApproval(
+      String ticketId, String approvalStatus) async {
     try {
       await _supabaseService.updateTicketApproval(
         ticketId: ticketId,
         approvalStatus: approvalStatus,
       );
-      
+
       // Reload tickets after update
       _loadInitialData();
     } catch (e) {
@@ -129,19 +132,22 @@ class _TicketScreenState extends State<TicketScreen> {
         body: Center(child: CustomLoading()),
       );
     }
-    
+
     // Make sure the key is properly associated with this instance
     if (TicketScreen.globalKey.currentState != this) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         TicketScreen.refreshTickets();
       });
     }
-    
-    final openTickets = _tickets.where((ticket) => ticket['status'] == 'open').toList();
-    final inProgressTickets = _tickets.where((ticket) => ticket['status'] == 'in_progress').toList();
-    final resolvedTickets = _tickets.where((ticket) => ticket['status'] == 'resolved').toList();
+
+    final openTickets =
+        _tickets.where((ticket) => ticket['status'] == 'open').toList();
+    final inProgressTickets =
+        _tickets.where((ticket) => ticket['status'] == 'in_progress').toList();
+    final resolvedTickets =
+        _tickets.where((ticket) => ticket['status'] == 'resolved').toList();
     final totalTickets = _tickets.length;
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       floatingActionButton: FloatingActionButton(
@@ -153,7 +159,7 @@ class _TicketScreenState extends State<TicketScreen> {
               fullscreenDialog: true,
             ),
           );
-          
+
           if (result == true) {
             refreshTickets();
             ScaffoldMessenger.of(context).showSnackBar(
@@ -178,9 +184,9 @@ class _TicketScreenState extends State<TicketScreen> {
           const SizedBox(height: 16),
           _buildStatusTabs(),
           Expanded(
-            child: _buildTicketList(
-              _tickets.where((ticket) => ticket['status'] == _selectedStatus).toList()
-            ),
+            child: _buildTicketList(_tickets
+                .where((ticket) => ticket['status'] == _selectedStatus)
+                .toList()),
           ),
         ],
       ),
@@ -240,11 +246,14 @@ class _TicketScreenState extends State<TicketScreen> {
                       color: Colors.blue.shade400,
                     ),
                     _buildProgressBar(
-                      width: totalTickets > 0 ? inProgressTickets / totalTickets : 0,
+                      width: totalTickets > 0
+                          ? inProgressTickets / totalTickets
+                          : 0,
                       color: Colors.orange.shade400,
                     ),
                     _buildProgressBar(
-                      width: totalTickets > 0 ? resolvedTickets / totalTickets : 0,
+                      width:
+                          totalTickets > 0 ? resolvedTickets / totalTickets : 0,
                       color: Colors.green.shade400,
                     ),
                   ],
@@ -284,7 +293,8 @@ class _TicketScreenState extends State<TicketScreen> {
   }
 
   Widget _buildProgressBar({required double width, required Color color}) {
-    final screenWidth = MediaQuery.of(context).size.width - 32; // Total available width
+    final screenWidth =
+        MediaQuery.of(context).size.width - 32; // Total available width
     return Container(
       height: 8,
       width: screenWidth * width,
@@ -298,7 +308,7 @@ class _TicketScreenState extends State<TicketScreen> {
       {'id': 'in_progress', 'label': 'In Progress', 'color': Colors.orange},
       {'id': 'resolved', 'label': 'Resolved', 'color': Colors.green},
     ];
-    
+
     return Container(
       height: 40,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -306,16 +316,16 @@ class _TicketScreenState extends State<TicketScreen> {
         children: statusOptions.map((status) {
           final isSelected = status['id'] == _selectedStatus;
           final color = status['color'] as MaterialColor;
-          
+
           return Expanded(
             child: DragTarget<Map<String, dynamic>>(
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: isSelected 
-                        ? color.withOpacity(0.2) 
-                        : candidateData.isNotEmpty 
-                            ? color.withOpacity(0.1) 
+                    color: isSelected
+                        ? color.withOpacity(0.2)
+                        : candidateData.isNotEmpty
+                            ? color.withOpacity(0.1)
                             : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
@@ -324,14 +334,16 @@ class _TicketScreenState extends State<TicketScreen> {
                     ),
                   ),
                   child: InkWell(
-                    onTap: () => setState(() => _selectedStatus = status['id'] as String),
+                    onTap: () => setState(
+                        () => _selectedStatus = status['id'] as String),
                     borderRadius: BorderRadius.circular(20),
                     child: Center(
                       child: Text(
                         status['label'] as String,
                         style: TextStyle(
                           color: isSelected ? color : Colors.white70,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -359,9 +371,11 @@ class _TicketScreenState extends State<TicketScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _selectedStatus == 'open' ? Icons.report_problem_outlined :
-              _selectedStatus == 'in_progress' ? Icons.pending_actions_outlined :
-              Icons.task_alt_outlined,
+              _selectedStatus == 'open'
+                  ? Icons.report_problem_outlined
+                  : _selectedStatus == 'in_progress'
+                      ? Icons.pending_actions_outlined
+                      : Icons.task_alt_outlined,
               size: 80,
               color: Colors.grey.shade600,
             ),
@@ -376,9 +390,11 @@ class _TicketScreenState extends State<TicketScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _selectedStatus == 'open' ? 'Create new tickets to get started' :
-              _selectedStatus == 'in_progress' ? 'Move tickets here when you start working on them' :
-              'Resolved tickets will appear here',
+              _selectedStatus == 'open'
+                  ? 'Create new tickets to get started'
+                  : _selectedStatus == 'in_progress'
+                      ? 'Move tickets here when you start working on them'
+                      : 'Resolved tickets will appear here',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade600,
@@ -391,7 +407,7 @@ class _TicketScreenState extends State<TicketScreen> {
         ),
       );
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: ReorderableListView.builder(
@@ -443,10 +459,11 @@ class _TicketScreenState extends State<TicketScreen> {
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TicketDetailScreen(ticketId: ticket['id']),
+                    builder: (context) =>
+                        TicketDetailScreen(ticketId: ticket['id']),
                   ),
                 );
-                
+
                 if (result == true) {
                   // Ticket was updated in detail screen, refresh tickets
                   _loadInitialData();
@@ -458,37 +475,39 @@ class _TicketScreenState extends State<TicketScreen> {
       ),
     );
   }
-  
+
   Widget _buildStatusChangeHint() {
-    final nextStatus = _selectedStatus == 'open' 
-        ? 'In Progress' 
-        : _selectedStatus == 'in_progress' 
-            ? 'Resolved' 
+    final nextStatus = _selectedStatus == 'open'
+        ? 'In Progress'
+        : _selectedStatus == 'in_progress'
+            ? 'Resolved'
             : 'Open';
-    
-    final nextStatusId = _selectedStatus == 'open' 
-        ? 'in_progress' 
-        : _selectedStatus == 'in_progress' 
-            ? 'resolved' 
+
+    final nextStatusId = _selectedStatus == 'open'
+        ? 'in_progress'
+        : _selectedStatus == 'in_progress'
+            ? 'resolved'
             : 'open';
-    
-    final color = _selectedStatus == 'open' 
-        ? Colors.orange 
-        : _selectedStatus == 'in_progress' 
-            ? Colors.green 
+
+    final color = _selectedStatus == 'open'
+        ? Colors.orange
+        : _selectedStatus == 'in_progress'
+            ? Colors.green
             : Colors.blue;
-    
+
     return ElevatedButton.icon(
       onPressed: () => setState(() => _selectedStatus = nextStatusId),
       icon: Icon(
-        _selectedStatus == 'open' ? Icons.arrow_forward : 
-        _selectedStatus == 'in_progress' ? Icons.check : 
-        Icons.refresh,
+        _selectedStatus == 'open'
+            ? Icons.arrow_forward
+            : _selectedStatus == 'in_progress'
+                ? Icons.check
+                : Icons.refresh,
         color: Colors.white,
         size: 16,
       ),
       label: Text(
-        'View $nextStatus Tickets', 
+        'View $nextStatus Tickets',
         style: const TextStyle(color: Colors.white),
       ),
       style: ElevatedButton.styleFrom(
@@ -526,14 +545,15 @@ class _TicketCard extends StatelessWidget {
     final String approvalStatus = ticket['approval_status'] ?? 'pending';
     final String ticketNumber = ticket['ticket_number'] ?? 'TKT-???';
     final String createdAt = _formatDate(ticket['created_at']);
-    
+
     // Get names from the team members cache
     final supabaseService = SupabaseService();
     String creatorName;
     if (ticket['created_by'] != null) {
       if (supabaseService.isCurrentUser(ticket['created_by'])) {
         creatorName = 'You';
-      } else if (ticket['creator'] != null && ticket['creator']['full_name'] != null) {
+      } else if (ticket['creator'] != null &&
+          ticket['creator']['full_name'] != null) {
         creatorName = ticket['creator']['full_name'];
       } else {
         creatorName = supabaseService.getUserNameById(ticket['created_by']);
@@ -541,7 +561,7 @@ class _TicketCard extends StatelessWidget {
     } else {
       creatorName = 'Unknown';
     }
-    
+
     // Determine colors and icons based on priority
     Color priorityColor;
     IconData priorityIcon;
@@ -562,7 +582,7 @@ class _TicketCard extends StatelessWidget {
         priorityColor = Colors.grey;
         priorityIcon = Icons.help_outline;
     }
-    
+
     // Determine category icon
     IconData categoryIcon;
     switch (category.toLowerCase()) {
@@ -587,12 +607,12 @@ class _TicketCard extends StatelessWidget {
       default:
         categoryIcon = Icons.category;
     }
-    
+
     // Determine colors based on approval status
-    final Color approvalColor = approvalStatus == 'pending' 
-        ? Colors.grey 
-        : approvalStatus == 'approved' 
-            ? Colors.green 
+    final Color approvalColor = approvalStatus == 'pending'
+        ? Colors.grey
+        : approvalStatus == 'approved'
+            ? Colors.green
             : Colors.red;
 
     return GestureDetector(
@@ -648,16 +668,20 @@ class _TicketCard extends StatelessWidget {
                         Row(
                           children: [
                             IconButton(
-                              onPressed: () => onApprovalChange(ticket['id'], 'approved'),
-                              icon: Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
+                              onPressed: () =>
+                                  onApprovalChange(ticket['id'], 'approved'),
+                              icon: Icon(Icons.check_circle,
+                                  color: Colors.green.shade400, size: 20),
                               tooltip: 'Approve',
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => onApprovalChange(ticket['id'], 'rejected'),
-                              icon: Icon(Icons.cancel, color: Colors.red.shade400, size: 20),
+                              onPressed: () =>
+                                  onApprovalChange(ticket['id'], 'rejected'),
+                              icon: Icon(Icons.cancel,
+                                  color: Colors.red.shade400, size: 20),
                               tooltip: 'Reject',
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
@@ -665,9 +689,106 @@ class _TicketCard extends StatelessWidget {
                             const SizedBox(width: 12),
                           ],
                         ),
-                      Text(
-                        createdAt,
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                      Row(
+                        children: [
+                          if (ticket['created_by'] ==
+                                  SupabaseService()
+                                      .client
+                                      .auth
+                                      .currentUser
+                                      ?.id ||
+                              isAdmin)
+                            IconButton(
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: const Color(0xFF2D2D2D),
+                                    title: const Text('Delete Ticket',
+                                        style: TextStyle(color: Colors.white)),
+                                    content: const Text(
+                                      'Are you sure you want to delete this ticket? This action cannot be undone.',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  try {
+                                    final result = await SupabaseService()
+                                        .deleteTicket(ticket['id']);
+                                    if (result['success'] == true) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Ticket deleted successfully'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                        // Refresh the ticket list
+                                        TicketScreen.refreshTickets();
+                                      }
+                                    } else {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(result['error'] ??
+                                                'Failed to delete ticket'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                              icon: Icon(Icons.delete_outline,
+                                  color: Colors.red.shade400, size: 20),
+                              tooltip: 'Delete',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          if (ticket['created_by'] ==
+                                  SupabaseService()
+                                      .client
+                                      .auth
+                                      .currentUser
+                                      ?.id ||
+                              isAdmin)
+                            const SizedBox(width: 8),
+                          Text(
+                            createdAt,
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 12),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -702,7 +823,8 @@ class _TicketCard extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: approvalColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -730,7 +852,8 @@ class _TicketCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.purple.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -760,7 +883,9 @@ class _TicketCard extends StatelessWidget {
                             radius: 12,
                             backgroundColor: Colors.blue.shade700,
                             child: Text(
-                              creatorName.isNotEmpty ? creatorName[0].toUpperCase() : '?',
+                              creatorName.isNotEmpty
+                                  ? creatorName[0].toUpperCase()
+                                  : '?',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -817,10 +942,10 @@ class _TicketCard extends StatelessWidget {
       ),
     );
   }
-  
+
   String _formatDate(String? dateString) {
     if (dateString == null) return '';
-    
+
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year}';
@@ -828,13 +953,13 @@ class _TicketCard extends StatelessWidget {
       return '';
     }
   }
-  
+
   String _limitWords(String text, int wordLimit) {
     if (text.isEmpty) return text;
-    
+
     final words = text.split(' ');
     if (words.length <= wordLimit) return text;
-    
+
     return '${words.take(wordLimit).join(' ')}...';
   }
 }
