@@ -52,7 +52,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _initialFirstName;
   String? _initialLastName;
   String? _avatarUrl;
-  String? _currentAvatarUrl;
+
+  // Add this method to extract path from URL
+  String? _extractStoragePathFromUrl(String url) {
+    try {
+      if (url.isEmpty) return null;
+      
+      debugPrint('Extracting path from URL: $url');
+      
+      final uri = Uri.parse(url);
+      final path = uri.path;
+      
+      // Remove the leading slash if present
+      String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+      
+      // Check for different URL formats
+      // Format 1: https://xyz.supabase.co/storage/v1/object/public/avatars/profile-images/user-id/filename.jpg
+      if (cleanPath.contains('avatars/')) {
+        final parts = cleanPath.split('avatars/');
+        if (parts.length > 1) {
+          final extracted = parts[1];
+          debugPrint('Extracted path (format 1): $extracted');
+          return extracted;
+        }
+      }
+      
+      // Format 2: Direct storage path
+      if (cleanPath.contains('profile-images/')) {
+        debugPrint('Extracted path (format 2): $cleanPath');
+        return cleanPath;
+      }
+      
+      debugPrint('Could not extract path from URL');
+      return null;
+    } catch (e) {
+      debugPrint('Error extracting path from URL: $e');
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -67,8 +104,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     _initialFirstName = firstName;
     _initialLastName = lastName;
+    
+    // Use avatar_url from your database
     _avatarUrl = widget.userProfile['avatar_url'];
-    _currentAvatarUrl = widget.userProfile['avatar_url'];
 
     _firstNameController = TextEditingController(text: firstName);
     _lastNameController = TextEditingController(text: lastName);
@@ -89,8 +127,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     
     return _selectedImage != null ||
         currentFullName != initialFullName ||
-        (_avatarUrl == null && _currentAvatarUrl != null) ||
-        (_avatarUrl != null && _avatarUrl != _currentAvatarUrl);
+        (_avatarUrl != null && _selectedImage != null);
   }
 
   // ---------------- IMAGE HANDLING ----------------
@@ -133,8 +170,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         
         setState(() {
           _selectedImage = fileToUse;
-          // Clear the avatar URL to show the selected image instead of the old one
-          _avatarUrl = null;
         });
       }
     } catch (e) {
@@ -192,7 +227,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _removeImage() async {
-    if (_currentAvatarUrl == null && _selectedImage == null && _avatarUrl == null) return;
+    if (_avatarUrl == null && _selectedImage == null) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -224,12 +259,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       bool deleteSuccessful = true;
       
-      // Only delete from storage if we have an existing URL AND we're not just removing a newly selected image
-      if (_currentAvatarUrl != null && _currentAvatarUrl!.isNotEmpty && _selectedImage == null) {
-        final fileName = _extractFileNameFromUrl(_currentAvatarUrl!);
+      // Only delete from storage if we have an existing URL
+      if (_avatarUrl != null && _avatarUrl!.isNotEmpty && _selectedImage == null) {
+        // Extract file path from URL using our local method
+        final extractedPath = _extractStoragePathFromUrl(_avatarUrl!);
         
-        if (fileName != null && fileName.isNotEmpty) {
-          final deleteResult = await _supabaseService.deleteProfileImage(fileName);
+        if (extractedPath != null && extractedPath.isNotEmpty) {
+          final deleteResult = await _supabaseService.deleteProfileImage(extractedPath);
           deleteSuccessful = deleteResult['success'] == true;
         }
       }
@@ -248,25 +284,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _showErrorSnackBar('Error removing profile picture: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isUploadingImage = false);
-    }
-  }
-
-  String? _extractFileNameFromUrl(String url) {
-    try {
-      final uri = Uri.parse(url);
-      final pathSegments = uri.pathSegments;
-      
-      final publicIndex = pathSegments.indexOf('public');
-      if (publicIndex != -1 && pathSegments.length > publicIndex + 2) {
-        return pathSegments.sublist(publicIndex + 2).join('/');
-      }
-      
-      final pattern = RegExp(r'avatars/(.+)');
-      final match = pattern.firstMatch(url);
-      return match?.group(1);
-    } catch (e) {
-      debugPrint('Error extracting filename: $e');
-      return null;
     }
   }
 
@@ -318,17 +335,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           setState(() => _isUploadingImage = true);
           final imageUrl = await _supabaseService.uploadProfileImage(_selectedImage!);
           if (imageUrl != null) {
+            // Update avatar_url in database
             updates['avatar_url'] = imageUrl;
+            _showSuccessSnackBar('Profile picture uploaded successfully');
+          } else {
+            _showErrorSnackBar('Failed to upload profile image');
+            return;
           }
         } catch (e) {
           debugPrint('Upload image error: $e');
-          _showErrorSnackBar('Failed to upload profile image');
+          _showErrorSnackBar('Failed to upload profile image: ${e.toString()}');
           return;
         } finally {
           setState(() => _isUploadingImage = false);
         }
-      } else if (_avatarUrl == null && _currentAvatarUrl != null && _selectedImage == null) {
-        // User removed their existing avatar (and didn't select a new one)
+      } else if (_selectedImage == null && _avatarUrl == null) {
+        // User wants to remove existing image and not upload a new one
         updates['avatar_url'] = null;
       }
 
@@ -684,64 +706,64 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ),
         ),
-                     const SizedBox(height: 32),
-                    const Text(
-                      'Role',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+        const SizedBox(height: 32),
+        const Text(
+          'Role',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2D2D2D),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: widget.userProfile['role'] == 'admin'
+                      ? Colors.orange.withOpacity(0.1)
+                      : Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.userProfile['role'] == 'admin'
+                      ? Icons.admin_panel_settings
+                      : Icons.person,
+                  color: widget.userProfile['role'] == 'admin'
+                      ? Colors.orange
+                      : Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.userProfile['role'] == 'admin' ? 'Team Admin' : 'Team Member',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2D2D2D),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: widget.userProfile['role'] == 'admin'
-                                  ? Colors.orange.withOpacity(0.1)
-                                  : Colors.blue.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              widget.userProfile['role'] == 'admin'
-                                  ? Icons.admin_panel_settings
-                                  : Icons.person,
-                              color: widget.userProfile['role'] == 'admin'
-                                  ? Colors.orange
-                                  : Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.userProfile['role'] == 'admin' ? 'Team Admin' : 'Team Member',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                widget.userProfile['role'] == 'admin'
-                                    ? 'You have admin privileges'
-                                    : 'Standard team member access',
-                                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),     
+                  ),
+                  Text(
+                    widget.userProfile['role'] == 'admin'
+                        ? 'You have admin privileges'
+                        : 'Standard team member access',
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),     
       ],
     );
   }

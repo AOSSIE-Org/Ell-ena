@@ -70,14 +70,162 @@ class SupabaseService {
 
       await _loadCachedUserProfile();
       await _loadTeamMembersIfLoggedIn();
+      await _checkStorageBuckets(); // Check storage buckets on initialization
+      
+      // Run automatic cleanup on app startup
+      await _autoCleanupOldImages();
     } catch (e) {
       debugPrint('Error initializing Supabase: $e');
       rethrow;
     }
   }
 
-  // Add deleteProfileImage method here
-  Future<Map<String, dynamic>> deleteProfileImage(String fileName) async {
+  // Auto cleanup old images on app startup
+  Future<void> _autoCleanupOldImages() async {
+    try {
+      if (!_isInitialized) return;
+      
+      final user = _client.auth.currentUser;
+      if (user == null) return;
+      
+      debugPrint('Running automatic cleanup of old profile images...');
+      
+      final audit = await auditUserStorage();
+      if (audit['success'] == true) {
+        final totalFiles = audit['totalFiles'] as int? ?? 0;
+        
+        if (totalFiles > 3) {
+          debugPrint('Found $totalFiles files, cleaning up old ones...');
+          await cleanupOldProfileImages(keepLast: 3);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in auto cleanup: $e');
+      // Don't throw, this is just a background cleanup
+    }
+  }
+
+  // Check and verify storage buckets exist
+  Future<Map<String, dynamic>> _checkStorageBuckets() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      debugPrint('Checking storage buckets...');
+
+      // Check if avatars bucket exists
+      try {
+        await _client.storage.from('avatars').list();
+        debugPrint('✅ Avatars bucket exists and is accessible');
+        return {
+          'success': true,
+          'bucketExists': true,
+        };
+      } catch (e) {
+        debugPrint('❌ Avatars bucket does not exist or cannot be accessed');
+        return {
+          'success': false,
+          'error': 'avatars bucket not found',
+          'setupInstructions': '''
+❌ CRITICAL: Storage bucket "avatars" not found!
+
+Please set up the storage bucket in Supabase Dashboard:
+
+1. Go to Supabase Dashboard → Storage
+2. Click "New Bucket"
+3. Name: "avatars" (exactly this name)
+4. Set to "Public" (allows reading without auth)
+5. Click "Create Bucket"
+
+Optional: Set up RLS policies for security:
+  - Allow public read access for profile images
+  - Allow authenticated users to upload their own images
+
+Documentation: https://supabase.com/docs/guides/storage
+''',
+        };
+      }
+    } catch (e) {
+      debugPrint('Error checking storage buckets: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Get detailed storage setup instructions
+  Map<String, dynamic> getStorageSetupInstructions() {
+    return {
+      'steps': [
+        '1. Go to Supabase Dashboard → Storage',
+        '2. Click "New Bucket"',
+        '3. Name: "avatars" (must be exact)',
+        '4. Set to "Public" for read access',
+        '5. Click "Create Bucket"',
+        '',
+        'Optional RLS Policies (recommended for production):',
+        '```sql',
+        '-- Allow authenticated users to upload own avatar',
+        'CREATE POLICY "Users can upload own avatar"',
+        'ON storage.objects FOR INSERT',
+        'TO authenticated',
+        "WITH (bucket_id = 'avatars');",
+        '',
+        '-- Allow public to read avatars',
+        'CREATE POLICY "Avatars are publicly accessible"',
+        'ON storage.objects FOR SELECT',
+        "TO public USING (bucket_id = 'avatars');",
+        '```',
+      ],
+      'docsUrl': 'https://supabase.com/docs/guides/storage',
+    };
+  }
+
+  // Helper to extract storage path from URL
+  String? _extractStoragePathFromUrl(String url) {
+    try {
+      if (url.isEmpty) return null;
+      
+      debugPrint('Extracting path from URL: $url');
+      
+      final uri = Uri.parse(url);
+      final path = uri.path;
+      
+      // Remove the leading slash if present
+      String cleanPath = path.startsWith('/') ? path.substring(1) : path;
+      
+      // Check for different URL formats
+      // Format 1: https://xyz.supabase.co/storage/v1/object/public/avatars/profile-images/user-id/filename.jpg
+      if (cleanPath.contains('avatars/')) {
+        final parts = cleanPath.split('avatars/');
+        if (parts.length > 1) {
+          final extracted = parts[1];
+          debugPrint('Extracted path (format 1): $extracted');
+          return extracted;
+        }
+      }
+      
+      // Format 2: Direct storage path
+      if (cleanPath.contains('profile-images/')) {
+        debugPrint('Extracted path (format 2): $cleanPath');
+        return cleanPath;
+      }
+      
+      debugPrint('Could not extract path from URL');
+      return null;
+    } catch (e) {
+      debugPrint('Error extracting path from URL: $e');
+      return null;
+    }
+  }
+
+  // Delete profile image
+  Future<Map<String, dynamic>> deleteProfileImage(String filePath) async {
     try {
       if (!_isInitialized) {
         return {
@@ -94,34 +242,29 @@ class SupabaseService {
         };
       }
 
-      debugPrint('Attempting to delete profile image: $fileName');
+      debugPrint('Attempting to delete profile image: $filePath');
 
-      // Extract just the filename if full path is provided
-      String filePath = fileName;
-      if (fileName.contains('profile-images/')) {
-        // Already contains the path
-      } else if (fileName.contains('/')) {
-        // Assume it's the full path from URL extraction
-        filePath = fileName;
-      } else {
-        // Just a filename, need to prepend the user's folder
-        filePath = 'profile-images/${user.id}/$fileName';
+      // Ensure the path is correct
+      String finalPath = filePath;
+      
+      // If it's just a filename, add the path
+      if (!filePath.contains('profile-images/')) {
+        finalPath = 'profile-images/${user.id}/$filePath';
       }
-
-      debugPrint('Deleting file at path: $filePath');
+      
+      debugPrint('Deleting file at path: $finalPath');
 
       // Delete from Supabase storage
-      await _client.storage
-          .from('avatars')
-          .remove([filePath]);
+      await _client.storage.from('avatars').remove([finalPath]);
 
-      debugPrint('Profile image deleted successfully');
+      debugPrint('✅ Profile image deleted successfully: $finalPath');
 
       return {
         'success': true,
+        'deletedPath': finalPath,
       };
     } catch (e) {
-      debugPrint('Error deleting profile image: $e');
+      debugPrint('❌ Error deleting profile image: $e');
       return {
         'success': false,
         'error': e.toString(),
@@ -129,25 +272,473 @@ class SupabaseService {
     }
   }
 
-  // NOTE: The createBucket method doesn't have a 'public' parameter in newer versions
-  // You need to create the bucket manually in Supabase Dashboard or use REST API
-  Future<void> initializeStorageBuckets() async {
+  // Helper to delete multiple images
+  Future<void> _deleteMultipleImages(List<String> paths) async {
     try {
-      if (!_isInitialized) return;
-
-      // Check if avatars bucket exists by trying to list files
-      // If it fails, the bucket doesn't exist and needs to be created manually
-      try {
-        await _client.storage.from('avatars').list();
-        debugPrint('Avatars bucket exists');
-      } catch (e) {
-        debugPrint('Avatars bucket does not exist or cannot be accessed.');
-        debugPrint('Please create the "avatars" bucket in Supabase Dashboard with public access.');
-        // Note: Bucket creation via SDK is not available in this version
-        // You need to create it manually in Supabase Dashboard
+      if (paths.isEmpty) return;
+      
+      debugPrint('Deleting ${paths.length} images...');
+      
+      for (var path in paths) {
+        try {
+          await _client.storage.from('avatars').remove([path]);
+          debugPrint('✅ Deleted: $path');
+        } catch (e) {
+          debugPrint('❌ Failed to delete $path: $e');
+          // Continue with other deletions even if one fails
+        }
       }
     } catch (e) {
-      debugPrint('Error checking storage buckets: $e');
+      debugPrint('Error in batch deletion: $e');
+    }
+  }
+
+  // Clean up old profile images for user - IMPROVED with better deletion logic
+  Future<Map<String, dynamic>> cleanupOldProfileImages({
+    int keepLast = 3,
+    int maxAgeDays = 30,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      debugPrint('Cleaning up old profile images for user ${user.id}');
+      debugPrint('Keeping last $keepLast images, max age: $maxAgeDays days');
+
+      // List all files in user's profile-images folder
+      final files = await _client.storage
+          .from('avatars')
+          .list(path: 'profile-images/${user.id}');
+
+      if (files.isEmpty) {
+        return {
+          'success': true,
+          'deleted': 0,
+          'message': 'No images to clean up',
+        };
+      }
+
+      // Get current profile image path
+      final profile = await getCurrentUserProfile();
+      final currentImagePath = profile?['profile_image_path'];
+      final currentImageUrl = profile?['avatar_url'];
+      
+      debugPrint('Current image from DB - Path: $currentImagePath, URL: $currentImageUrl');
+
+      // Convert to list of file objects with metadata
+      final List<Map<String, dynamic>> fileObjects = [];
+      for (var file in files) {
+        final filePath = 'profile-images/${user.id}/${file.name}';
+        
+        // Check if this is the current image by comparing with both path and URL
+        bool isCurrent = false;
+        
+        // Compare with stored path
+        if (currentImagePath != null && currentImagePath.isNotEmpty) {
+          isCurrent = filePath == currentImagePath;
+        }
+        
+        // If not matched by path, try to match by URL
+        if (!isCurrent && currentImageUrl != null && currentImageUrl.isNotEmpty) {
+          final extractedPath = _extractStoragePathFromUrl(currentImageUrl);
+          isCurrent = filePath == extractedPath;
+        }
+        
+        fileObjects.add({
+          'name': file.name,
+          'path': filePath,
+          'created_at': file.createdAt,
+          'updated_at': file.updatedAt,
+          'is_current': isCurrent,
+        });
+      }
+
+      // Sort by created_at (newest first)
+      fileObjects.sort((a, b) {
+        final aTime = a['created_at'] ?? '';
+        final bTime = b['created_at'] ?? '';
+        return bTime.compareTo(aTime); // Descending (newest first)
+      });
+
+      // Log all files for debugging
+      debugPrint('Found ${fileObjects.length} files:');
+      for (var file in fileObjects) {
+        debugPrint('  - ${file['name']} (current: ${file['is_current']}, created: ${file['created_at']})');
+      }
+
+      // Determine which files to delete
+      final List<String> filesToDelete = [];
+      final cutoffDate = DateTime.now().subtract(Duration(days: maxAgeDays));
+
+      for (int i = 0; i < fileObjects.length; i++) {
+        final file = fileObjects[i];
+        final filePath = file['path'];
+        final createdAt = file['created_at'];
+        final isCurrent = file['is_current'];
+
+        // Never delete the current image
+        if (isCurrent) {
+          debugPrint('Skipping current image: $filePath');
+          continue;
+        }
+
+        // Delete if:
+        // 1. It's older than keepLast (keep only the N newest)
+        // 2. OR it's older than maxAgeDays
+        bool shouldDelete = false;
+        
+        if (i >= keepLast) {
+          debugPrint('Marking for deletion (older than keepLast $keepLast): $filePath');
+          shouldDelete = true;
+        } else if (createdAt != null && createdAt.isNotEmpty) {
+          try {
+            final fileDate = DateTime.parse(createdAt);
+            if (fileDate.isBefore(cutoffDate)) {
+              debugPrint('Marking for deletion (older than $maxAgeDays days): $filePath');
+              shouldDelete = true;
+            }
+          } catch (e) {
+            debugPrint('Error parsing date for file $filePath: $e');
+          }
+        }
+
+        if (shouldDelete) {
+          filesToDelete.add(filePath);
+        }
+      }
+
+      if (filesToDelete.isEmpty) {
+        return {
+          'success': true,
+          'deleted': 0,
+          'message': 'No old images to clean up',
+        };
+      }
+
+      debugPrint('Files to delete: ${filesToDelete.length}');
+      for (var path in filesToDelete) {
+        debugPrint('  - $path');
+      }
+
+      // Delete the old files
+      await _deleteMultipleImages(filesToDelete);
+
+      debugPrint('✅ Cleaned up ${filesToDelete.length} old profile images');
+
+      return {
+        'success': true,
+        'deleted': filesToDelete.length,
+        'message': 'Cleaned up ${filesToDelete.length} old profile images',
+        'deletedFiles': filesToDelete,
+      };
+    } catch (e) {
+      debugPrint('Error cleaning up old profile images: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Get detailed storage audit
+  Future<Map<String, dynamic>> auditUserStorage() async {
+    try {
+      if (!_isInitialized) return {'success': false};
+
+      final user = _client.auth.currentUser;
+      if (user == null) return {'success': false};
+
+      debugPrint('Auditing storage for user ${user.id}');
+
+      // List all files in user's profile-images folder
+      final files = await _client.storage
+          .from('avatars')
+          .list(path: 'profile-images/${user.id}');
+
+      // Get current profile
+      final profile = await getCurrentUserProfile();
+      final currentImagePath = profile?['profile_image_path'];
+      final currentImageUrl = profile?['avatar_url'];
+
+      // Analyze files
+      final List<Map<String, dynamic>> fileDetails = [];
+      int totalSize = 0;
+      
+      for (var file in files) {
+        final filePath = 'profile-images/${user.id}/${file.name}';
+        
+        // Check if this is the current image
+        bool isCurrent = false;
+        if (currentImagePath != null && currentImagePath.isNotEmpty) {
+          isCurrent = filePath == currentImagePath;
+        }
+        
+        if (!isCurrent && currentImageUrl != null && currentImageUrl.isNotEmpty) {
+          final extractedPath = _extractStoragePathFromUrl(currentImageUrl);
+          isCurrent = filePath == extractedPath;
+        }
+        
+        fileDetails.add({
+          'name': file.name,
+          'path': filePath,
+          'created_at': file.createdAt,
+          'updated_at': file.updatedAt,
+          'is_current': isCurrent,
+          'metadata': file.metadata,
+        });
+        
+        // Try to get file size from metadata
+        final metadata = file.metadata;
+        if (metadata != null && metadata['size'] != null) {
+          totalSize += int.parse(metadata['size'].toString());
+        }
+      }
+
+      // Sort by date (newest first)
+      fileDetails.sort((a, b) {
+        final aTime = a['created_at'] ?? '';
+        final bTime = b['created_at'] ?? '';
+        return bTime.compareTo(aTime);
+      });
+
+      // Count orphans (files not in database)
+      final orphans = fileDetails.where((f) => !f['is_current']).length;
+
+      return {
+        'success': true,
+        'userId': user.id,
+        'totalFiles': files.length,
+        'currentImage': {
+          'path': currentImagePath,
+          'url': currentImageUrl,
+        },
+        'totalSizeBytes': totalSize,
+        'totalSizeMB': (totalSize / (1024 * 1024)).toStringAsFixed(2),
+        'totalSizeKB': (totalSize / 1024).toStringAsFixed(2),
+        'files': fileDetails,
+        'storageHealth': {
+          'hasOrphans': orphans,
+          'orphanCount': orphans,
+          'recommendedAction': fileDetails.length > 3 
+              ? 'Clean up old images (keep only last 3)' 
+              : 'OK',
+          'status': fileDetails.length <= 3 ? 'healthy' : 'needs_cleanup',
+        },
+        'summary': {
+          'currentImages': fileDetails.where((f) => f['is_current']).length,
+          'oldImages': fileDetails.where((f) => !f['is_current']).length,
+          'oldestFile': fileDetails.isNotEmpty ? fileDetails.last['created_at'] : null,
+          'newestFile': fileDetails.isNotEmpty ? fileDetails.first['created_at'] : null,
+        }
+      };
+    } catch (e) {
+      debugPrint('Error auditing user storage: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // Force cleanup of all but last N images
+  Future<Map<String, dynamic>> forceCleanup({int keepLast = 3}) async {
+    try {
+      debugPrint('Force cleaning up storage, keeping last $keepLast images');
+      
+      final audit = await auditUserStorage();
+      if (!audit['success']) return audit;
+
+      final files = audit['files'] as List<dynamic>;
+      if (files.length <= keepLast) {
+        return {
+          'success': true,
+          'message': 'No cleanup needed. Only ${files.length} files exist.',
+          'filesBefore': files.length,
+          'filesAfter': files.length,
+        };
+      }
+
+      // Sort by date (newest first) and keep only file paths
+      final fileDetails = files.map((f) => f as Map<String, dynamic>).toList();
+      fileDetails.sort((a, b) {
+        final aTime = a['created_at'] ?? '';
+        final bTime = b['created_at'] ?? '';
+        return bTime.compareTo(aTime);
+      });
+
+      // Mark files to delete (skip the first 'keepLast' ones)
+      List<String> toDelete = [];
+      for (int i = keepLast; i < fileDetails.length; i++) {
+        final file = fileDetails[i];
+        if (!file['is_current']) { // Don't delete current image
+          toDelete.add(file['path']);
+        }
+      }
+
+      if (toDelete.isEmpty) {
+        return {
+          'success': true, 
+          'message': 'No files to delete (keeping current image)',
+          'filesBefore': files.length,
+          'filesAfter': files.length,
+        };
+      }
+
+      // Delete
+      await _deleteMultipleImages(toDelete);
+
+      // Re-audit after cleanup
+      final newAudit = await auditUserStorage();
+      final newFileCount = newAudit['success'] ? newAudit['totalFiles'] : 'unknown';
+
+      return {
+        'success': true,
+        'deleted': toDelete.length,
+        'remaining': files.length - toDelete.length,
+        'deletedFiles': toDelete,
+        'filesBefore': files.length,
+        'filesAfter': newFileCount,
+        'message': 'Deleted ${toDelete.length} old images. Now have $newFileCount files.',
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // Upload profile image to Supabase Storage - COMPLETE VERSION with automatic cleanup
+  Future<String?> uploadProfileImage(File imageFile,
+      {bool deletePrevious = true}) async {
+    try {
+      if (!_isInitialized) return null;
+
+      final user = _client.auth.currentUser;
+      if (user == null) return null;
+
+      // Check storage bucket first
+      final bucketCheck = await _checkStorageBuckets();
+      if (!bucketCheck['success']) {
+        debugPrint('Storage bucket check failed: ${bucketCheck['error']}');
+        return null;
+      }
+
+      debugPrint('🔄 Starting profile image upload for user ${user.id}');
+      debugPrint('Delete previous image: $deletePrevious');
+
+      // Step 1: Clean up any old images before upload (keep only last 2)
+      debugPrint('🧹 Cleaning up old images before upload...');
+      final preCleanup = await cleanupOldProfileImages(keepLast: 2);
+      if (preCleanup['success'] == true && preCleanup['deleted'] != null && preCleanup['deleted'] > 0) {
+        debugPrint('✅ Cleaned up ${preCleanup['deleted']} old images before upload');
+      }
+
+      // Step 2: Get current profile to find existing image path
+      String? oldImagePath;
+      if (deletePrevious) {
+        final profile = await getCurrentUserProfile();
+        final oldImageUrl = profile?['avatar_url'];
+        final oldImagePathFromDb = profile?['profile_image_path'];
+        
+        debugPrint('Old image URL from DB: $oldImageUrl');
+        debugPrint('Old image path from DB: $oldImagePathFromDb');
+
+        // Try to get the old image path from multiple sources
+        if (oldImagePathFromDb != null && oldImagePathFromDb.isNotEmpty) {
+          // First priority: Use the path stored in database
+          oldImagePath = oldImagePathFromDb;
+          debugPrint('Using path from DB: $oldImagePath');
+        } else if (oldImageUrl != null && oldImageUrl.isNotEmpty) {
+          // Fallback: Extract path from URL
+          oldImagePath = _extractStoragePathFromUrl(oldImageUrl);
+          debugPrint('Extracted path from URL: $oldImagePath');
+        }
+
+        // Delete old image if we found a valid path
+        if (oldImagePath != null && oldImagePath.isNotEmpty) {
+          debugPrint('Attempting to delete old image: $oldImagePath');
+          final deleteResult = await deleteProfileImage(oldImagePath);
+          if (deleteResult['success'] == true) {
+            debugPrint('✅ Successfully deleted old image');
+          } else {
+            debugPrint('❌ Failed to delete old image: ${deleteResult['error']}');
+          }
+        } else {
+          debugPrint('No old image path found to delete');
+        }
+      }
+
+      // Step 3: Generate new filename
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = imageFile.path.split('.').last.toLowerCase();
+      final fileName = '${user.id}_$timestamp.$extension';
+      final filePath = 'profile-images/${user.id}/$fileName';
+
+      debugPrint('📤 Uploading new image to: $filePath');
+      debugPrint('File size: ${imageFile.lengthSync()} bytes');
+
+      // Step 4: Upload to Supabase Storage
+      try {
+        await _client.storage.from('avatars').upload(
+          filePath,
+          imageFile,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: _getMimeType(extension),
+          ),
+        );
+        debugPrint('✅ Upload successful');
+      } catch (uploadError) {
+        debugPrint('❌ Upload failed: $uploadError');
+        return null;
+      }
+
+      // Step 5: Get public URL
+      final publicUrl = _client.storage.from('avatars').getPublicUrl(filePath);
+      debugPrint('🔗 Public URL: $publicUrl');
+
+      // Step 6: Update user profile with new image URL AND path
+      debugPrint('💾 Updating user profile in database...');
+      final updateSuccess = await updateUserProfile({
+        'avatar_url': publicUrl,
+        'profile_image_path': filePath,  // Make sure this is saved!
+        'profile_image_updated_at': DateTime.now().toIso8601String(),
+      });
+
+      if (!updateSuccess) {
+        debugPrint('⚠️ Failed to update user profile in database');
+        // Even if profile update fails, we should delete the uploaded image
+        try {
+          await deleteProfileImage(filePath);
+          debugPrint('Deleted uploaded image due to profile update failure');
+        } catch (e) {
+          debugPrint('Failed to clean up after profile update failure: $e');
+        }
+        return null;
+      }
+
+      debugPrint('✅ Profile updated with new image');
+
+      // Step 7: Final cleanup - keep only the current image
+      debugPrint('🧹 Final cleanup - keeping only current image...');
+      final finalCleanup = await cleanupOldProfileImages(keepLast: 1);
+      if (finalCleanup['success'] == true && finalCleanup['deleted'] != null && finalCleanup['deleted'] > 0) {
+        debugPrint('✅ Final cleanup removed ${finalCleanup['deleted']} old images');
+      }
+
+      debugPrint('🎉 Profile image upload completed successfully!');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('❌ Error in uploadProfileImage: $e');
+      debugPrint('Stack trace: ${e.toString()}');
+      return null;
     }
   }
 
@@ -187,84 +778,57 @@ class SupabaseService {
     }
   }
 
-  // Upload profile image to Supabase Storage - FIXED VERSION
-  Future<String?> uploadProfileImage(File imageFile) async {
-    try {
-      if (!_isInitialized) return null;
-
-      final user = _client.auth.currentUser;
-      if (user == null) return null;
-
-      // Generate unique filename
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final extension = imageFile.path.split('.').last;
-      final fileName = 'profile_${user.id}_$timestamp.$extension';
-      final filePath = 'profile-images/$fileName';
-
-      // Read file bytes
-      final fileBytes = await imageFile.readAsBytes();
-
-      // Upload to Supabase Storage - FIXED: Using uploadBinary for Uint8List
-      final uploadResponse = await _client.storage
-          .from('avatars')
-          .uploadBinary(
-            filePath,
-            fileBytes,
-            fileOptions: const FileOptions(
-              upsert: true,
-              contentType: 'image/jpeg', // You can adjust this based on file type
-            ),
-          );
-
-      // Get public URL
-      final publicUrl = _client.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-
-      debugPrint('Profile image uploaded successfully: $publicUrl');
-      return publicUrl;
-    } catch (e) {
-      debugPrint('Error uploading profile image: $e');
-      return null;
+  // Helper method to get MIME type from file extension
+  String _getMimeType(String extension) {
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'svg':
+        return 'image/svg+xml';
+      default:
+        return 'image/jpeg';
     }
   }
 
-  // Alternative upload method using the File object directly
-  Future<String?> uploadProfileImageDirect(File imageFile) async {
+  // Get user's storage usage statistics - SIMPLIFIED VERSION
+  Future<Map<String, dynamic>> getUserStorageUsage() async {
     try {
-      if (!_isInitialized) return null;
+      if (!_isInitialized) return {'success': false};
 
       final user = _client.auth.currentUser;
-      if (user == null) return null;
+      if (user == null) return {'success': false};
 
-      // Generate unique filename
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final extension = imageFile.path.split('.').last;
-      final fileName = 'profile_${user.id}_$timestamp.$extension';
-      final filePath = 'profile-images/$fileName';
-
-      // Upload using the file directly
-      final uploadResponse = await _client.storage
+      // List all files in user's profile-images folder
+      final files = await _client.storage
           .from('avatars')
-          .upload(
-            filePath,
-            imageFile,
-            fileOptions: const FileOptions(
-              upsert: true,
-              contentType: 'image/jpeg',
-            ),
-          );
+          .list(path: 'profile-images/${user.id}');
 
-      // Get public URL
-      final publicUrl = _client.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
+      // Simplified response - we can't access size in this package version
+      final List<Map<String, dynamic>> fileList = [];
 
-      debugPrint('Profile image uploaded successfully: $publicUrl');
-      return publicUrl;
+      for (var file in files) {
+        fileList.add({
+          'name': file.name,
+          'created_at': file.createdAt,
+          'updated_at': file.updatedAt,
+        });
+      }
+
+      return {
+        'success': true,
+        'totalFiles': files.length,
+        'files': fileList,
+      };
     } catch (e) {
-      debugPrint('Error uploading profile image: $e');
-      return null;
+      debugPrint('Error getting storage usage: $e');
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -1083,7 +1647,7 @@ class SupabaseService {
       if (user == null) return null;
 
       // Check cache first
-      if (_userProfileCache != null && 
+      if (_userProfileCache != null &&
           _userProfileCache!['google_refresh_token'] != null) {
         return _userProfileCache!['google_refresh_token'];
       }
@@ -1131,8 +1695,8 @@ class SupabaseService {
 
       // Check if user is admin of this team
       final userProfile = await getCurrentUserProfile();
-      if (userProfile == null || 
-          userProfile['team_id'] != teamId || 
+      if (userProfile == null ||
+          userProfile['team_id'] != teamId ||
           userProfile['role'] != 'admin') {
         return {
           'success': false,
@@ -1170,8 +1734,7 @@ class SupabaseService {
       }
 
       // Update cache if this is the current team
-      if (_userProfileCache != null && 
-          _userProfileCache!['team_id'] == teamId) {
+      if (_userProfileCache != null && _userProfileCache!['team_id'] == teamId) {
         _userProfileCache!['teams'] = response[0];
         await _saveUserProfileToCache(_userProfileCache!);
       }
@@ -1479,12 +2042,13 @@ class SupabaseService {
       debugPrint('Error updating password: $e');
       return {
         'success': false,
-        'error': 'Failed to update password. Please check your current password.',
+        'error':
+            'Failed to update password. Please check your current password.',
       };
     }
   }
 
-  // Delete user account
+  // Delete user account - IMPROVED VERSION with storage cleanup
   Future<Map<String, dynamic>> deleteAccount() async {
     try {
       if (!_isInitialized) {
@@ -1502,11 +2066,35 @@ class SupabaseService {
         };
       }
 
-      // Delete user from database
+      debugPrint('Deleting account for user ${user.id}');
+
+      // Step 1: Get user profile to find profile images
+      final profile = await getCurrentUserProfile();
+      final imagePath = profile?['profile_image_path'];
+
+      // Step 2: Delete profile image if exists
+      if (imagePath != null && imagePath.isNotEmpty) {
+        debugPrint('Deleting profile image: $imagePath');
+        await deleteProfileImage(imagePath);
+      }
+
+      // Step 3: Also clean up any other images in user's folder
+      try {
+        debugPrint('Cleaning up all user images...');
+        await forceCleanup(keepLast: 0); // Delete all
+      } catch (e) {
+        debugPrint('Error cleaning up user images: $e');
+        // Continue with account deletion even if image cleanup fails
+      }
+
+      // Step 4: Delete user from database
+      debugPrint('Deleting user from database...');
       await _client.from('users').delete().eq('id', user.id);
 
-      // Sign out
+      // Step 5: Sign out
       await signOut();
+
+      debugPrint('✅ Account deleted successfully');
 
       return {
         'success': true,
@@ -2892,14 +3480,12 @@ class SupabaseService {
 
       // Calculate statistics
       int totalTasks = tasksResponse.length;
-      int completedTasks = tasksResponse
-          .where((task) => task['status'] == 'done')
-          .length;
+      int completedTasks =
+          tasksResponse.where((task) => task['status'] == 'done').length;
 
       int totalTickets = ticketsResponse.length;
-      int openTickets = ticketsResponse
-          .where((ticket) => ticket['status'] == 'open')
-          .length;
+      int openTickets =
+          ticketsResponse.where((ticket) => ticket['status'] == 'open').length;
 
       int highPriorityTickets = ticketsResponse
           .where((ticket) => ticket['priority'] == 'high')
@@ -2911,8 +3497,8 @@ class SupabaseService {
           'tasks': {
             'total': totalTasks,
             'completed': completedTasks,
-            'completionRate': totalTasks > 0 
-                ? (completedTasks / totalTasks * 100).round() 
+            'completionRate': totalTasks > 0
+                ? (completedTasks / totalTasks * 100).round()
                 : 0,
           },
           'tickets': {
@@ -2946,7 +3532,7 @@ class SupabaseService {
           session.expiresAt! * 1000,
         );
         final now = DateTime.now();
-        
+
         // Refresh if session expires in less than 5 minutes
         if (expiresAt.difference(now).inMinutes < 5) {
           await _client.auth.refreshSession();
@@ -2965,18 +3551,18 @@ class SupabaseService {
   Future<void> clearAllCaches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Only remove user-related keys, not all preferences
       // These are the keys we know this service uses
       await prefs.remove('user_profile');
       // Add other user-specific keys here if needed
       // e.g., await prefs.remove('user_token');
-      
+
       // Clear in-memory caches
       _teamMembersCache = [];
       _currentTeamId = null;
       _userProfileCache = null;
-      
+
       debugPrint('User caches cleared (app settings preserved)');
     } catch (e) {
       debugPrint('Error clearing caches: $e');
