@@ -149,12 +149,11 @@ class AuthScreenWrapper extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
               Text(
                 title,
                 style: const TextStyle(
@@ -168,8 +167,9 @@ class AuthScreenWrapper extends StatelessWidget {
                 subtitle,
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
-              const SizedBox(height: 40),
-              ...children,
+              const SizedBox(height: 20),
+              // Expanded(child: Column(children: children,))
+              ...children
             ],
           ),
         ),
