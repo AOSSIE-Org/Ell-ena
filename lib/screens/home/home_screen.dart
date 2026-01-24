@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
+import '../../services/theme_service.dart';
 import '../workspace/workspace_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../profile/profile_screen.dart';
@@ -138,16 +139,36 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final onSurfaceMuted = scheme.onSurface.withOpacity(0.7);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('Ell-ena'),
+        actions: [
+          IconButton(
+            tooltip: 'Toggle theme',
+            icon: Icon(
+              ThemeService().themeMode == ThemeMode.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
+            onPressed: () {
+              setState(() {
+                ThemeService().toggleThemeMode();
+              });
+            },
+          ),
+        ],
+      ),
       body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2D2D2D),
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.white70,
+        backgroundColor: scheme.surface,
+        selectedItemColor: scheme.primary,
+        unselectedItemColor: onSurfaceMuted,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
