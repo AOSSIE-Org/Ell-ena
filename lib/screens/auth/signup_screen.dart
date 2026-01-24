@@ -222,15 +222,13 @@ class _SignupScreenState extends State<SignupScreen>
           indicatorSize: TabBarIndicatorSize.tab,
         ),
         const SizedBox(height: 24),
-        SizedBox(
-          
-          height: MediaQuery.of(context).size.height * 0.43,   // ~43% of screen 
+        Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
               // Join Team Tab
               Padding(
-                padding: const EdgeInsets.fromLTRB(0,8,0,0),
+                padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
                 child: SingleChildScrollView(
                   child: Form(
                     key: _joinTeamFormKey,
@@ -316,7 +314,7 @@ class _SignupScreenState extends State<SignupScreen>
               ),
               // Create Team Tab
               Padding(
-                padding: const EdgeInsets.fromLTRB(0,8,0,0),
+                padding: const EdgeInsets.fromLTRB(0, 8, 0, 0),
                 child: SingleChildScrollView(
                   child: Form(
                     key: _createTeamFormKey,
@@ -459,27 +457,26 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         const SizedBox(height: 16),
         Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Already have an account? ',
-                        style: TextStyle(color: Colors.grey.shade400),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          NavigationService().navigateToReplacement(const LoginScreen());
-                        },
-                        child: Text(
-                          'Sign In',
-                          style: TextStyle(
-                            color: Colors.green.shade400,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-       
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Already have an account? ',
+              style: TextStyle(color: Colors.grey.shade400),
+            ),
+            TextButton(
+              onPressed: () {
+                NavigationService().navigateTo(const LoginScreen());
+              },
+              child: Text(
+                'Sign In',
+                style: TextStyle(
+                  color: Colors.green.shade400,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

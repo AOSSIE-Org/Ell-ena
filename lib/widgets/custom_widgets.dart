@@ -68,10 +68,10 @@ class CustomTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.green.shade400),
         ),
-        // contentPadding: const EdgeInsets.symmetric(
-        //   horizontal: 16,
-        //   vertical: 16,
-        // ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
     );
   }
@@ -149,12 +149,11 @@ class AuthScreenWrapper extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // const SizedBox(height: 40),
               Text(
                 title,
                 style: const TextStyle(
@@ -169,7 +168,8 @@ class AuthScreenWrapper extends StatelessWidget {
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
               const SizedBox(height: 20),
-              ...children,
+              // Expanded(child: Column(children: children,))
+              ...children
             ],
           ),
         ),
