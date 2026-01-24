@@ -366,6 +366,10 @@ supabase secrets set VEXA_API_KEY=your-vexa-api-key
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 
 
+# Local Testing the functions (optional)
+supabase functions serve --allow-env --env-file .env
+
+
 
 ## Deploying Edge Functions
 
@@ -548,4 +552,3 @@ After setting up your backend:
 ---
 
 This guide should help you get started with the Ell-ena backend.
-
