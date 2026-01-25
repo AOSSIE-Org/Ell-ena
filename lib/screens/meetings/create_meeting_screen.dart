@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/unified_form_components.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
   const CreateMeetingScreen({super.key});
@@ -205,11 +206,8 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text('Create Meeting'),
-      ),
+      backgroundColor: UnifiedDesignTokens.backgroundColor,
+      appBar: unifiedCreateAppBar(title: 'Create Meeting'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.green))
           : SingleChildScrollView(
@@ -220,19 +218,10 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Title
-                    TextFormField(
+                    UnifiedTextFormField(
+                      label: 'Meeting Title',
+                      hintText: 'Enter meeting title',
                       controller: _titleController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Title *',
-                        labelStyle: TextStyle(color: Colors.grey),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.green),
-                        ),
-                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter a title';
@@ -240,101 +229,53 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
-                    // Description
-                    TextFormField(
+                    // Description (Optional)
+                    UnifiedTextFormField(
+                      label: 'Description',
+                      hintText: 'Enter meeting description',
                       controller: _descriptionController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        labelStyle: TextStyle(color: Colors.grey),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.green),
-                        ),
-                      ),
                       maxLines: 3,
+                      isOptional: true,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
                     // Date and Time
                     Row(
                       children: [
                         Expanded(
-                          child: InkWell(
+                          child: UnifiedPickerField(
+                            label: 'Date',
+                            displayText: _selectedDate == null
+                                ? 'Select date'
+                                : DateFormat('MMM dd, yyyy').format(_selectedDate!),
+                            icon: Icons.calendar_today,
                             onTap: _selectDate,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_today, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _selectedDate == null
-                                        ? 'Select Date *'
-                                        : DateFormat('MMM dd, yyyy').format(_selectedDate!),
-                                    style: TextStyle(
-                                      color: _selectedDate == null ? Colors.grey : Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: InkWell(
+                          child: UnifiedPickerField(
+                            label: 'Time',
+                            displayText: _selectedTime == null
+                                ? 'Select time'
+                                : _selectedTime!.format(context),
+                            icon: Icons.access_time,
                             onTap: _selectTime,
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.access_time, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _selectedTime == null
-                                        ? 'Select Time *'
-                                        : _selectedTime!.format(context),
-                                    style: TextStyle(
-                                      color: _selectedTime == null ? Colors.grey : Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
-                    // Duration
-                    TextFormField(
+                    // Duration (Optional)
+                    UnifiedTextFormField(
+                      label: 'Duration',
+                      hintText: 'Duration in minutes',
                       controller: _durationController,
-                      style: const TextStyle(color: Colors.white),
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Duration (minutes)',
-                        labelStyle: TextStyle(color: Colors.grey),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.grey),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.green),
-                        ),
-                      ),
+                      isOptional: true,
                       validator: (value) {
                         if (value != null && value.isNotEmpty) {
                           try {
@@ -349,67 +290,76 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
-                    // Meeting URL
-                    TextFormField(
-                      controller: _urlController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Google Meet URL',
-                        labelStyle: const TextStyle(color: Colors.grey),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: _urlController.text.isNotEmpty && !_isGoogleMeetUrl
-                                ? Colors.red
-                                : Colors.grey,
-                          ),
+                    // Meeting URL (Optional)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Google Meet URL',
+                              style: UnifiedDesignTokens.labelStyle,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '(Optional)',
+                              style: TextStyle(
+                                color: UnifiedDesignTokens.textSecondary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          ],
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: _urlController.text.isNotEmpty && !_isGoogleMeetUrl
-                                ? Colors.red
-                                : Colors.green,
+                        const SizedBox(height: UnifiedDesignTokens.labelSpacing),
+                        TextFormField(
+                          controller: _urlController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'https://meet.google.com/...',
+                            hintStyle: UnifiedDesignTokens.hintStyle,
+                            filled: true,
+                            fillColor: UnifiedDesignTokens.surfaceColor,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(UnifiedDesignTokens.borderRadius),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                            suffixIcon: _urlController.text.isNotEmpty
+                                ? Icon(
+                                    _isGoogleMeetUrl ? Icons.check_circle : Icons.error,
+                                    color: _isGoogleMeetUrl ? Colors.green : Colors.red,
+                                  )
+                                : null,
                           ),
+                          onChanged: (value) {
+                            _checkUrl(value);
+                          },
                         ),
-                        suffixIcon: _urlController.text.isNotEmpty
-                            ? Icon(
-                                _isGoogleMeetUrl ? Icons.check_circle : Icons.error,
-                                color: _isGoogleMeetUrl ? Colors.green : Colors.red,
-                              )
-                            : null,
-                      ),
-                      onChanged: (value) {
-                        _checkUrl(value);
-                      },
+                        
+                        // Warning message for non-Google Meet URLs
+                        if (_urlController.text.isNotEmpty && !_isGoogleMeetUrl)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'Ellena AI transcription only works with Google Meet URLs',
+                              style: TextStyle(color: Colors.red.shade300, fontSize: 12),
+                            ),
+                          ),
+                      ],
                     ),
-                    
-                    // Warning message for non-Google Meet URLs
-                    if (_urlController.text.isNotEmpty && !_isGoogleMeetUrl)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          'Ellena AI transcription only works with Google Meet URLs',
-                          style: TextStyle(color: Colors.red.shade300, fontSize: 12),
-                        ),
-                      ),
-                    
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     
                     // Create button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _createMeeting,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Create Meeting',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
+                    UnifiedActionButton(
+                      text: 'Create Meeting',
+                      onPressed: _createMeeting,
+                      isLoading: _isLoading,
                     ),
                   ],
                 ),
