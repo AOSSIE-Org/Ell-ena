@@ -433,55 +433,51 @@ This prevents filename collisions and allows safe cleanup.
 
 ### Step 3: Configure Storage Policies
 
-All policies apply to the `storage.objects` table.
+-- Step 3: Configure Storage Policies
+-- All policies apply to the storage.objects table
 
--- Policy 1: Allow authenticated users to read avatars
+-- 1. Allow authenticated users to read avatars
 CREATE POLICY "Allow authenticated users to read avatars"
-ON storage.objects FOR SELECT
+ON storage.objects
+FOR SELECT
+TO authenticated
 USING (
-  bucket_id = 'avatars' 
-  AND auth.role() = 'authenticated'
+  bucket_id = 'avatars'
 );
 
--- Policy 2: Allow authenticated users to upload avatars
+-- 2. Allow authenticated users to upload avatars
 CREATE POLICY "Allow authenticated users to upload avatars"
-ON storage.objects FOR INSERT
+ON storage.objects
+FOR INSERT
+TO authenticated
 WITH CHECK (
-  bucket_id = 'avatars' 
-  AND auth.role() = 'authenticated'
+  bucket_id = 'avatars'
 );
 
--- Policy 3: Allow users to update their own avatars
+-- 3. Allow users to update their own avatars
 CREATE POLICY "Allow users to update their own avatars"
-ON storage.objects FOR UPDATE
+ON storage.objects
+FOR UPDATE
+TO authenticated
 USING (
-  bucket_id = 'avatars' 
-  AND auth.uid() = owner
+  bucket_id = 'avatars'
+  AND auth.uid() = owner_id
 )
 WITH CHECK (
-  bucket_id = 'avatars' 
-  AND auth.uid() = owner
+  bucket_id = 'avatars'
+  AND auth.uid() = owner_id
 );
 
--- Policy 4: Allow users to delete their own avatars
+-- 4. Allow users to delete their own avatars
 CREATE POLICY "Allow users to delete their own avatars"
-ON storage.objects FOR DELETE
+ON storage.objects
+FOR DELETE
+TO authenticated
 USING (
-  bucket_id = 'avatars' 
-  AND auth.uid() = owner
+  bucket_id = 'avatars'
+  AND auth.uid() = owner_id
 );
 
-#### Avatar Update Flow
-
-When a user uploads or updates their profile image:
-
-1. The existing image at `profile_image_path` is deleted (if present)
-2. A new image is uploaded to: avatars/profile-images/{userId}/{userId}_{timestamp}.jpg
-3. The following fields are updated:
-- `avatar_url`
-- `profile_image_path`
-- `profile_image_updated_at`
-4. The new avatar is immediately reflected across the application
 
 #### User Profile Avatar Database Fields
 
@@ -499,11 +495,11 @@ The users table includes additional fields for managing profile images.
 When a user updates their avatar:
 
 1. Existing image at profile_image_path is deleted
-2.New image is uploaded to Supabase Storage
-3.User record is updated:
-  - avatar_url
-  - profile_image_path
-  - profile_image_updated_at
+2. New image is uploaded to Supabase Storage
+3. User record is updated:
+   - avatar_url
+   - profile_image_path
+   - profile_image_updated_at
 4. UI updates instantly across the app
 
 This ensures no orphaned images remain in storage.
