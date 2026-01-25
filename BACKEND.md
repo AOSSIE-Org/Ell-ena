@@ -461,11 +461,11 @@ FOR UPDATE
 TO authenticated
 USING (
   bucket_id = 'avatars'
-  AND auth.uid() = owner_id
+  AND owner_id = auth.uid()::text
 )
 WITH CHECK (
   bucket_id = 'avatars'
-  AND auth.uid() = owner_id
+  AND owner_id = auth.uid()::text
 );
 
 -- 4. Allow users to delete their own avatars
@@ -475,8 +475,9 @@ FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'avatars'
-  AND auth.uid() = owner_id
+  AND owner_id = auth.uid()::text
 );
+
 
 #### User Profile Avatar Database Fields
 
