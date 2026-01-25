@@ -408,7 +408,7 @@ supabase functions deploy summarize-transcription
 4. Use the following configuration:
 
    - **Name:** `avatars`
-   - **Public bucket:** ✅ Enabled
+   - **Public bucket:** ❌ Disabled
 
 ⚠️ The bucket name is case-sensitive and must be exactly `avatars`.
 
