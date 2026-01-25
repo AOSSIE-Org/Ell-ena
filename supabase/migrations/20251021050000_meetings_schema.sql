@@ -1,4 +1,6 @@
 -- Meetings table
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
 CREATE TABLE meetings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     meeting_number TEXT NOT NULL,
