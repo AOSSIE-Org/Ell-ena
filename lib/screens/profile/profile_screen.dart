@@ -35,8 +35,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final profile = await _supabaseService.getCurrentUserProfile();
       
       // Load avatar URL from profile
-      if (profile != null && profile['avatar_url'] != null) {
-        _avatarUrl = profile['avatar_url'];
+      if (profile != null) {
+      _avatarUrl = profile['avatar_url']; // will correctly set to null if removed
       }
       
       // Also load all teams associated with the user's email
