@@ -11,7 +11,8 @@ This document provides a comprehensive guide to set up the Supabase backend for 
 5. [Deploying Database Schema](#deploying-database-schema)
 6. [Setting Up Authentication](#setting-up-authentication)
 7. [Deploying Edge Functions](#deploying-edge-functions)
-8. [Troubleshooting](#troubleshooting)
+8. [Supabase Avatar Storage Setup](#profile-avatars-supabase-storage-setup)
+9. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
