@@ -433,7 +433,6 @@ This prevents filename collisions and allows safe cleanup.
 
 ### Step 3: Configure Storage Policies
 
--- Step 3: Configure Storage Policies
 -- All policies apply to the storage.objects table
 
 -- 1. Allow authenticated users to read avatars
@@ -477,7 +476,6 @@ USING (
   bucket_id = 'avatars'
   AND auth.uid() = owner_id
 );
-
 
 #### User Profile Avatar Database Fields
 
