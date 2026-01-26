@@ -41,10 +41,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
     try {
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null && userProfile['team_id'] != null) {
-        // Load team members cache first
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
-        
-        // Get team members from cache
         final teamMembers = _supabaseService.teamMembersCache;
         
         if (mounted) {
@@ -128,263 +125,285 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF2D2D2D),
         title: const Text('Create Ticket'),
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else
-            IconButton(
-              onPressed: _createTicket,
-              icon: const Icon(Icons.check),
-              tooltip: 'Create Ticket',
-            ),
-        ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Title
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                      labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText: 'Enter ticket title',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.title, color: Colors.grey),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Description
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText: 'Enter ticket description (max 75 words recommended)',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.description, color: Colors.grey),
-                      alignLabelWithHint: true,
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 5,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a description';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Priority
-                  Text(
-                    'Priority',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildPriorityOption('low', 'Low', Colors.green.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('medium', 'Medium', Colors.orange.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('high', 'High', Colors.red.shade400),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Category
-                  Text(
-                    'Category',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedCategory,
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedCategory = value;
-                            });
-                          }
-                        },
-                        items: ticketCategories.map((category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        dropdownColor: const Color(0xFF2D2D2D),
-                        style: const TextStyle(color: Colors.white),
-                        isExpanded: true,
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50)))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    const Text(
+                      'Title *',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Assignee
-                  Text(
-                    'Assign To (Optional)',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedAssignee,
-                        hint: Text(
-                          'Select team member',
-                          style: TextStyle(color: Colors.grey.shade600),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter ticket title',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: const Color(0xFF2D2D2D),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedAssignee = value;
-                          });
-                        },
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Unassigned'),
-                          ),
-                          ..._teamMembers.map((member) {
-                            return DropdownMenuItem<String?>(
-                              value: member['id'],
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 12,
-                                    backgroundColor: Colors.green.shade700,
-                                    child: Text(
-                                      member['full_name'] != null && member['full_name'].isNotEmpty
-                                          ? member['full_name'][0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(member['full_name'] ?? 'Unknown'),
-                                  if (member['role'] == 'admin')
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.shade400.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'Admin',
-                                        style: TextStyle(
-                                          color: Colors.orange.shade400,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a title';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Description
+                    const Text(
+                      'Description *',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter ticket description',
+                        hintStyle: TextStyle(color: Colors.grey.shade400),
+                        filled: true,
+                        fillColor: const Color(0xFF2D2D2D),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: 4,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a description';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Priority
+                    const Text(
+                      'Priority',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildPriorityOption('low', 'Low', Colors.green),
+                        const SizedBox(width: 8),
+                        _buildPriorityOption('medium', 'Medium', Colors.orange),
+                        const SizedBox(width: 8),
+                        _buildPriorityOption('high', 'High', Colors.red),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Category
+                    const Text(
+                      'Category',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2D2D2D),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedCategory,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedCategory = value;
+                              });
+                            }
+                          },
+                          items: ticketCategories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Text(
+                                  category,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
                               ),
                             );
                           }).toList(),
-                        ],
-                        dropdownColor: const Color(0xFF2D2D2D),
-                        style: const TextStyle(color: Colors.white),
-                        isExpanded: true,
+                          dropdownColor: const Color(0xFF2D2D2D),
+                          style: const TextStyle(color: Colors.white),
+                          isExpanded: true,
+                          icon: Icon(
+                            Icons.arrow_drop_down,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Submit button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _createTicket,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
+                    const SizedBox(height: 24),
+                    
+                    // Assignee
+                    const Text(
+                      'Assign To',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2D2D2D),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      disabledBackgroundColor: Colors.grey.shade800,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Create Ticket',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          value: _selectedAssignee,
+                          hint: Text(
+                            'Unassigned',
+                            style: TextStyle(color: Colors.grey.shade400),
                           ),
-                  ),
-                ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedAssignee = value;
+                            });
+                          },
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Unassigned'),
+                            ),
+                            ..._teamMembers.map((member) {
+                              return DropdownMenuItem<String?>(
+                                value: member['id'],
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: const Color(0xFF4CAF50),
+                                      child: Text(
+                                        member['full_name'] != null && member['full_name'].isNotEmpty
+                                            ? member['full_name'][0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(member['full_name'] ?? 'Unknown'),
+                                    if (member['role'] == 'admin')
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.shade400.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'Admin',
+                                          style: TextStyle(
+                                            color: Colors.orange.shade400,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                          dropdownColor: const Color(0xFF2D2D2D),
+                          style: const TextStyle(color: Colors.white),
+                          isExpanded: true,
+                          icon: Icon(
+                            Icons.arrow_drop_down,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Submit button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _createTicket,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          disabledBackgroundColor: Colors.grey.shade800,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Create Ticket',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
     );
@@ -416,16 +435,17 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                 value == 'high'
                     ? Icons.priority_high
                     : value == 'medium'
-                        ? Icons.remove_circle_outline
+                        ? Icons.arrow_upward
                         : Icons.arrow_downward,
                 color: isSelected ? color : Colors.grey,
+                size: 24,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
                   color: isSelected ? color : Colors.grey,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ],
@@ -434,4 +454,4 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       ),
     );
   }
-} 
+}
