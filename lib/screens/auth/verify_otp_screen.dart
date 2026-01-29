@@ -399,6 +399,36 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 20),
+        DecoratedBox(
+          
+          // height:20,
+          // padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              
+            color:Color(0xFF1B3043),
+            borderRadius: BorderRadius.circular(10)
+          ),
+          child: Center(
+            child:Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.email, color: Color(0xFF277FBD),),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Check you spam/junk folder if you don't see the email.",
+                    style:TextStyle(
+                      color: Color(0xFF277FBD),
+                      fontWeight: FontWeight.w500,
+                    )
+                  ),
+                ],
+              ),
+            )
+          ),
+
+        ),
         const SizedBox(height: 32),
         CustomButton(
           text: 'Verify Code',
