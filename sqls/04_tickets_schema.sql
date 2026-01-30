@@ -1,9 +1,3 @@
--- Teams table
-CREATE TABLE teams (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL
-);
-
 -- Tickets table
 CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,6 +39,7 @@ CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
     team_prefix TEXT;
+    sanitized_prefix TEXT;
     next_number INT;
     lock_key BIGINT;
 BEGIN
@@ -62,15 +57,26 @@ BEGIN
         END IF;
     END IF;
 
+    -- Sanitize team_prefix to prevent LIKE/regex injection
+    -- Remove any non-alphabetic characters and limit to 3 uppercase letters
+    sanitized_prefix := UPPER(regexp_replace(team_prefix, '[^A-Za-z]', '', 'g'));
+    IF sanitized_prefix = '' OR length(sanitized_prefix) < 3 THEN
+        sanitized_prefix := 'TKT';
+    ELSE
+        sanitized_prefix := SUBSTRING(sanitized_prefix FROM 1 FOR 3);
+    END IF;
+
     -- Serialize inserts per prefix
-    lock_key := hashtext(team_prefix)::BIGINT;
+    lock_key := hashtext(sanitized_prefix)::BIGINT;
     PERFORM pg_advisory_xact_lock(lock_key);
 
-    -- Safely calculate next ticket number
+    -- Safely calculate next ticket number using sanitized prefix
+    -- Escape LIKE special characters by using regex pattern
     SELECT COALESCE(
         MAX(
             CASE
-                WHEN ticket_number ~ ('^' || team_prefix || '-[0-9]+$')
+                -- Use regex for exact prefix matching (sanitized_prefix is safe)
+                WHEN ticket_number ~ ('^' || sanitized_prefix || '-[0-9]+$')
                 THEN SUBSTRING(ticket_number FROM '[0-9]+$')::INT
                 ELSE NULL
             END
@@ -79,17 +85,16 @@ BEGIN
     ) + 1
     INTO next_number
     FROM tickets
-    WHERE ticket_number LIKE team_prefix || '-%';
+    WHERE ticket_number LIKE sanitized_prefix || '-%';
 
     NEW.ticket_number :=
-        team_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
+        sanitized_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-
--- Trigger
+-- Trigger: assign ticket number
 CREATE TRIGGER set_ticket_number
 BEFORE INSERT ON tickets
 FOR EACH ROW
@@ -109,8 +114,7 @@ BEFORE UPDATE ON tickets
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
-
--- ROW LEVEL SECURITY (FIX)
+-- Row Level Security (RLS)
 ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 
 -- View tickets (same team)
@@ -129,6 +133,7 @@ CREATE POLICY tickets_view_policy ON tickets
 CREATE POLICY tickets_insert_policy ON tickets
     FOR INSERT
     WITH CHECK (
+        -- Creator must be authenticated and in the same team
         auth.uid() = created_by
         AND EXISTS (
             SELECT 1
@@ -138,13 +143,64 @@ CREATE POLICY tickets_insert_policy ON tickets
         )
     );
 
--- Update tickets
+-- Update tickets - Fixed with team membership checks
 CREATE POLICY tickets_update_policy ON tickets
     FOR UPDATE
     USING (
-        auth.uid() = created_by
-        OR auth.uid() = assigned_to
-        OR EXISTS (
+        -- created_by can update only if they're still in the same team
+        (
+            auth.uid() = created_by 
+            AND EXISTS (
+                SELECT 1
+                FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = tickets.team_id
+            )
+        )
+        OR
+        -- assigned_to can update only if they're still in the same team
+        (
+            auth.uid() = assigned_to 
+            AND EXISTS (
+                SELECT 1
+                FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = tickets.team_id
+            )
+        )
+        OR
+        -- Admins from the same team
+        EXISTS (
+            SELECT 1
+            FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = tickets.team_id
+              AND users.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        -- Same conditions for new values
+        (
+            auth.uid() = created_by 
+            AND EXISTS (
+                SELECT 1
+                FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = tickets.team_id
+            )
+        )
+        OR
+        (
+            auth.uid() = assigned_to 
+            AND EXISTS (
+                SELECT 1
+                FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = tickets.team_id
+            )
+        )
+        OR
+        EXISTS (
             SELECT 1
             FROM users
             WHERE users.id = auth.uid()
@@ -153,13 +209,34 @@ CREATE POLICY tickets_update_policy ON tickets
         )
     );
 
--- Delete tickets
+-- Delete tickets - Fixed with team membership checks
 CREATE POLICY tickets_delete_policy ON tickets
     FOR DELETE
     USING (
-        auth.uid() = created_by
-        OR auth.uid() = assigned_to
-        OR EXISTS (
+        -- created_by can delete only if they're still in the same team
+        (
+            auth.uid() = created_by 
+            AND EXISTS (
+                SELECT 1
+                FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = tickets.team_id
+            )
+        )
+        OR
+        -- assigned_to can delete only if they're still in the same team
+        (
+            auth.uid() = assigned_to 
+            AND EXISTS (
+                SELECT 1
+                FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = tickets.team_id
+            )
+        )
+        OR
+        -- Admins from the same team
+        EXISTS (
             SELECT 1
             FROM users
             WHERE users.id = auth.uid()
