@@ -417,7 +417,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                   Icon(Icons.email, color: Color(0xFF277FBD),),
                   const SizedBox(width: 8),
                   Text(
-                    "Check you spam/junk folder if you don't see the email.",
+                    "Check your spam/junk folder if you don't see the email.",
                     style:TextStyle(
                       color: Color(0xFF277FBD),
                       fontWeight: FontWeight.w500,
