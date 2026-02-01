@@ -101,6 +101,8 @@ USING (
   -- Check: current user is admin in same team (using helper function to avoid recursion)
   users.team_id IS NOT NULL
   AND is_admin_in_same_team(users.team_id)
+  -- Prevent admins from changing their own role
+  AND users.id <> auth.uid()
 )
 WITH CHECK (
   -- Validate the new role value
