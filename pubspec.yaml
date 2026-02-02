@@ -41,6 +41,9 @@ dependencies:
   supabase_flutter: ^2.3.4
   flutter_dotenv: ^5.2.1
 
+  # State management
+  provider: ^6.1.2
+
   # Local storage
   shared_preferences: ^2.5.3
 

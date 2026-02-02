@@ -13,40 +13,40 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _supabaseService = SupabaseService();
-  
+
   String _selectedPriority = 'medium';
   String _selectedCategory = 'Bug';
   List<Map<String, dynamic>> _teamMembers = [];
   String? _selectedAssignee;
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
     _loadTeamMembers();
   }
-  
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTeamMembers() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null && userProfile['team_id'] != null) {
         // Load team members cache first
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
-        
+
         // Get team members from cache
         final teamMembers = _supabaseService.teamMembersCache;
-        
+
         if (mounted) {
           setState(() {
             _teamMembers = teamMembers;
@@ -67,14 +67,14 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       }
     }
   }
-  
+
   Future<void> _createTicket() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final result = await _supabaseService.createTicket(
         title: _titleController.text.trim(),
@@ -83,7 +83,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         category: _selectedCategory,
         assignedToUserId: _selectedAssignee,
       );
-      
+
       if (result['success']) {
         if (mounted) {
           Navigator.pop(context, true);
@@ -93,7 +93,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           setState(() {
             _isLoading = false;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to create ticket: ${result['error']}'),
@@ -108,7 +108,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating ticket: $e'),
@@ -122,11 +122,11 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   @override
   Widget build(BuildContext context) {
     final ticketCategories = _supabaseService.getTicketCategories();
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Create Ticket'),
         actions: [
           if (_isLoading)
@@ -165,7 +165,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       hintText: 'Enter ticket title',
                       hintStyle: TextStyle(color: Colors.grey.shade600),
                       filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
+                      fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -181,22 +181,24 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Description
                   TextFormField(
                     controller: _descriptionController,
                     decoration: InputDecoration(
                       labelText: 'Description',
                       labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText: 'Enter ticket description (max 75 words recommended)',
+                      hintText:
+                          'Enter ticket description (max 75 words recommended)',
                       hintStyle: TextStyle(color: Colors.grey.shade600),
                       filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
+                      fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      prefixIcon: const Icon(Icons.description, color: Colors.grey),
+                      prefixIcon:
+                          const Icon(Icons.description, color: Colors.grey),
                       alignLabelWithHint: true,
                     ),
                     style: const TextStyle(color: Colors.white),
@@ -209,7 +211,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Priority
                   Text(
                     'Priority',
@@ -223,13 +225,14 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     children: [
                       _buildPriorityOption('low', 'Low', Colors.green.shade400),
                       const SizedBox(width: 8),
-                      _buildPriorityOption('medium', 'Medium', Colors.orange.shade400),
+                      _buildPriorityOption(
+                          'medium', 'Medium', Colors.orange.shade400),
                       const SizedBox(width: 8),
                       _buildPriorityOption('high', 'High', Colors.red.shade400),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Category
                   Text(
                     'Category',
@@ -242,7 +245,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -261,14 +264,14 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                             child: Text(category),
                           );
                         }).toList(),
-                        dropdownColor: const Color(0xFF2D2D2D),
+                        dropdownColor: Theme.of(context).colorScheme.surface,
                         style: const TextStyle(color: Colors.white),
                         isExpanded: true,
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Assignee
                   Text(
                     'Assign To (Optional)',
@@ -281,7 +284,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -310,7 +313,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                     radius: 12,
                                     backgroundColor: Colors.green.shade700,
                                     child: Text(
-                                      member['full_name'] != null && member['full_name'].isNotEmpty
+                                      member['full_name'] != null &&
+                                              member['full_name'].isNotEmpty
                                           ? member['full_name'][0].toUpperCase()
                                           : '?',
                                       style: const TextStyle(
@@ -330,7 +334,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.orange.shade400.withOpacity(0.2),
+                                        color: Colors.orange.shade400
+                                            .withOpacity(0.2),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -347,14 +352,14 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                             );
                           }).toList(),
                         ],
-                        dropdownColor: const Color(0xFF2D2D2D),
+                        dropdownColor: Theme.of(context).colorScheme.surface,
                         style: const TextStyle(color: Colors.white),
                         isExpanded: true,
                       ),
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Submit button
                   ElevatedButton(
                     onPressed: _isLoading ? null : _createTicket,
@@ -364,7 +369,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      disabledBackgroundColor: Colors.grey.shade800,
+                      disabledBackgroundColor:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -389,10 +395,10 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
             ),
     );
   }
-  
+
   Widget _buildPriorityOption(String value, String label, Color color) {
     final isSelected = _selectedPriority == value;
-    
+
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -403,7 +409,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.2) : const Color(0xFF2D2D2D),
+            color: isSelected
+                ? color.withOpacity(0.2)
+                : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,
@@ -434,4 +442,4 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       ),
     );
   }
-} 
+}
