@@ -832,7 +832,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Icon(Icons.dark_mode_outlined, color: Colors.purple.shade400),
       ),
       title: Text(
-        'Dark Mode',
+        'Theme',
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.bold,

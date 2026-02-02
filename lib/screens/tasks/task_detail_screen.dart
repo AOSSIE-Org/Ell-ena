@@ -157,9 +157,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             'Delete Task',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          content: const Text(
+          content: Text(
             'Are you sure you want to delete this task? This action cannot be undone.',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           actions: [
             TextButton(
@@ -499,8 +500,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             const SizedBox(width: 8),
                             Text(
                               'Created by $creatorName',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 14,
                               ),
                             ),
@@ -527,8 +528,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'Assigned to $assigneeName',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                   fontSize: 14,
                                 ),
                               ),

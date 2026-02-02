@@ -385,15 +385,14 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List<Widget>.generate(list.length, (i) {
           final text = list[i]?.toString() ?? '';
+          final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('• ', style: TextStyle(color: Colors.white70)),
-                Expanded(
-                    child: Text(text,
-                        style: const TextStyle(color: Colors.white70))),
+                Text('• ', style: TextStyle(color: textColor)),
+                Expanded(child: Text(text, style: TextStyle(color: textColor))),
               ],
             ),
           );
@@ -473,7 +472,8 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8)),
           child: Text(overall,
-              style: const TextStyle(color: Colors.white70, height: 1.4)),
+              style:
+                  Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.4)),
         ),
       ],
     );

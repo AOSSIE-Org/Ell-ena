@@ -201,7 +201,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                           const Icon(Icons.description, color: Colors.grey),
                       alignLabelWithHint: true,
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 5,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -265,7 +266,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                           );
                         }).toList(),
                         dropdownColor: Theme.of(context).colorScheme.surface,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                         isExpanded: true,
                       ),
                     ),
@@ -353,7 +355,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                           }).toList(),
                         ],
                         dropdownColor: Theme.of(context).colorScheme.surface,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                         isExpanded: true,
                       ),
                     ),

@@ -185,8 +185,8 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => false, // Prevent dismissal
+    return PopScope(
+      canPop: false,
       child: AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
