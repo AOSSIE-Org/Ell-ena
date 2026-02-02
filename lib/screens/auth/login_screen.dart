@@ -220,18 +220,23 @@ class _LoginScreenState extends State<LoginScreen>
                   // OR divider
                   Row(
                     children: [
-                      Expanded(child: Divider(color: Colors.grey.shade700)),
+                      Expanded(
+                          child:
+                              Divider(color: Theme.of(context).dividerColor)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR',
                           style: TextStyle(
-                            color: Colors.grey.shade500,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Colors.grey.shade700)),
+                      Expanded(
+                          child:
+                              Divider(color: Theme.of(context).dividerColor)),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -250,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                       side: BorderSide(color: Colors.green.shade400, width: 2),
                       padding: const EdgeInsets.symmetric(
                         vertical: 16,
@@ -267,7 +272,9 @@ class _LoginScreenState extends State<LoginScreen>
                     children: [
                       Text(
                         'Don\'t have an account? ',
-                        style: TextStyle(color: Colors.grey.shade400),
+                        style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       TextButton(
                         onPressed: () {

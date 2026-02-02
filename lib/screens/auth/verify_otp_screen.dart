@@ -10,7 +10,7 @@ class VerifyOTPScreen extends StatefulWidget {
   final String email;
   final String verifyType; // 'signup_join', 'signup_create', or 'reset_password'
   final Map<String, dynamic> userData;
-  
+
   const VerifyOTPScreen({
     super.key, 
     required this.email, 
@@ -59,7 +59,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           type: widget.verifyType,
           userData: widget.userData,
         );
-        
+
         if (result['success']) {
           // Handle successful verification based on verify type
           if (widget.verifyType == 'signup_create') {
@@ -114,7 +114,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       }
     }
   }
-  
+
   Future<void> _resendCode() async {
     setState(() {
       _isLoading = true;
@@ -126,7 +126,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         widget.email,
         type: widget.verifyType,
       );
-      
+
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -137,32 +137,34 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       } else {
         setState(() {
           String errorMsg = result['error'] ?? 'Failed to resend code';
-          
+
           // Make the error message more user-friendly
           if (errorMsg.contains('Rate limit')) {
             errorMsg = 'Too many attempts. Please try again later.';
-          } else if (errorMsg.contains('not found') || errorMsg.contains('Invalid email')) {
+          } else if (errorMsg.contains('not found') ||
+              errorMsg.contains('Invalid email')) {
             errorMsg = 'Email address not found or invalid.';
           }
-          
+
           _errorMessage = errorMsg;
         });
       }
     } catch (e) {
       setState(() {
         String errorMsg = e.toString();
-        
+
         // Make the error message more user-friendly
         if (errorMsg.contains('Rate limit')) {
           errorMsg = 'Too many attempts. Please try again later.';
-        } else if (errorMsg.contains('not found') || errorMsg.contains('Invalid email')) {
+        } else if (errorMsg.contains('not found') ||
+            errorMsg.contains('Invalid email')) {
           errorMsg = 'Email address not found or invalid.';
         } else if (errorMsg.contains('Assertion failed')) {
           errorMsg = 'Unable to resend code. Please go back and try again.';
         } else {
           errorMsg = 'An error occurred. Please try again.';
         }
-        
+
         _errorMessage = errorMsg;
       });
     } finally {
@@ -173,7 +175,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       }
     }
   }
-  
+
   // Show dialog with the generated team ID
   void _showTeamIdDialog(String teamId) {
     showDialog(
@@ -181,23 +183,25 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
             'Team Created Successfully!',
-            style: TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Your Team ID is:',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -205,11 +209,11 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                   children: [
                     Text(
                       teamId,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 2,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     IconButton(
@@ -228,9 +232,10 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Share this ID with your team members so they can join your team.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -279,18 +284,16 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
-                  fillColor: const Color(0xFF2A2A2A),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
                   ),
                 ),
                 onChanged: (value) {
@@ -319,7 +322,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           children: [
             Text(
               'Didn\'t receive the code? ',
-              style: TextStyle(color: Colors.grey.shade400),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             TextButton(
               onPressed: _isLoading ? null : _resendCode,

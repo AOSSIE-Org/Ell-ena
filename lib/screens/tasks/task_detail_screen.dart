@@ -152,14 +152,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
             'Delete Task',
-            style: TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          content: const Text(
+          content: Text(
             'Are you sure you want to delete this task? This action cannot be undone.',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           actions: [
             TextButton(
@@ -287,7 +288,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Task Details'),
           backgroundColor: Colors.green.shade800,
@@ -298,7 +299,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     if (_taskDetails == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Task Details'),
           backgroundColor: Colors.green.shade800,
@@ -348,7 +349,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final Color approvalColor = _getApprovalColor(approvalStatus);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Task Details'),
         backgroundColor: Colors.green.shade800,
@@ -381,10 +382,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
+                      color: Theme.of(context).colorScheme.surface,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .shadow
+                              .withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -412,8 +416,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     status == 'todo'
                                         ? Icons.assignment_outlined
                                         : status == 'in_progress'
-                                        ? Icons.pending_actions_outlined
-                                        : Icons.task_alt_outlined,
+                                            ? Icons.pending_actions_outlined
+                                            : Icons.task_alt_outlined,
                                     color: statusColor,
                                     size: 16,
                                   ),
@@ -496,8 +500,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             const SizedBox(width: 8),
                             Text(
                               'Created by $creatorName',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 14,
                               ),
                             ),
@@ -524,8 +528,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'Assigned to $assigneeName',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                   fontSize: 14,
                                 ),
                               ),
@@ -558,8 +563,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             children: [
                               if (status == 'todo')
                                 ElevatedButton.icon(
-                                  onPressed:
-                                      () => _updateTaskStatus('in_progress'),
+                                  onPressed: () =>
+                                      _updateTaskStatus('in_progress'),
                                   icon: const Icon(
                                     Icons.play_arrow,
                                     color: Colors.white,
@@ -578,8 +583,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 ),
                               if (status == 'in_progress')
                                 ElevatedButton.icon(
-                                  onPressed:
-                                      () => _updateTaskStatus('completed'),
+                                  onPressed: () =>
+                                      _updateTaskStatus('completed'),
                                   icon: const Icon(
                                     Icons.check_circle,
                                     color: Colors.white,
@@ -598,8 +603,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 ),
                               if (_isAdmin && approvalStatus == 'pending') ...[
                                 ElevatedButton.icon(
-                                  onPressed:
-                                      () => _updateTaskApproval('approved'),
+                                  onPressed: () =>
+                                      _updateTaskApproval('approved'),
                                   icon: const Icon(
                                     Icons.check,
                                     color: Colors.white,
@@ -617,8 +622,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ),
                                 ),
                                 ElevatedButton.icon(
-                                  onPressed:
-                                      () => _updateTaskApproval('rejected'),
+                                  onPressed: () =>
+                                      _updateTaskApproval('rejected'),
                                   icon: const Icon(
                                     Icons.close,
                                     color: Colors.white,
@@ -739,7 +744,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 margin: const EdgeInsets.only(bottom: 16),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF2D2D2D),
+                                  color: Theme.of(context).colorScheme.surface,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Column(
@@ -806,10 +811,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF2D2D2D),
+              color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -822,19 +827,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     controller: _commentController,
                     decoration: InputDecoration(
                       hintText: 'Add a comment...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
                       ),
-                      filled: true,
-                      fillColor: const Color(0xFF1A1A1A),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 3,
                     minLines: 1,
                   ),
