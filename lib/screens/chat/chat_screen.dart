@@ -35,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   late AnimationController _waveformController;
   late stt.SpeechToText _speech;
   bool _speechAvailable = false;
+  bool _isListeningDialogOpen = false; // Track if dialog is open
 
   // Initial message safe handling
   bool _servicesReady = false;
@@ -58,7 +59,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // consume arguments once, no Future.delayed
+    // consume arguments once
     if (_initialMessageConsumed) return;
 
     final args = widget.arguments;
@@ -81,13 +82,21 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         if (!mounted) return;
         if (status == 'done' || status == 'notListening') {
           setState(() => _isListening = false);
-          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          // FIXED: Only pop if we know the dialog is open
+          if (_isListeningDialogOpen && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            _isListeningDialogOpen = false;
+          }
         }
       },
       onError: (error) {
         if (!mounted) return;
         setState(() => _isListening = false);
-        if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        // FIXED: Only pop if we know the dialog is open
+        if (_isListeningDialogOpen && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          _isListeningDialogOpen = false;
+        }
       },
     );
 
@@ -334,7 +343,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _flushPendingMessageIfPossible();
   }
 
-  // --- Your original CRUD methods stay same (kept as-is) ---
+  // --- CRUD methods ---
   Future<Map<String, dynamic>> _createTask(Map<String, dynamic> arguments) async {
     try {
       if (!_supabaseService.isInitialized) return {'success': false, 'error': 'Service not initialized'};
@@ -627,6 +636,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     });
   }
 
+  // FIXED: Race condition in speech listening
   Future<void> _toggleListening() async {
     if (!_speechAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -634,26 +644,34 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       );
       return;
     }
+
     if (_speech.isListening) {
       await _speech.stop();
-      if (mounted) setState(() => _isListening = false);
+      if (!mounted) return;
+      setState(() => _isListening = false);
       return;
     }
 
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: true,
-        builder: (_) => _buildListeningDialog(),
-      ).then((_) {
-        if (_isListening && _speech.isListening) {
-          _speech.stop();
-          if (mounted) setState(() => _isListening = false);
-        }
-      });
-    }
+    if (!mounted) return;
 
-    if (mounted) setState(() => _isListening = true);
+    // set BEFORE dialog to avoid race
+    setState(() => _isListening = true);
+
+    _isListeningDialogOpen = true; // Mark dialog as open
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => _buildListeningDialog(),
+    ).then((_) async {
+      _isListeningDialogOpen = false; // Mark dialog as closed
+      
+      // Always stop speech when dialog closes
+      if (_speech.isListening) {
+        await _speech.stop();
+      }
+      if (mounted) setState(() => _isListening = false);
+    });
+
     await _speech.listen(
       onResult: (result) {
         if (!mounted) return;
@@ -896,7 +914,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
-        color: Color(0xFF2D2D2D),
+        color: const Color(0xFF2D2D2D),
         borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
       child: Row(
@@ -1166,8 +1184,8 @@ class _ItemCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
+      );
+    }
   }
 
   String _formatDate(String? dateString) {
@@ -1201,6 +1219,10 @@ class ChatMessage {
   });
 }
 
+// FIXED: Added null-safety check for empty strings
 extension StringExtension on String {
-  String capitalize() => "${this[0].toUpperCase()}${substring(1)}";
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
 }
