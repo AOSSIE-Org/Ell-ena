@@ -22,8 +22,9 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Team members can view their team" 
   ON teams FOR SELECT 
   USING (
-    -- Everyone can see all teams for now (we'll restrict this later if needed)
-    TRUE
+    id IN (
+      SELECT team_id FROM users WHERE id = auth.uid()
+    )
   );
 
 CREATE POLICY "Only admins can update their team" 
