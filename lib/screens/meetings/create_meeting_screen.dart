@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../services/google_meet_service.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
   const CreateMeetingScreen({super.key});
@@ -15,11 +16,14 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   final _descriptionController = TextEditingController();
   final _urlController = TextEditingController();
   final _durationController = TextEditingController(text: '60'); // Default to 60 minutes
+  
   final _supabaseService = SupabaseService();
+  final _googleMeetService = GoogleMeetService();
   
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
+  bool _isCreatingMeetLink = false;
   bool _isGoogleMeetUrl = true;
   
   @override
@@ -42,6 +46,85 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
     setState(() {
       _isGoogleMeetUrl = _validateGoogleMeetUrl(url);
     });
+  }
+  
+  Future<void> _createGoogleMeetLink() async {
+    if (_selectedDate == null || _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select date and time first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Combine date and time
+    final meetingDateTime = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      _selectedTime!.hour,
+      _selectedTime!.minute,
+    );
+
+    // Validate meeting is in the future
+    if (meetingDateTime.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Meeting time must be in the future'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Parse duration
+    int duration = 60;
+    try {
+      duration = int.parse(_durationController.text.trim());
+      if (duration <= 0) duration = 60;
+    } catch (e) {
+      // Default to 60 if parsing fails
+      duration = 60;
+    }
+
+    setState(() => _isCreatingMeetLink = true);
+
+    final link = await _googleMeetService.createMeetLink(
+      start: meetingDateTime,
+      durationMinutes: duration,
+      title: _titleController.text.trim().isNotEmpty
+          ? _titleController.text.trim()
+          : 'Meeting',
+      description: _descriptionController.text.trim(),
+    );
+
+    if (!mounted) return;
+    
+    setState(() => _isCreatingMeetLink = false);
+
+    if (link != null) {
+      _urlController.text = link;
+      _checkUrl(link);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google Meet link created successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to create Google Meet link. Please sign in with Google.'),
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: 'Retry',
+            onPressed: () => _createGoogleMeetLink(),
+          ),
+        ),
+      );
+    }
   }
   
   Future<void> _createMeeting() async {
@@ -384,6 +467,32 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                       },
                     ),
                     
+                    // Create Google Meet Link button
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isCreatingMeetLink ? null : _createGoogleMeetLink,
+                        icon: _isCreatingMeetLink
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.video_call),
+                        label: Text(
+                          _isCreatingMeetLink ? 'Creating Meet Link...' : 'Create Google Meet Link',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade800,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                    
                     // Warning message for non-Google Meet URLs
                     if (_urlController.text.isNotEmpty && !_isGoogleMeetUrl)
                       Padding(
@@ -417,4 +526,4 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
             ),
     );
   }
-} 
+}
