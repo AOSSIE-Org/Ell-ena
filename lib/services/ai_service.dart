@@ -301,7 +301,7 @@ class AIService {
         }
       }
       
-      // Add system message as the first message with role "model"
+      // Add system message
       contents.add({
         "role": "model",
         "parts": [
@@ -389,40 +389,49 @@ class AIService {
       );
       
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        
-        // Check if the response contains a function call
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          final content = candidates[0]['content'];
-          final parts = content['parts'] as List<dynamic>;
+        try {
+          // FIX: Added try-catch block for safe JSON decoding
+          final responseData = jsonDecode(response.body);
           
-          for (var part in parts) {
-            if (part.containsKey('functionCall')) {
-              final functionCall = part['functionCall'];
-              final functionName = functionCall['name'];
-              final arguments = functionCall['args'];
-              
-              return {
-                'type': 'function_call',
-                'function_name': functionName,
-                'arguments': arguments,
-                'raw_response': jsonEncode(responseData),
-              };
+          // Check if the response contains a function call
+          final candidates = responseData['candidates'] as List<dynamic>;
+          if (candidates.isNotEmpty) {
+            final content = candidates[0]['content'];
+            final parts = content['parts'] as List<dynamic>;
+            
+            for (var part in parts) {
+              if (part.containsKey('functionCall')) {
+                final functionCall = part['functionCall'];
+                final functionName = functionCall['name'];
+                final arguments = functionCall['args'];
+                
+                return {
+                  'type': 'function_call',
+                  'function_name': functionName,
+                  'arguments': arguments,
+                  'raw_response': jsonEncode(responseData),
+                };
+              }
             }
+            
+            // If no function call is detected, return as regular message
+            return {
+              'type': 'message',
+              'content': candidates[0]['content']['parts'][0]['text'] ?? '',
+            };
           }
           
-          // If no function call is detected, return as regular message
           return {
-            'type': 'message',
-            'content': candidates[0]['content']['parts'][0]['text'] ?? '',
+            'type': 'error',
+            'content': 'No response generated',
+          };
+        } catch (e) {
+          debugPrint('Error parsing AI response: $e');
+          return {
+            'type': 'error',
+            'content': 'Sorry, I received an invalid response from the AI server.',
           };
         }
-        
-        return {
-          'type': 'error',
-          'content': 'No response generated',
-        };
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return {
