@@ -324,13 +324,12 @@ class SupabaseService {
       final userId = authResponse.user!.id;
 
       // Step 2: Generate a unique team ID
-      String teamId;
+      String teamId = '';
       bool isUnique = false;
       int attempts = 0;
 
-      do {
+      while (!isUnique && attempts < 10) {
         teamId = generateTeamId();
-        attempts++;
 
         try {
           // Use raw SQL query to avoid RLS issues
@@ -339,17 +338,26 @@ class SupabaseService {
             params: {'code': teamId},
           );
 
-          isUnique = response == false;
+          // If response is true, the code exists (collision)
+          if (response == true) {
+            attempts++;
+            continue;
+          }
+          
+          // If response is false, the code is unique
+          isUnique = true;
         } catch (e) {
           debugPrint('Error checking team code: $e');
-          // If RPC consistently fails, throw error instead of risking duplicates
-          if (attempts >= 3) {
-            throw Exception(
-                'Unable to verify team code uniqueness. Please try again.');
-          }
+          // Fail fast on network/RPC errors instead of retrying blindly
+          throw Exception(
+              'Unable to verify team code uniqueness. Please check your connection.');
         }
-      } while (!isUnique && attempts < 10);
+      }
 
+      if (!isUnique) {
+        throw Exception(
+            'Failed to generate a unique team code after multiple attempts. Please try again.');
+      }
       // Step 3: Create the team with retry on duplicate
       Map<String, dynamic>? teamResponse;
       int insertAttempts = 0;
@@ -698,47 +706,13 @@ class SupabaseService {
   }
 
   // Create team after Google OAuth (for new users)
-  Future<Map<String, dynamic>> createTeamWithGoogle({
-    required String email,
-    required String teamName,
-    required String adminName,
-    String? googleRefreshToken,
-  }) async {
-    try {
-      if (!_isInitialized) {
-        return {
-          'success': false,
-          'error': 'Supabase is not initialized',
-        };
-      }
-
-      final user = _client.auth.currentUser;
-      if (user == null) {
-        return {
-          'success': false,
-          'error': 'User not authenticated',
-        };
-      }
-
-      final authedEmail = user.email;
-      if (authedEmail == null ||
-          authedEmail.toLowerCase() != email.toLowerCase()) {
-        return {
-          'success': false,
-          'error': 'Email mismatch for authenticated user',
-        };
-      }
-
-      final userId = user.id;
-
-      // Generate a unique team ID
-      String teamId;
+// Generate a unique team ID
+      String teamId = '';
       bool isUnique = false;
       int attempts = 0;
 
-      do {
+      while (!isUnique && attempts < 10) {
         teamId = generateTeamId();
-        attempts++;
 
         try {
           final response = await _client.rpc(
@@ -746,16 +720,23 @@ class SupabaseService {
             params: {'code': teamId},
           );
 
-          isUnique = response == false;
+          if (response == true) {
+            attempts++;
+            continue;
+          }
+          
+          isUnique = true;
         } catch (e) {
           debugPrint('Error checking team code: $e');
-          // If RPC consistently fails, throw error instead of risking duplicates
-          if (attempts >= 3) {
-            throw Exception(
-                'Unable to verify team code uniqueness. Please try again.');
-          }
+          throw Exception(
+              'Unable to verify team code uniqueness. Please check your connection.');
         }
-      } while (!isUnique && attempts < 10);
+      }
+
+      if (!isUnique) {
+        throw Exception(
+            'Failed to generate a unique team code after multiple attempts. Please try again.');
+      }
 
       // Create the team with retry on duplicate
       Map<String, dynamic>? teamResponse;
@@ -940,14 +921,13 @@ class SupabaseService {
       // Handle different verification types
       if (type == 'signup_create' && userData.isNotEmpty) {
         try {
-          // Generate a unique team ID
-          String teamId;
+         // Generate a unique team ID
+          String teamId = '';
           bool isUnique = false;
           int attempts = 0;
 
-          do {
+          while (!isUnique && attempts < 10) {
             teamId = generateTeamId();
-            attempts++;
 
             try {
               final checkResponse = await _client.rpc(
@@ -955,14 +935,21 @@ class SupabaseService {
                 params: {'code': teamId},
               );
 
-              isUnique = checkResponse == false;
+              if (checkResponse == true) {
+                attempts++;
+                continue;
+              }
+              
+              isUnique = true;
             } catch (e) {
               debugPrint('Error checking team code: $e');
-              if (attempts >= 3) {
-                isUnique = true;
-              }
+              throw Exception('Unable to verify team code uniqueness.');
             }
-          } while (!isUnique && attempts < 10);
+          }
+          
+          if (!isUnique) {
+             throw Exception('Failed to generate a unique team code.');
+          }
 
           // Step 1: Create the team
           final teamInsertResponse = await _client.from('teams').insert({
