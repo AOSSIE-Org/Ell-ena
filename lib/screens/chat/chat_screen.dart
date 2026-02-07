@@ -27,6 +27,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   late AnimationController _waveformController;
   late final stt.SpeechToText _speech;
   bool _speechAvailable = false;
+  bool _isProcessing = false;
+  bool _isListening = false;
+  bool _isInitializing = true; // Added for loading state
+  late AnimationController _waveformController;
   
   // Services
   final AIService _aiService = AIService();
@@ -45,8 +49,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1000),
     )..repeat();
     
+    // Start initialization immediately
     _initializeServices();
     _initSpeech();
+  }
     
     // Handle initial message if provided
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,17 +117,40 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         }
       }
       
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text: "Hello! I'm Ell-ena, your AI assistant. How can I help you today?",
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-      });
+        if (mounted) {
+          setState(() {
+            _messages.add(
+              ChatMessage(
+                text: "Hello! I'm Ell-ena, your AI assistant. How can I help you today?",
+                isUser: false,
+                timestamp: DateTime.now(),
+              ),
+            );
+            _isInitializing = false;
+          });
+
+        // Handle initial message safely after initialization
+        if (widget.arguments != null && 
+            widget.arguments!.containsKey('initial_message') &&
+            widget.arguments!['initial_message'] is String) {
+          _messageController.text = widget.arguments!['initial_message'] as String;
+          _sendMessage();
+        }
+      }
     } catch (e) {
       debugPrint('Error initializing services: $e');
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: "I encountered an error connecting to services. Some features may be unavailable.",
+              isUser: false,
+              timestamp: DateTime.now(),
+            ),
+          );
+          _isInitializing = false;
+        });
+      }
     }
   }
   
@@ -1101,71 +1130,39 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // Show loading spinner while initializing
+    if (_isInitializing) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF1A1A1A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF2D2D2D),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              LoadingAnimationWidget.staggeredDotsWave(
+                color: Colors.green,
+                size: 40,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Initializing Ell-ena...',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2D2D2D),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  offset: const Offset(0, 2),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.smart_toy, color: Colors.green),
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Chat with Ell-ena',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Your AI Assistant',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.info_outline,
-                      color: Colors.green,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+      // ...
           Expanded(
             child:
                 _messages.isEmpty
