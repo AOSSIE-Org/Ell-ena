@@ -413,11 +413,10 @@ class AIService {
                 };
               }
             }
-            
             // If no function call is detected, return as regular message
             return {
               'type': 'message',
-              'content': candidates[0]['content']['parts'][0]['text'] ?? '',
+              'content': parts[0]['text'] ?? '',
             };
           }
           
