@@ -16,6 +16,9 @@ class SupabaseService {
 
   Map<String, dynamic>? _userProfileCache;
 
+  Future<List<Map<String, dynamic>>>? _pendingGetTasks;
+  String? _pendingGetTasksKey;
+
   final _tasksStreamController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
   final _ticketsStreamController =
@@ -1148,8 +1151,41 @@ class SupabaseService {
 
   // Task-related methods
 
-  // Get tasks for the current user's team
   Future<List<Map<String, dynamic>>> getTasks({
+    bool filterByAssignment = false,
+    String? filterByStatus,
+    String? filterByDueDate,
+  }) async {
+    if (!_isInitialized) return [];
+
+    final user = _client.auth.currentUser;
+    if (user == null) return [];
+
+    final requestKey =
+      '${filterByAssignment}_${filterByStatus}_${filterByDueDate}';
+
+    if (_pendingGetTasks != null && _pendingGetTasksKey == requestKey) {
+      return _pendingGetTasks!;
+    }
+
+    _pendingGetTasksKey = requestKey;
+    _pendingGetTasks = _doGetTasks(
+    filterByAssignment: filterByAssignment,
+    filterByStatus: filterByStatus,
+    filterByDueDate: filterByDueDate,
+    );
+
+    try {
+      return await _pendingGetTasks!;
+    } finally {
+      _pendingGetTasks = null;
+      _pendingGetTasksKey = null;
+    }
+  }
+
+
+  // Get tasks for the current user's team
+  Future<List<Map<String, dynamic>>> _doGetTasks({
     bool filterByAssignment = false,
     String? filterByStatus,
     String? filterByDueDate,
