@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/unified_form_components.dart';
 
 class CreateTicketScreen extends StatefulWidget {
   const CreateTicketScreen({super.key});
@@ -124,267 +125,156 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
     final ticketCategories = _supabaseService.getTicketCategories();
     
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
-        title: const Text('Create Ticket'),
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else
-            IconButton(
-              onPressed: _createTicket,
-              icon: const Icon(Icons.check),
-              tooltip: 'Create Ticket',
-            ),
-        ],
-      ),
+      backgroundColor: UnifiedDesignTokens.backgroundColor,
+      appBar: unifiedCreateAppBar(title: 'Create Ticket'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Title
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Title',
-                      labelStyle: TextStyle(color: Colors.grey.shade400),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    UnifiedTextFormField(
+                      label: 'Ticket Title',
                       hintText: 'Enter ticket title',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.title, color: Colors.grey),
+                      controller: _titleController,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a title';
+                        }
+                        return null;
+                      },
                     ),
-                    style: const TextStyle(color: Colors.white),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Description
-                  TextFormField(
-                    controller: _descriptionController,
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      labelStyle: TextStyle(color: Colors.grey.shade400),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
+                    
+                    // Description
+                    UnifiedTextFormField(
+                      label: 'Description',
                       hintText: 'Enter ticket description (max 75 words recommended)',
-                      hintStyle: TextStyle(color: Colors.grey.shade600),
-                      filled: true,
-                      fillColor: const Color(0xFF2D2D2D),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: const Icon(Icons.description, color: Colors.grey),
-                      alignLabelWithHint: true,
+                      controller: _descriptionController,
+                      maxLines: 5,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a description';
+                        }
+                        return null;
+                      },
                     ),
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 5,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a description';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Priority
-                  Text(
-                    'Priority',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
+                    
+                    // Priority
+                    const Text(
+                      'Priority',
+                      style: UnifiedDesignTokens.labelStyle,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildPriorityOption('low', 'Low', Colors.green.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('medium', 'Medium', Colors.orange.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('high', 'High', Colors.red.shade400),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Category
-                  Text(
-                    'Category',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
+                    const SizedBox(height: UnifiedDesignTokens.labelSpacing),
+                    Row(
+                      children: [
+                        _buildPriorityOption('low', 'Low', Colors.green.shade400),
+                        const SizedBox(width: 8),
+                        _buildPriorityOption('medium', 'Medium', Colors.orange.shade400),
+                        const SizedBox(width: 8),
+                        _buildPriorityOption('high', 'High', Colors.red.shade400),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedCategory,
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedCategory = value;
-                            });
-                          }
-                        },
-                        items: ticketCategories.map((category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        dropdownColor: const Color(0xFF2D2D2D),
-                        style: const TextStyle(color: Colors.white),
-                        isExpanded: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Assignee
-                  Text(
-                    'Assign To (Optional)',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2D2D2D),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String?>(
-                        value: _selectedAssignee,
-                        hint: Text(
-                          'Select team member',
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                        onChanged: (value) {
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
+                    
+                    // Category
+                    UnifiedDropdownField<String>(
+                      label: 'Category',
+                      value: _selectedCategory,
+                      items: ticketCategories.map((category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
                           setState(() {
-                            _selectedAssignee = value;
+                            _selectedCategory = value;
                           });
-                        },
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('Unassigned'),
-                          ),
-                          ..._teamMembers.map((member) {
-                            return DropdownMenuItem<String?>(
-                              value: member['id'],
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 12,
-                                    backgroundColor: Colors.green.shade700,
+                        }
+                      },
+                    ),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
+                    
+                    // Assignee (Optional)
+                    UnifiedDropdownField<String?>(
+                      label: 'Assign To',
+                      value: _selectedAssignee,
+                      isOptional: true,
+                      hintText: 'Select team member',
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Unassigned'),
+                        ),
+                        ..._teamMembers.map((member) {
+                          return DropdownMenuItem<String?>(
+                            value: member['id'],
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: Colors.green.shade700,
+                                  child: Text(
+                                    member['full_name'] != null && member['full_name'].isNotEmpty
+                                        ? member['full_name'][0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(member['full_name'] ?? 'Unknown'),
+                                if (member['role'] == 'admin')
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade400.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                     child: Text(
-                                      member['full_name'] != null && member['full_name'].isNotEmpty
-                                          ? member['full_name'][0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                        fontSize: 12,
+                                      'Admin',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade400,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(member['full_name'] ?? 'Unknown'),
-                                  if (member['role'] == 'admin')
-                                    Container(
-                                      margin: const EdgeInsets.only(left: 8),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.shade400.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'Admin',
-                                        style: TextStyle(
-                                          color: Colors.orange.shade400,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ],
-                        dropdownColor: const Color(0xFF2D2D2D),
-                        style: const TextStyle(color: Colors.white),
-                        isExpanded: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Submit button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _createTicket,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      disabledBackgroundColor: Colors.grey.shade800,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                              ],
                             ),
-                          )
-                        : const Text(
-                            'Create Ticket',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ],
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedAssignee = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Submit button
+                    UnifiedActionButton(
+                      text: 'Create Ticket',
+                      onPressed: _createTicket,
+                      isLoading: _isLoading,
+                    ),
+                  ],
+                ),
               ),
             ),
     );
@@ -403,8 +293,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.2) : const Color(0xFF2D2D2D),
-            borderRadius: BorderRadius.circular(12),
+            color: isSelected ? color.withOpacity(0.2) : UnifiedDesignTokens.surfaceColor,
+            borderRadius: BorderRadius.circular(UnifiedDesignTokens.borderRadius),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,
               width: 2,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/unified_form_components.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   const CreateTaskScreen({super.key});
@@ -141,11 +142,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
-      appBar: AppBar(
-        title: const Text('Create New Task'),
-        backgroundColor: Colors.green.shade800,
-      ),
+      backgroundColor: UnifiedDesignTokens.backgroundColor,
+      appBar: unifiedCreateAppBar(title: 'Create New Task'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -156,32 +154,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Task title
-                    const Text(
-                      'Task Title',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
+                    UnifiedTextFormField(
+                      label: 'Task Title',
+                      hintText: 'Enter task title',
                       controller: _titleController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Enter task title',
-                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                        filled: true,
-                        fillColor: const Color(0xFF2D2D2D),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                      ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Please enter a task title';
@@ -189,209 +165,100 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
-                    // Task description
-                    const Text(
-                      'Description',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
+                    // Task description (Optional)
+                    UnifiedTextFormField(
+                      label: 'Description',
+                      hintText: 'Enter task description',
                       controller: _descriptionController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Enter task description',
-                        hintStyle: TextStyle(color: Colors.grey.shade400),
-                        filled: true,
-                        fillColor: const Color(0xFF2D2D2D),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                      ),
                       maxLines: 5,
+                      isOptional: true,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
-                    // Due date
-                    const Text(
-                      'Due Date',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
+                    // Due date (Optional)
+                    UnifiedPickerField(
+                      label: 'Due Date',
+                      displayText: _selectedDueDate == null
+                          ? 'Select due date'
+                          : '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}',
+                      icon: Icons.calendar_today,
                       onTap: _selectDueDate,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2D2D2D),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              color: Colors.grey.shade400,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _selectedDueDate == null
-                                  ? 'Select due date'
-                                  : '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}',
-                              style: TextStyle(
-                                color: _selectedDueDate == null
-                                    ? Colors.grey.shade400
-                                    : Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      isOptional: true,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: UnifiedDesignTokens.sectionSpacing),
                     
-                    // Assign to
-                    const Text(
-                      'Assign To',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2D2D2D),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedAssigneeId,
-                          hint: Text(
-                            'Select team member',
-                            style: TextStyle(color: Colors.grey.shade400),
-                          ),
-                          dropdownColor: const Color(0xFF2D2D2D),
-                          isExpanded: true,
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                            color: Colors.grey.shade400,
-                          ),
-                          style: const TextStyle(color: Colors.white),
-                          items: [
-                            const DropdownMenuItem<String>(
-                              value: null,
-                              child: Text('Unassigned'),
-                            ),
-                            ..._teamMembers.map((member) {
-                              return DropdownMenuItem<String>(
-                                value: member['id'],
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 12,
-                                      backgroundColor: Colors.green.shade700,
-                                      child: Text(
-                                        (member['full_name'] != null && member['full_name'].toString().isNotEmpty)
-                                            ? member['full_name'].toString()[0].toUpperCase()
-                                            : '?',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
+                    // Assign to (Optional)
+                    UnifiedDropdownField<String>(
+                      label: 'Assign To',
+                      value: _selectedAssigneeId,
+                      isOptional: true,
+                      hintText: 'Select team member',
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Unassigned'),
+                        ),
+                        ..._teamMembers.map((member) {
+                          return DropdownMenuItem<String>(
+                            value: member['id'],
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: Colors.green.shade700,
+                                  child: Text(
+                                    (member['full_name'] != null && member['full_name'].toString().isNotEmpty)
+                                        ? member['full_name'].toString()[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                  Text(member['full_name']?.toString() ?? 'Unknown'),
+                                if (member['role'] == 'admin')
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade400.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Admin',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade400,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                      Text(member['full_name']?.toString() ?? 'Unknown'),
-                                    if (member['role'] == 'admin')
-                                      Container(
-                                        margin: const EdgeInsets.only(left: 8),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.orange.shade400.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          'Admin',
-                                          style: TextStyle(
-                                            color: Colors.orange.shade400,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedAssigneeId = value;
-                            });
-                          },
-                        ),
-                      ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedAssigneeId = value;
+                        });
+                      },
                     ),
                     const SizedBox(height: 32),
                     
                     // Submit button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _createTask,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade400,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          disabledBackgroundColor: Colors.grey,
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'Create Task',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
+                    UnifiedActionButton(
+                      text: 'Create Task',
+                      onPressed: _createTask,
+                      isLoading: _isLoading,
                     ),
                   ],
                 ),
