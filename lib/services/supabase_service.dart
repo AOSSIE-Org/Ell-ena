@@ -16,8 +16,7 @@ class SupabaseService {
 
   Map<String, dynamic>? _userProfileCache;
 
-  Future<List<Map<String, dynamic>>>? _pendingGetTasks;
-  String? _pendingGetTasksKey;
+  final Map<String, Future<List<Map<String, dynamic>>>> _pendingGetTasks = {};
 
   final _tasksStreamController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -1162,26 +1161,29 @@ class SupabaseService {
     if (user == null) return [];
 
     final requestKey =
-      '${filterByAssignment}_${filterByStatus}_${filterByDueDate}';
+        '${filterByAssignment}_${filterByStatus}_${filterByDueDate}';
 
-    if (_pendingGetTasks != null && _pendingGetTasksKey == requestKey) {
-      return _pendingGetTasks!;
+    // Reuse in-flight request if present
+    final existing = _pendingGetTasks[requestKey];
+    if (existing != null) {
+      return existing;
     }
 
-    _pendingGetTasksKey = requestKey;
-    _pendingGetTasks = _doGetTasks(
-    filterByAssignment: filterByAssignment,
-    filterByStatus: filterByStatus,
-    filterByDueDate: filterByDueDate,
+    final future = _doGetTasks(
+      filterByAssignment: filterByAssignment,
+      filterByStatus: filterByStatus,
+      filterByDueDate: filterByDueDate,
     );
 
+    _pendingGetTasks[requestKey] = future;
+
     try {
-      return await _pendingGetTasks!;
+      return await future;
     } finally {
-      _pendingGetTasks = null;
-      _pendingGetTasksKey = null;
+      _pendingGetTasks.remove(requestKey);
     }
   }
+
 
 
   // Get tasks for the current user's team
