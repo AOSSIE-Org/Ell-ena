@@ -13,13 +13,13 @@ CREATE TABLE meetings (
     meeting_url TEXT,
     transcription TEXT DEFAULT NULL,
     ai_summary TEXT DEFAULT NULL,
-    
+
     -- New columns for transcription bot functionality
     duration_minutes INT DEFAULT 60,
     bot_started_at TIMESTAMP WITH TIME ZONE,
     transcription_attempted_at TIMESTAMP WITH TIME ZONE,
-    transcription_error TEXT DEFAULT NULL,  -- Stores error messages when transcription processing fails
-    
+    transcription_error TEXT DEFAULT NULL,
+
     created_by UUID REFERENCES auth.users(id),
     team_id UUID REFERENCES teams(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -28,22 +28,19 @@ CREATE TABLE meetings (
 
 COMMENT ON COLUMN meetings.transcription_error IS 'Stores error messages when transcription processing fails';
 
+-- Meeting number trigger
 CREATE OR REPLACE FUNCTION generate_meeting_number()
 RETURNS TRIGGER AS $$
 DECLARE
     next_number INT;
     generated_meeting_number TEXT;
 BEGIN
-    -- Get the next number for the 'MTG' prefix
     SELECT COALESCE(MAX(SUBSTRING(meetings.meeting_number FROM '[0-9]+')::INT), 0) + 1
     INTO next_number
     FROM meetings
     WHERE meetings.meeting_number LIKE 'MTG-%';
 
-    -- Format the meeting number (e.g., MTG-001)
     generated_meeting_number := 'MTG-' || LPAD(next_number::TEXT, 3, '0');
-
-    -- Set the meeting number
     NEW.meeting_number := generated_meeting_number;
 
     RETURN NEW;
@@ -58,56 +55,72 @@ EXECUTE FUNCTION generate_meeting_number();
 -- Enable Row Level Security
 ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 
+-- MEETINGS POLICIES (SECURE)
+
+
 -- View policy - all team members can view meetings
+DROP POLICY IF EXISTS meetings_view_policy ON meetings;
 CREATE POLICY meetings_view_policy ON meetings
     FOR SELECT
     USING (
         EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
         )
     );
 
--- Insert policy - any authenticated user can create a meeting for their team
+-- Insert policy - user must create meeting in their team, created_by must be auth.uid()
+DROP POLICY IF EXISTS meetings_insert_policy ON meetings;
 CREATE POLICY meetings_insert_policy ON meetings
     FOR INSERT
     WITH CHECK (
-        auth.uid() = created_by AND
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id
+        auth.uid() = created_by
+        AND EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
         )
     );
 
 -- Delete policy - only admins or the creator can delete meetings
+DROP POLICY IF EXISTS meetings_delete_policy ON meetings;
 CREATE POLICY meetings_delete_policy ON meetings
     FOR DELETE
     USING (
-        auth.uid() = created_by OR
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id 
-            AND users.role = 'admin'
+        auth.uid() = created_by
+        OR EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
+              AND users.role = 'admin'
         )
     );
 
--- Update policy - only the creator or admins can update meetings
+-- Update policy - ADMIN ONLY (strong security)
+-- This prevents normal members from writing transcription/ai_summary/bot fields via SDK
+DROP POLICY IF EXISTS meetings_update_policy ON meetings;
 CREATE POLICY meetings_update_policy ON meetings
     FOR UPDATE
     USING (
-        auth.uid() = created_by OR
         EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id 
-            AND users.role = 'admin'
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
+              AND users.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
+              AND users.role = 'admin'
         )
     );
 
 -- Update the updated_at timestamp automatically
+-- (Requires update_updated_at_column from tickets file; if it doesn't exist yet, define it here too)
 CREATE TRIGGER update_meetings_updated_at
 BEFORE UPDATE ON meetings
 FOR EACH ROW
@@ -122,7 +135,7 @@ BEGIN
   FOR meeting_record IN
     SELECT id, meeting_url
     FROM meetings
-    WHERE 
+    WHERE
       meeting_url LIKE '%meet.google.com%' AND
       meeting_date <= NOW() + INTERVAL '5 minutes' AND
       meeting_date > NOW() - INTERVAL '5 minutes' AND
@@ -149,7 +162,7 @@ BEGIN
   FOR meeting_record IN
     SELECT id, meeting_url
     FROM meetings
-    WHERE 
+    WHERE
       meeting_url LIKE '%meet.google.com%' AND
       meeting_date + ((COALESCE(duration_minutes, 60)) * INTERVAL '1 minute') <= NOW() AND
       bot_started_at IS NOT NULL AND
@@ -168,14 +181,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Scheduled jobs for bot automation
--- Note: IF EXISTS checks allow safe re-running during development/debugging
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'start-bot') THEN
     PERFORM cron.unschedule('start-bot');
   END IF;
   PERFORM cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
-  
+
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'fetch-transcript') THEN
     PERFORM cron.unschedule('fetch-transcript');
   END IF;
@@ -192,7 +204,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Cleanup cron job
--- Note: IF EXISTS check allows safe re-running during development/debugging
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'delete-old-meetings') THEN

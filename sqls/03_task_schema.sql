@@ -35,99 +35,122 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE task_comments ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for tasks
+
 -- Users can view all tasks in their team
-CREATE POLICY "Users can view tasks in their team" 
-  ON tasks FOR SELECT 
+DROP POLICY IF EXISTS "Users can view tasks in their team" ON tasks;
+CREATE POLICY "Users can view tasks in their team"
+  ON tasks FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.team_id = tasks.team_id
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+        AND users.team_id = tasks.team_id
     )
   );
 
 -- Users can create tasks in their team
-CREATE POLICY "Users can create tasks in their team" 
-  ON tasks FOR INSERT 
+-- (also enforce created_by = auth.uid() so users can't spoof creator)
+DROP POLICY IF EXISTS "Users can create tasks in their team" ON tasks;
+CREATE POLICY "Users can create tasks in their team"
+  ON tasks FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.team_id = tasks.team_id
+    created_by = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+        AND users.team_id = tasks.team_id
     )
   );
 
--- Users can update tasks they created or are assigned to
-CREATE POLICY "Users can update tasks they created or are assigned to" 
-  ON tasks FOR UPDATE 
+-- Users can update tasks ONLY if they are:
+--  - the creator, OR
+--  - the assignee, OR
+--  - an admin in the same team
+--
+-- IMPORTANT: Removed the old "any team member can update" logic.
+DROP POLICY IF EXISTS "Users can update tasks they created or are assigned to" ON tasks;
+CREATE POLICY "Users can update tasks they created or are assigned to"
+  ON tasks FOR UPDATE
   USING (
-    created_by = auth.uid() OR 
-    assigned_to = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.team_id = tasks.team_id
+    created_by = auth.uid()
+    OR assigned_to = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+        AND users.role = 'admin'
+        AND users.team_id = tasks.team_id
+    )
+  )
+  WITH CHECK (
+    created_by = auth.uid()
+    OR assigned_to = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+        AND users.role = 'admin'
+        AND users.team_id = tasks.team_id
     )
   );
 
--- Users can delete tasks they created or admins can delete any task in their team
-CREATE POLICY "Users can delete tasks they created or admins can delete" 
-  ON tasks FOR DELETE 
+-- Users can delete tasks they created OR admins can delete any task in their team
+DROP POLICY IF EXISTS "Users can delete tasks they created or admins can delete" ON tasks;
+CREATE POLICY "Users can delete tasks they created or admins can delete"
+  ON tasks FOR DELETE
   USING (
-    created_by = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE id = auth.uid() 
-      AND role = 'admin' 
-      AND team_id = tasks.team_id
+    created_by = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'admin'
+        AND team_id = tasks.team_id
     )
   );
 
--- Only admins can approve/reject tasks
-CREATE POLICY "Only admins can approve or reject tasks" 
-  ON tasks FOR UPDATE 
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE id = auth.uid() 
-      AND role = 'admin' 
-      AND team_id = tasks.team_id
-    )
-  );
+-- Remove this policy because policies are OR-ed:
+-- Keeping it does NOT prevent non-admins from updating approval_status if another update policy allows them.
+DROP POLICY IF EXISTS "Only admins can approve or reject tasks" ON tasks;
 
 -- Create policies for task comments
+
 -- Users can view comments on tasks in their team
-CREATE POLICY "Users can view comments on tasks in their team" 
-  ON task_comments FOR SELECT 
+DROP POLICY IF EXISTS "Users can view comments on tasks in their team" ON task_comments;
+CREATE POLICY "Users can view comments on tasks in their team"
+  ON task_comments FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM tasks 
+      SELECT 1 FROM tasks
       JOIN users ON users.team_id = tasks.team_id
-      WHERE tasks.id = task_comments.task_id 
-      AND users.id = auth.uid()
+      WHERE tasks.id = task_comments.task_id
+        AND users.id = auth.uid()
     )
   );
 
 -- Users can add comments to tasks in their team
-CREATE POLICY "Users can add comments to tasks in their team" 
-  ON task_comments FOR INSERT 
+-- (also enforce user_id = auth.uid() so they can't post as someone else)
+DROP POLICY IF EXISTS "Users can add comments to tasks in their team" ON task_comments;
+CREATE POLICY "Users can add comments to tasks in their team"
+  ON task_comments FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM tasks 
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM tasks
       JOIN users ON users.team_id = tasks.team_id
-      WHERE tasks.id = task_comments.task_id 
-      AND users.id = auth.uid()
+      WHERE tasks.id = task_comments.task_id
+        AND users.id = auth.uid()
     )
   );
 
 -- Users can only update their own comments
-CREATE POLICY "Users can only update their own comments" 
-  ON task_comments FOR UPDATE 
-  USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can only update their own comments" ON task_comments;
+CREATE POLICY "Users can only update their own comments"
+  ON task_comments FOR UPDATE
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 -- Users can only delete their own comments
-CREATE POLICY "Users can only delete their own comments" 
-  ON task_comments FOR DELETE 
+DROP POLICY IF EXISTS "Users can only delete their own comments" ON task_comments;
+CREATE POLICY "Users can only delete their own comments"
+  ON task_comments FOR DELETE
   USING (user_id = auth.uid());
 
 -- Create function to update task timestamps
@@ -140,6 +163,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to update task timestamps
+DROP TRIGGER IF EXISTS update_task_timestamp ON tasks;
 CREATE TRIGGER update_task_timestamp
 BEFORE UPDATE ON tasks
 FOR EACH ROW
@@ -150,10 +174,10 @@ CREATE OR REPLACE FUNCTION is_team_admin(team_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM users 
-    WHERE id = auth.uid() 
-    AND role = 'admin' 
-    AND team_id = team_uuid
+    SELECT 1 FROM users
+    WHERE id = auth.uid()
+      AND role = 'admin'
+      AND team_id = team_uuid
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER;
