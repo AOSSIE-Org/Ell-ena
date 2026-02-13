@@ -49,7 +49,7 @@ CREATE POLICY "Users can view tasks in their team"
   );
 
 -- Users can create tasks in their team
--- (also enforce created_by = auth.uid() so users can't spoof creator)
+-- Enforce created_by = auth.uid() so users can't spoof creator
 DROP POLICY IF EXISTS "Users can create tasks in their team" ON tasks;
 CREATE POLICY "Users can create tasks in their team"
   ON tasks FOR INSERT
@@ -63,11 +63,7 @@ CREATE POLICY "Users can create tasks in their team"
   );
 
 -- Users can update tasks ONLY if they are:
---  - the creator, OR
---  - the assignee, OR
---  - an admin in the same team
---
--- IMPORTANT: Removed the old "any team member can update" logic.
+-- the creator, OR the assignee, OR an admin in the same team
 DROP POLICY IF EXISTS "Users can update tasks they created or are assigned to" ON tasks;
 CREATE POLICY "Users can update tasks they created or are assigned to"
   ON tasks FOR UPDATE
@@ -106,9 +102,44 @@ CREATE POLICY "Users can delete tasks they created or admins can delete"
     )
   );
 
--- Remove this policy because policies are OR-ed:
--- Keeping it does NOT prevent non-admins from updating approval_status if another update policy allows them.
+-- Drop the old admin-only approval RLS policy
+-- (Policies are OR-ed in Postgres; this does not restrict approval_status by itself)
 DROP POLICY IF EXISTS "Only admins can approve or reject tasks" ON tasks;
+
+-- Guard sensitive fields at the database level (column-level)
+-- Prevent assignee/member from changing approval_status directly.
+-- Only admins in the same team can change approval_status.
+
+CREATE OR REPLACE FUNCTION guard_task_approval_status()
+RETURNS TRIGGER AS $$
+DECLARE
+  is_admin BOOLEAN;
+BEGIN
+  -- Only enforce on actual change
+  IF NEW.approval_status IS DISTINCT FROM OLD.approval_status THEN
+    SELECT EXISTS (
+      SELECT 1
+      FROM users
+      WHERE users.id = auth.uid()
+        AND users.team_id = NEW.team_id
+        AND users.role = 'admin'
+    )
+    INTO is_admin;
+
+    IF NOT is_admin THEN
+      RAISE EXCEPTION 'permission denied: only admins can change approval_status';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS guard_task_approval_status ON tasks;
+CREATE TRIGGER guard_task_approval_status
+BEFORE UPDATE ON tasks
+FOR EACH ROW
+EXECUTE FUNCTION guard_task_approval_status();
 
 -- Create policies for task comments
 
@@ -126,7 +157,7 @@ CREATE POLICY "Users can view comments on tasks in their team"
   );
 
 -- Users can add comments to tasks in their team
--- (also enforce user_id = auth.uid() so they can't post as someone else)
+-- Enforce user_id = auth.uid() so they can't post as someone else
 DROP POLICY IF EXISTS "Users can add comments to tasks in their team" ON task_comments;
 CREATE POLICY "Users can add comments to tasks in their team"
   ON task_comments FOR INSERT

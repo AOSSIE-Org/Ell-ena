@@ -28,32 +28,37 @@ CREATE TABLE meetings (
 
 COMMENT ON COLUMN meetings.transcription_error IS 'Stores error messages when transcription processing fails';
 
--- Meeting number trigger
+-- Generate meeting number trigger
 CREATE OR REPLACE FUNCTION generate_meeting_number()
 RETURNS TRIGGER AS $$
 DECLARE
     next_number INT;
     generated_meeting_number TEXT;
 BEGIN
+    -- Get the next number for the 'MTG' prefix
     SELECT COALESCE(MAX(SUBSTRING(meetings.meeting_number FROM '[0-9]+')::INT), 0) + 1
     INTO next_number
     FROM meetings
     WHERE meetings.meeting_number LIKE 'MTG-%';
 
+    -- Format the meeting number (e.g., MTG-001)
     generated_meeting_number := 'MTG-' || LPAD(next_number::TEXT, 3, '0');
+
+    -- Set the meeting number
     NEW.meeting_number := generated_meeting_number;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_meeting_number ON meetings;
 CREATE TRIGGER set_meeting_number
 BEFORE INSERT ON meetings
 FOR EACH ROW
 EXECUTE FUNCTION generate_meeting_number();
 
 -- Enable Row Level Security
-ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY
 
 -- MEETINGS POLICIES (SECURE)
 
@@ -70,7 +75,8 @@ CREATE POLICY meetings_view_policy ON meetings
         )
     );
 
--- Insert policy - user must create meeting in their team, created_by must be auth.uid()
+-- Insert policy - any authenticated user can create a meeting for their team
+-- Enforce created_by = auth.uid()
 DROP POLICY IF EXISTS meetings_insert_policy ON meetings;
 CREATE POLICY meetings_insert_policy ON meetings
     FOR INSERT
@@ -97,13 +103,14 @@ CREATE POLICY meetings_delete_policy ON meetings
         )
     );
 
--- Update policy - ADMIN ONLY (strong security)
--- This prevents normal members from writing transcription/ai_summary/bot fields via SDK
+-- Update policy - creator OR admin can update meetings (consistent with delete)
+-- Sensitive columns are protected by a trigger (below).
 DROP POLICY IF EXISTS meetings_update_policy ON meetings;
 CREATE POLICY meetings_update_policy ON meetings
     FOR UPDATE
     USING (
-        EXISTS (
+        auth.uid() = created_by
+        OR EXISTS (
             SELECT 1 FROM users
             WHERE users.id = auth.uid()
               AND users.team_id = meetings.team_id
@@ -111,7 +118,8 @@ CREATE POLICY meetings_update_policy ON meetings
         )
     )
     WITH CHECK (
-        EXISTS (
+        auth.uid() = created_by
+        OR EXISTS (
             SELECT 1 FROM users
             WHERE users.id = auth.uid()
               AND users.team_id = meetings.team_id
@@ -119,8 +127,49 @@ CREATE POLICY meetings_update_policy ON meetings
         )
     );
 
+-- Guard sensitive fields (column-level) at the database level
+-- Non-admins (including creator) can NOT modify transcription/AI/bot fields.
+-- Admins can modify everything.
+
+CREATE OR REPLACE FUNCTION guard_meeting_sensitive_fields()
+RETURNS TRIGGER AS $$
+DECLARE
+  is_admin BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE users.id = auth.uid()
+      AND users.team_id = NEW.team_id
+      AND users.role = 'admin'
+  )
+  INTO is_admin;
+
+  IF NOT is_admin THEN
+    IF NEW.transcription IS DISTINCT FROM OLD.transcription
+       OR NEW.ai_summary IS DISTINCT FROM OLD.ai_summary
+       OR NEW.duration_minutes IS DISTINCT FROM OLD.duration_minutes
+       OR NEW.bot_started_at IS DISTINCT FROM OLD.bot_started_at
+       OR NEW.transcription_attempted_at IS DISTINCT FROM OLD.transcription_attempted_at
+       OR NEW.transcription_error IS DISTINCT FROM OLD.transcription_error
+    THEN
+      RAISE EXCEPTION 'permission denied: only admins can modify transcription/AI/bot fields';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS guard_meeting_sensitive_fields ON meetings;
+CREATE TRIGGER guard_meeting_sensitive_fields
+BEFORE UPDATE ON meetings
+FOR EACH ROW
+EXECUTE FUNCTION guard_meeting_sensitive_fields();
+
 -- Update the updated_at timestamp automatically
--- (Requires update_updated_at_column from tickets file; if it doesn't exist yet, define it here too)
+-- NOTE: update_updated_at_column() is defined in sqls/04_tickets_schema.sql
+DROP TRIGGER IF EXISTS update_meetings_updated_at ON meetings;
 CREATE TRIGGER update_meetings_updated_at
 BEFORE UPDATE ON meetings
 FOR EACH ROW
