@@ -391,9 +391,18 @@ class AIService {
         
         // Check if the response contains a function call
         if (response.statusCode == 200) {
-          final responseData = jsonDecode(response.body);
+          final decoded = jsonDecode(response.body);
 
+          if (decoded is! Map<String, dynamic>) {
+            return {
+              'type': 'error',
+              'content': 'Invalid response format from API',
+            };
+          }
+
+          final responseData = decoded;
           final candidates = responseData['candidates'];
+
 
           if (candidates is! List || candidates.isEmpty) {
             return {
@@ -571,12 +580,39 @@ class AIService {
       );
       
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          return candidates[0]['content']['parts'][0]['text'] ?? 'Function executed successfully.';
+        final decoded = jsonDecode(response.body);
+
+        if (decoded is! Map<String, dynamic>) {
+          return 'Function executed successfully.';
         }
-        return 'Function executed successfully.';
+
+        final responseData = decoded;
+        final candidates = responseData['candidates'];
+
+
+        if (candidates is! List || candidates.isEmpty) {
+          return 'Function executed successfully.';
+        }
+
+        final first = candidates.first;
+        if (first is! Map) return 'Function executed successfully.';
+
+        final content = first['content'];
+        if (content is! Map) return 'Function executed successfully.';
+
+        final parts = content['parts'];
+        if (parts is! List || parts.isEmpty) {
+          return 'Function executed successfully.';
+        }
+
+        final textPart = parts.firstWhere(
+          (p) => p is Map && p['text'] != null,
+          orElse: () => null,
+        );
+
+        return (textPart is Map && textPart['text'] is String)
+            ? textPart['text'] as String
+            : 'Function executed successfully.';
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return 'Function executed successfully.';
