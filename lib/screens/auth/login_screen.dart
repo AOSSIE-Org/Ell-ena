@@ -77,6 +77,13 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (mounted && response.user != null) {
         NavigationService().navigateToReplacement(const HomeScreen());
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } on AuthApiException catch (_) {
       if (!mounted) return;
