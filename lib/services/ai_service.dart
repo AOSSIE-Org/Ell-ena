@@ -388,41 +388,70 @@ class AIService {
         body: jsonEncode(requestBody),
       );
       
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
         
         // Check if the response contains a function call
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          final content = candidates[0]['content'];
-          final parts = content['parts'] as List<dynamic>;
-          
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+
+          final candidates = responseData['candidates'];
+
+          if (candidates is! List || candidates.isEmpty) {
+            return {
+              'type': 'error',
+              'content': 'Invalid or empty response from API',
+            };
+          }
+
+          final firstCandidate = candidates.first;
+
+          if (firstCandidate is! Map ||
+              firstCandidate['content'] is! Map) {
+            return {
+              'type': 'error',
+              'content': 'Invalid response structure',
+            };
+          }
+
+          final content = firstCandidate['content'] as Map;
+          final parts = content['parts'];
+
+          if (parts is! List || parts.isEmpty) {
+            return {
+              'type': 'error',
+              'content': 'Invalid response structure',
+            };
+          }
+
+          // Check for function call
           for (var part in parts) {
-            if (part.containsKey('functionCall')) {
+            if (part is Map && part['functionCall'] != null) {
               final functionCall = part['functionCall'];
-              final functionName = functionCall['name'];
-              final arguments = functionCall['args'];
               
-              return {
-                'type': 'function_call',
-                'function_name': functionName,
-                'arguments': arguments,
-                'raw_response': jsonEncode(responseData),
-              };
+              if (functionCall is Map) {
+                final functionName = functionCall['name'];
+                final arguments = functionCall['args'];  
+
+                return {
+                  'type': 'function_call',
+                  'function_name': functionName,
+                  'arguments': arguments ?? {},
+                  'raw_response': jsonEncode(responseData),
+                };
+              }
             }
           }
+
           
           // If no function call is detected, return as regular message
+          final textPart = parts.firstWhere(
+            (p) => p is Map && p['text'] != null,
+            orElse: () => {'text': ''},
+          );
+
           return {
             'type': 'message',
-            'content': candidates[0]['content']['parts'][0]['text'] ?? '',
+            'content': textPart['text'] ?? '',
           };
-        }
-        
-        return {
-          'type': 'error',
-          'content': 'No response generated',
-        };
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return {
