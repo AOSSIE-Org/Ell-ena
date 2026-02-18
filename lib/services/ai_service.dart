@@ -428,16 +428,31 @@ class AIService {
               final functionCall = part['functionCall'];
               
               if (functionCall is Map) {
-                final functionName = functionCall['name'];
-                final arguments = functionCall['args'];  
+                final rawName = functionCall['name'];
+                final rawArguments = functionCall['args'];
+
+                // Ensure function name is a valid non-empty String
+                if (rawName is! String || rawName.isEmpty) {
+                  return {
+                    'type': 'error',
+                    'content': 'Invalid function call name from API',
+                  };
+                }
+
+                // Ensure arguments is Map<String, dynamic>
+                final parsedArguments =
+                    rawArguments is Map
+                        ? Map<String, dynamic>.from(rawArguments)
+                        : <String, dynamic>{};
 
                 return {
                   'type': 'function_call',
-                  'function_name': functionName,
-                  'arguments': arguments ?? {},
+                  'function_name': rawName,
+                  'arguments': parsedArguments,
                   'raw_response': jsonEncode(responseData),
                 };
               }
+
             }
           }
 
