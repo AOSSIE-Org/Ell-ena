@@ -23,22 +23,20 @@ serve(async (req) => {
       throw new Error("No text provided for embedding");
     }
 
-    // Generate embedding using Gemini
-    const embeddingResponse = await fetch("https://generativelanguage.googleapis.com/v1/models/embedding-001:embedContent?key=" + GEMINI_API_KEY, {
+    // Generate embedding using Gemini embedding model
+    const embeddingResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=" + GEMINI_API_KEY, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "embedding-001",
         content: {
           parts: [
             {
               text: text
             }
           ]
-        },
-        taskType: "RETRIEVAL_QUERY"
+        }
       }),
     });
 
