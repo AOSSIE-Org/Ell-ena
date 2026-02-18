@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/custom_widgets.dart';
@@ -8,12 +9,13 @@ import '../auth/set_new_password_screen.dart';
 
 class VerifyOTPScreen extends StatefulWidget {
   final String email;
-  final String verifyType; // 'signup_join', 'signup_create', or 'reset_password'
+  final String
+      verifyType; // 'signup_join', 'signup_create', or 'reset_password'
   final Map<String, dynamic> userData;
 
   const VerifyOTPScreen({
-    super.key, 
-    required this.email, 
+    super.key,
+    required this.email,
     required this.verifyType,
     this.userData = const {},
   });
@@ -28,12 +30,20 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
     (index) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  Timer? _resendTimer;
+  bool _showtimertext = false;
+  bool _timerStarted = false;
   bool _isLoading = false;
+  int _resendseconds = 60;
+  bool _canresend = true;
+
   String? _errorMessage;
+  bool _otpcomplete = false;
   final _supabaseService = SupabaseService();
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     for (var controller in _controllers) {
       controller.dispose();
     }
@@ -41,6 +51,54 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       node.dispose();
     }
     super.dispose();
+  }
+
+  void _checkotpcomplete() {
+    final iscomplete =
+        _controllers.every((controller) => controller.text.isNotEmpty);
+
+    if (_otpcomplete != iscomplete) {
+      setState(() {
+        _otpcomplete = iscomplete;
+      });
+    }
+  }
+  void _showErrorSnackBar(String message) {
+  ScaffoldMessenger.of(context).clearSnackBars();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red.shade600,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
+
+
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    setState(() {
+      _resendseconds = 60;
+      _canresend = false;
+      _timerStarted = true;
+      _showtimertext = true; 
+    });
+
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendseconds == 0) {
+        timer.cancel();
+        setState(() {
+          _canresend = true;
+          _timerStarted = false;
+          _showtimertext = false;
+        });
+      } else {
+        setState(() {
+          _resendseconds--;
+        });
+      }
+    });
   }
 
   Future<void> _handleVerification() async {
@@ -79,32 +137,38 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         } else {
           setState(() {
             String errorMsg = result['error'] ?? 'Verification failed';
-            
+
             // Make the error message more user-friendly
-            if (errorMsg.contains('expired') || errorMsg.contains('otp_expired')) {
-              errorMsg = 'Verification code has expired. Please request a new code.';
+            if (errorMsg.contains('expired') ||
+                errorMsg.contains('otp_expired')) {
+              errorMsg =
+                  'Verification code has expired or invalid. Please request a new code.';
             } else if (errorMsg.contains('invalid')) {
               errorMsg = 'Invalid verification code. Please try again.';
             }
-            
+
             _errorMessage = errorMsg;
           });
+          _showErrorSnackBar(_errorMessage!);
         }
       } catch (e) {
         setState(() {
           String errorMsg = e.toString();
-          
+
           // Make the error message more user-friendly
-          if (errorMsg.contains('expired') || errorMsg.contains('otp_expired')) {
-            errorMsg = 'Verification code has expired. Please request a new code.';
+          if (errorMsg.contains('expired') ||
+              errorMsg.contains('otp_expired')) {
+            errorMsg =
+                'Verification code has expired. Please request a new code.';
           } else if (errorMsg.contains('invalid')) {
             errorMsg = 'Invalid verification code. Please try again.';
           } else {
             errorMsg = 'An error occurred. Please try again.';
           }
-          
+
           _errorMessage = errorMsg;
         });
+        _showErrorSnackBar(_errorMessage!);
       } finally {
         if (mounted) {
           setState(() {
@@ -116,10 +180,20 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   }
 
   Future<void> _resendCode() async {
+    
+    if (!_canresend) {
+      setState(() {
+        _showtimertext = true;
+      });
+      return;
+    }
+
+    _startResendTimer();
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
+
 
     try {
       final result = await _supabaseService.resendVerificationEmail(
@@ -130,7 +204,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification code resent successfully'),
+            content: Text('Verification code resent successfully. Please check your inbox and spam folder.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -148,6 +222,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
 
           _errorMessage = errorMsg;
         });
+        _showErrorSnackBar(_errorMessage!);
       }
     } catch (e) {
       setState(() {
@@ -167,6 +242,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
 
         _errorMessage = errorMsg;
       });
+      _showErrorSnackBar(_errorMessage!);
     } finally {
       if (mounted) {
         setState(() {
@@ -262,15 +338,27 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       title: 'Verify Email',
       subtitle: 'Enter the 6-digit code sent to ${widget.email}',
       children: [
-        if (_errorMessage != null)
+        
+        // if (_errorMessage != null)
+        //   Padding(
+        //     padding: const EdgeInsets.only(bottom: 16),
+        //     child: Text(
+        //       _errorMessage!,
+        //       style: const TextStyle(color: Colors.red),
+        //       textAlign: TextAlign.center,
+        //     ),
+        //   ),
+        if (_showtimertext && _timerStarted)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
+              'Resend code in 00:${_resendseconds.toString().padLeft(2, '0')}',
+              style: TextStyle(
+                  color: Colors.red.shade400, fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
           ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(
@@ -302,18 +390,49 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                       _focusNodes[index + 1].requestFocus();
                     } else {
                       _focusNodes[index].unfocus();
-                      _handleVerification();
+                      // _handleVerification();
                     }
                   }
+                  _checkotpcomplete();
                 },
               ),
             ),
           ),
         ),
+        const SizedBox(height: 20),
+        DecoratedBox(
+          
+          // height:20,
+          // padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              
+            color:Color(0xFF1B3043),
+            borderRadius: BorderRadius.circular(10)
+          ),
+          child: Center(
+            child:Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.email, color: Color(0xFF277FBD),),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Check your spam/junk folder if you don't see the email.",
+                    style:TextStyle(
+                      color: Color(0xFF277FBD),
+                      fontWeight: FontWeight.w500,
+                    )
+                  ),
+                ],
+              ),
+            )
+          ),
+
+        ),
         const SizedBox(height: 32),
         CustomButton(
           text: 'Verify Code',
-          onPressed: _isLoading ? null : _handleVerification,
+          onPressed: (!_otpcomplete || _isLoading) ? null : _handleVerification,
           isLoading: _isLoading,
         ),
         const SizedBox(height: 16),
