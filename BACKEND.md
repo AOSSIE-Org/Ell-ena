@@ -366,6 +366,10 @@ supabase secrets set VEXA_API_KEY=your-vexa-api-key
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 
 
+# Local Testing the functions (optional)
+supabase functions serve --allow-env --env-file .env
+
+
 
 ## Deploying Edge Functions
 
@@ -384,15 +388,6 @@ supabase functions deploy search-meetings
 supabase functions deploy start-bot
 supabase functions deploy summarize-transcription
 ````
-
-### Function Descriptions
-
-- **fetch-transcript**: Retrieves meeting transcriptions
-- **generate-embeddings**: Creates vector embeddings for meeting content
-- **get-embedding**: Retrieves embeddings for specific content
-- **search-meetings**: Performs semantic search across meeting transcriptions
-- **start-bot**: Initializes the AI assistant
-- **summarize-transcription**: Generates AI summaries of meeting transcriptions
 
 ## Troubleshooting
 
@@ -438,4 +433,3 @@ After setting up your backend:
 ---
 
 This guide should help you get started with the Ell-ena backend.
-

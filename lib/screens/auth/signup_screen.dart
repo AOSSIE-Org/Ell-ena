@@ -217,7 +217,7 @@ class _SignupScreenState extends State<SignupScreen>
             Tab(text: 'Create the Team'),
           ],
           labelColor: Colors.green.shade400,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           indicatorColor: Colors.green.shade400,
           indicatorSize: TabBarIndicatorSize.tab,
         ),
@@ -403,18 +403,18 @@ class _SignupScreenState extends State<SignupScreen>
         // OR divider
         Row(
           children: [
-            Expanded(child: Divider(color: Colors.grey.shade700)),
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'OR',
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: Colors.grey.shade700)),
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
           ],
         ),
         const SizedBox(height: 24),
@@ -434,7 +434,7 @@ class _SignupScreenState extends State<SignupScreen>
               ),
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(color: Colors.green.shade400, width: 2),
               padding: const EdgeInsets.symmetric(
                 vertical: 16,
