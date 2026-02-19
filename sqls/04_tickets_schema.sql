@@ -15,6 +15,14 @@ CREATE TABLE tickets (
     team_id UUID REFERENCES teams(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+); 
+-- Ticket comments table
+CREATE TABLE ticket_comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Indexes for ticket_number
