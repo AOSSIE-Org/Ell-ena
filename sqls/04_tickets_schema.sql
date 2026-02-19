@@ -1,5 +1,5 @@
--- Tickets table
-CREATE TABLE tickets (
+-- Tickets table with IF NOT EXISTS
+CREATE TABLE IF NOT EXISTS tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ticket_number TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -15,7 +15,8 @@ CREATE TABLE tickets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-CREATE TABLE ticket_comments (
+-- Ticket comments table with IF NOT EXISTS
+CREATE TABLE IF NOT EXISTS ticket_comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
     user_id UUID REFERENCES auth.users(id),
@@ -23,6 +24,50 @@ CREATE TABLE ticket_comments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Indexes (these are safe with IF NOT EXISTS)
+CREATE INDEX IF NOT EXISTS idx_tickets_team_id ON tickets(team_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_comments_ticket_id ON ticket_comments(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
+
+-- Drop existing validation function and trigger
+DROP FUNCTION IF EXISTS validate_ticket_user_team() CASCADE;
+
+-- Create validation function
+CREATE OR REPLACE FUNCTION validate_ticket_user_team()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.created_by IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = NEW.created_by
+          AND u.team_id = NEW.team_id
+    ) THEN
+        RAISE EXCEPTION 'created_by must belong to the same team as the ticket';
+    END IF;
+
+    IF NEW.assigned_to IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = NEW.assigned_to
+          AND u.team_id = NEW.team_id
+    ) THEN
+        RAISE EXCEPTION 'assigned_to must belong to the same team as the ticket';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create validation trigger (drop if exists first)
+DROP TRIGGER IF EXISTS trg_validate_ticket_user_team ON tickets;
+
+CREATE TRIGGER trg_validate_ticket_user_team
+BEFORE INSERT OR UPDATE ON tickets
+FOR EACH ROW
+EXECUTE FUNCTION validate_ticket_user_team();
+
+-- Drop existing ticket number trigger
+DROP TRIGGER IF EXISTS set_ticket_number ON tickets;
+
+-- Create or replace ticket number function
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -52,13 +97,46 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Create ticket number trigger
 CREATE TRIGGER set_ticket_number
 BEFORE INSERT ON tickets
 FOR EACH ROW
 EXECUTE FUNCTION generate_ticket_number();
 
-ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+-- Drop existing updated_at trigger
+DROP TRIGGER IF EXISTS update_tickets_updated_at ON tickets;
 
+-- Create or replace updated_at function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create updated_at trigger
+CREATE TRIGGER update_tickets_updated_at
+BEFORE UPDATE ON tickets
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable RLS (safe to run multiple times)
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
+
+-- Drop all existing policies before recreating
+DROP POLICY IF EXISTS tickets_view_policy ON tickets;
+DROP POLICY IF EXISTS tickets_insert_policy ON tickets;
+DROP POLICY IF EXISTS tickets_update_policy ON tickets;
+DROP POLICY IF EXISTS tickets_delete_policy ON tickets;
+
+DROP POLICY IF EXISTS ticket_comments_view_policy ON ticket_comments;
+DROP POLICY IF EXISTS ticket_comments_insert_policy ON ticket_comments;
+DROP POLICY IF EXISTS ticket_comments_update_policy ON ticket_comments;
+DROP POLICY IF EXISTS ticket_comments_delete_policy ON ticket_comments;
+
+-- Recreate all policies
 CREATE POLICY tickets_view_policy ON tickets
     FOR SELECT
     USING (
@@ -105,8 +183,6 @@ CREATE POLICY tickets_delete_policy ON tickets
             AND users.role = 'admin'
         )
     );
-
-ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY ticket_comments_view_policy ON ticket_comments
     FOR SELECT
@@ -156,16 +232,3 @@ CREATE POLICY ticket_comments_delete_policy ON ticket_comments
             AND users.role = 'admin'
         )
     );
-
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_tickets_updated_at
-BEFORE UPDATE ON tickets
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column(); 
