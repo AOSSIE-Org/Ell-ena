@@ -51,13 +51,19 @@ class MyApp extends StatelessWidget {
             settings: settings,
           );
         } else if (settings.name == '/home') {
-          final args = settings.arguments as Map<String, dynamic>?;
+          final args = (settings.arguments is Map<String, dynamic>) 
+              ? settings.arguments as Map<String, dynamic> 
+              : null;
+              
           return MaterialPageRoute(
             builder: (context) => HomeScreen(arguments: args),
             settings: settings,
           );
         } else if (settings.name == '/chat') {
-          final args = settings.arguments as Map<String, dynamic>?;
+          final args = (settings.arguments is Map<String, dynamic>) 
+              ? settings.arguments as Map<String, dynamic> 
+              : null;
+              
           return MaterialPageRoute(
             builder: (context) => ChatScreen(arguments: args),
             settings: settings,
