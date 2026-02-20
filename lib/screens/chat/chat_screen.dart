@@ -1319,6 +1319,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                     child: TextField(
                       controller: _messageController,
                       style: TextStyle(color: colorScheme.onSurface),
+                      minLines: 1,
+                      maxLines: 5,
+                      keyboardType: TextInputType.multiline,
                       decoration: InputDecoration(
                         hintText: 'Type your message...',
                         hintStyle:
