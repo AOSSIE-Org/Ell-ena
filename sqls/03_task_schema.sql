@@ -39,8 +39,10 @@ ALTER TABLE task_comments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view tasks in their team" 
   ON tasks FOR SELECT 
   USING (
-    team_id IN (
-      SELECT team_id FROM users WHERE id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.team_id = tasks.team_id
     )
   );
 
@@ -48,8 +50,10 @@ CREATE POLICY "Users can view tasks in their team"
 CREATE POLICY "Users can create tasks in their team" 
   ON tasks FOR INSERT 
   WITH CHECK (
-    team_id IN (
-      SELECT team_id FROM users WHERE id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.team_id = tasks.team_id
     )
   );
 
@@ -59,8 +63,23 @@ CREATE POLICY "Users can update tasks they created or are assigned to"
   USING (
     created_by = auth.uid() OR 
     assigned_to = auth.uid() OR
-    team_id IN (
-      SELECT team_id FROM users WHERE id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.team_id = tasks.team_id
+    )
+  );
+
+-- Users can delete tasks they created or admins can delete any task in their team
+CREATE POLICY "Users can delete tasks they created or admins can delete" 
+  ON tasks FOR DELETE 
+  USING (
+    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() 
+      AND role = 'admin' 
+      AND team_id = tasks.team_id
     )
   );
 
@@ -81,11 +100,11 @@ CREATE POLICY "Only admins can approve or reject tasks"
 CREATE POLICY "Users can view comments on tasks in their team" 
   ON task_comments FOR SELECT 
   USING (
-    task_id IN (
-      SELECT id FROM tasks 
-      WHERE team_id IN (
-        SELECT team_id FROM users WHERE id = auth.uid()
-      )
+    EXISTS (
+      SELECT 1 FROM tasks 
+      JOIN users ON users.team_id = tasks.team_id
+      WHERE tasks.id = task_comments.task_id 
+      AND users.id = auth.uid()
     )
   );
 
@@ -93,11 +112,11 @@ CREATE POLICY "Users can view comments on tasks in their team"
 CREATE POLICY "Users can add comments to tasks in their team" 
   ON task_comments FOR INSERT 
   WITH CHECK (
-    task_id IN (
-      SELECT id FROM tasks 
-      WHERE team_id IN (
-        SELECT team_id FROM users WHERE id = auth.uid()
-      )
+    EXISTS (
+      SELECT 1 FROM tasks 
+      JOIN users ON users.team_id = tasks.team_id
+      WHERE tasks.id = task_comments.task_id 
+      AND users.id = auth.uid()
     )
   );
 
