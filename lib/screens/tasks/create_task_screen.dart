@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key});
+  const CreateTaskScreen({super.key, this.initialDateTime});
+
+  final DateTime? initialDateTime;
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -21,6 +23,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDateTime != null) {
+      _selectedDueDate = DateTime(
+        widget.initialDateTime!.year,
+        widget.initialDateTime!.month,
+        widget.initialDateTime!.day,
+      );
+    }
     _loadTeamMembers();
   }
 
@@ -66,12 +75,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   }
 
   Future<void> _selectDueDate() async {
+    final DateTime today = DateUtils.dateOnly(DateTime.now());
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate:
-          _selectedDueDate ?? DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: (_selectedDueDate != null && !_selectedDueDate!.isBefore(today))
+          ? _selectedDueDate!
+          : today,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
       builder: (context, child) => child!,
     );
 
