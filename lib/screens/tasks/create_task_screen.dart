@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key});
+  const CreateTaskScreen({super.key, this.initialDateTime});
+
+  final DateTime? initialDateTime;
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -21,6 +23,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDateTime != null) {
+      _selectedDueDate = DateTime(
+        widget.initialDateTime!.year,
+        widget.initialDateTime!.month,
+        widget.initialDateTime!.day,
+      );
+    }
     _loadTeamMembers();
   }
 

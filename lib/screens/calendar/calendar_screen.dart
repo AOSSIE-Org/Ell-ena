@@ -284,8 +284,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _events[dateOnly]!.add(CalendarEvent(
           title: ticket['title'] ?? 'Untitled Ticket',
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
-          endTime:
-              TimeOfDay(hour: createdAt.hour + 1, minute: createdAt.minute),
+          endTime: TimeOfDay.fromDateTime(
+              createdAt.add(const Duration(hours: 1))),
           type: EventType.ticket,
           id: ticket['id'],
         ));
@@ -326,8 +326,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           title: meeting['title'] ?? 'Untitled Meeting',
           startTime:
               TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
-          endTime:
-              TimeOfDay(hour: meetingDate.hour + 1, minute: meetingDate.minute),
+          endTime: TimeOfDay.fromDateTime(
+              meetingDate.add(const Duration(hours: 1))),
           type: EventType.meeting,
           id: meeting['id'],
         ));
@@ -371,7 +371,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
           firstDay: DateTime.utc(2024, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
+          lastDay: DateTime.utc(DateTime.now().year + 10, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
@@ -711,7 +711,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateMeetingScreen(),
+            builder: (context) =>
+                CreateMeetingScreen(initialDateTime: selectedDateTime),
           ),
         );
         break;
@@ -719,7 +720,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTaskScreen(),
+            builder: (context) =>
+                CreateTaskScreen(initialDateTime: selectedDateTime),
           ),
         );
         break;
@@ -727,7 +729,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTicketScreen(),
+            builder: (context) =>
+                CreateTicketScreen(initialDateTime: selectedDateTime),
           ),
         );
         break;

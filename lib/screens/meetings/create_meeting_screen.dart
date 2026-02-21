@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
-  const CreateMeetingScreen({super.key});
+  const CreateMeetingScreen({super.key, this.initialDateTime});
+
+  final DateTime? initialDateTime;
 
   @override
   State<CreateMeetingScreen> createState() => _CreateMeetingScreenState();
@@ -20,6 +22,25 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDateTime != null) {
+      _selectedDate = DateTime(
+        widget.initialDateTime!.year,
+        widget.initialDateTime!.month,
+        widget.initialDateTime!.day,
+      );
+      _selectedTime = TimeOfDay(
+        hour: widget.initialDateTime!.hour,
+        minute: widget.initialDateTime!.minute,
+      );
+    } else {
+      _selectedDate = null;
+      _selectedTime = null;
+    }
+  }
   bool _isLoading = false;
   bool _isGoogleMeetUrl = true;
 
