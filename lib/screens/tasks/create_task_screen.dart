@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import 'package:intl/intl.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   const CreateTaskScreen({super.key});
@@ -72,7 +73,20 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
           _selectedDueDate ?? DateTime.now().add(const Duration(days: 1)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) => child!,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF4CAF50),
+              onPrimary: Colors.white,
+              surface: Color(0xFF2D2D2D),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF1A1A1A),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null && mounted) {
@@ -133,11 +147,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Create New Task'),
-        backgroundColor: Colors.green.shade800,
+        title: const Text('Create Task'),
+        backgroundColor: const Color(0xFF2D2D2D),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50)))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -145,13 +159,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Task title
-                    Text(
-                      'Task Title',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                    // Task Title
+                    const Text(
+                      'Title *',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -179,14 +194,15 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-
-                    // Task description
-                    Text(
+                    
+                    // Description
+                    const Text(
                       'Description',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -206,17 +222,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           vertical: 16,
                         ),
                       ),
-                      maxLines: 5,
+                      maxLines: 4,
                     ),
                     const SizedBox(height: 24),
-
-                    // Due date
-                    Text(
+                    
+                    // Due Date
+                    const Text(
                       'Due Date',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -244,7 +261,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                             Text(
                               _selectedDueDate == null
                                   ? 'Select due date'
-                                  : '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}',
+                                  : DateFormat('MMM dd, yyyy').format(_selectedDueDate!),
                               style: TextStyle(
                                 color: _selectedDueDate == null
                                     ? Theme.of(context)
@@ -258,21 +275,19 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // Assign to
-                    Text(
+                    
+                    // Assign To
+                    const Text(
                       'Assign To',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color:
                             Theme.of(context).colorScheme.surfaceContainerLow,
@@ -282,11 +297,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                         child: DropdownButton<String>(
                           value: _selectedAssigneeId,
                           hint: Text(
-                            'Select team member',
-                            style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
+                            'Unassigned',
+                            style: TextStyle(color: Colors.grey.shade400),
                           ),
                           dropdownColor: Theme.of(context).colorScheme.surface,
                           isExpanded: true,
@@ -309,7 +321,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 12,
-                                      backgroundColor: Colors.green.shade700,
+                                      backgroundColor: const Color(0xFF4CAF50),
                                       child: Text(
                                         (member['full_name'] != null &&
                                                 member['full_name']
@@ -327,8 +339,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(member['full_name']?.toString() ??
-                                        'Unknown'),
+                                    Text(member['full_name']?.toString() ?? 'Unknown'),
                                     if (member['role'] == 'admin')
                                       Container(
                                         margin: const EdgeInsets.only(left: 8),
@@ -372,12 +383,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _createTask,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade400,
+                          backgroundColor: const Color(0xFF4CAF50),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          disabledBackgroundColor: Colors.grey,
+                          disabledBackgroundColor: Colors.grey.shade800,
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -393,7 +404,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                       ),
