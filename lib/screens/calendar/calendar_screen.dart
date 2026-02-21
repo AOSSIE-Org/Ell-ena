@@ -299,7 +299,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _events[dateOnly]!.add(CalendarEvent(
           title: ticket['title'] ?? 'Untitled Ticket',
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
-          endTime: TimeOfDay(hour: createdAt.hour + 1, minute: createdAt.minute),
+          endTime:
+              TimeOfDay(hour: createdAt.hour + 1, minute: createdAt.minute),
           type: EventType.ticket,
           id: ticket['id'],
         ));
@@ -337,8 +338,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // For meetings, assume 1 hour duration
         _events[dateOnly]!.add(CalendarEvent(
           title: meeting['title'] ?? 'Untitled Meeting',
-          startTime: TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
-          endTime: TimeOfDay(hour: meetingDate.hour + 1, minute: meetingDate.minute),
+          startTime:
+              TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
+          endTime:
+              TimeOfDay(hour: meetingDate.hour + 1, minute: meetingDate.minute),
           type: EventType.meeting,
           id: meeting['id'],
         ));
@@ -496,7 +499,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final events = _getEventsForHour(hour);
 
         // Calculate dynamic height based on number of events (minimum 60)
-        final double timeSlotHeight = events.isEmpty ? 60 : max(60, events.length * 40.0);
+        final double timeSlotHeight =
+            events.isEmpty ? 60 : max(60, events.length * 40.0);
 
         return InkWell(
           onTap: () {
@@ -512,7 +516,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   width: 50,
                   child: Text(
                     '${time.format(context).toLowerCase()}',
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -521,7 +527,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     decoration: BoxDecoration(
                       border: Border(
                         top: BorderSide(
-                          color: Colors.grey.shade800,
+                          color: Theme.of(context).colorScheme.outline,
                           width: 0.5,
                         ),
                       ),
@@ -637,17 +643,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
           'Create at ${selectedTime.format(context)}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
