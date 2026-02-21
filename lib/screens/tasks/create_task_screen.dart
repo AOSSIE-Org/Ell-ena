@@ -75,14 +75,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   }
 
   Future<void> _selectDueDate() async {
-    final DateTime now = DateTime.now();
+    final DateTime today = DateUtils.dateOnly(DateTime.now());
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: (_selectedDueDate != null && !_selectedDueDate!.isBefore(now))
+      initialDate: (_selectedDueDate != null && !_selectedDueDate!.isBefore(today))
           ? _selectedDueDate!
-          : now.add(const Duration(days: 1)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
+          : today,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
       builder: (context, child) => child!,
     );
 
