@@ -22,6 +22,8 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+  bool _isLoading = false;
+  bool _isGoogleMeetUrl = true;
 
   @override
   void initState() {
@@ -36,13 +38,8 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         hour: widget.initialDateTime!.hour,
         minute: widget.initialDateTime!.minute,
       );
-    } else {
-      _selectedDate = null;
-      _selectedTime = null;
     }
   }
-  bool _isLoading = false;
-  bool _isGoogleMeetUrl = true;
 
   @override
   void dispose() {
@@ -172,7 +169,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
+      initialDate: (_selectedDate != null && !_selectedDate!.isBefore(DateTime.now())) ? _selectedDate! : DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => child!,

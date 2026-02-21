@@ -284,8 +284,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _events[dateOnly]!.add(CalendarEvent(
           title: ticket['title'] ?? 'Untitled Ticket',
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
-          endTime: TimeOfDay.fromDateTime(
-              createdAt.add(const Duration(hours: 1))),
+          endTime:
+              TimeOfDay.fromDateTime(createdAt.add(const Duration(hours: 1))),
           type: EventType.ticket,
           id: ticket['id'],
         ));
@@ -326,8 +326,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           title: meeting['title'] ?? 'Untitled Meeting',
           startTime:
               TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
-          endTime: TimeOfDay.fromDateTime(
-              meetingDate.add(const Duration(hours: 1))),
+          endTime:
+              TimeOfDay.fromDateTime(meetingDate.add(const Duration(hours: 1))),
           type: EventType.meeting,
           id: meeting['id'],
         ));

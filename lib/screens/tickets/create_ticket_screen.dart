@@ -4,6 +4,7 @@ import '../../services/supabase_service.dart';
 class CreateTicketScreen extends StatefulWidget {
   const CreateTicketScreen({super.key, this.initialDateTime});
 
+  // Accepted for API consistency; tickets have no due-date field.
   final DateTime? initialDateTime;
 
   @override
