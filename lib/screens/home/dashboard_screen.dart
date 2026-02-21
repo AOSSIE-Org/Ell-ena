@@ -7,6 +7,9 @@ import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 
+// Import the UserAvatar widget
+import '../../widgets/user_avatar.dart'; // Add this import
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -20,6 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _selectedTimeRange = 0; // 0: Week, 1: Month
   bool _isLoading = true;
   String? _userName;
+  String? _avatarUrl; // Add avatar URL
   String? _currentTeamId;
   String? _currentTeamName;
   List<Map<String, dynamic>> _userTeams = [];
@@ -183,10 +187,11 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       // Get user profile with team information
       final profile = await supa.getCurrentUserProfile(forceRefresh: true);
-
-      // Set username
+      
+      // Set username and avatar
       _userName = (profile?['full_name'] as String?)?.trim();
-
+      _avatarUrl = profile?['avatar_url'] as String?; // Get avatar URL
+      
       // Set current team
       if (profile != null && profile['team_id'] != null) {
         _currentTeamId = profile['team_id'];
@@ -431,28 +436,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
+                                // Replace the Container with UserAvatar widget
+                                UserAvatar(
+                                  avatarUrl: _avatarUrl,
+                                  fullName: _userName ?? 'User',
+                                  size: 48,
+                                  showBorder: true,
+                                  borderColor: Colors.white,
+                                  borderWidth: 2.0,
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       const Text(
@@ -486,8 +482,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                               color: Colors.white.withOpacity(
                                                 0.2,
                                               ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
+                                              borderRadius: BorderRadius.circular(
                                                 12,
                                               ),
                                             ),
@@ -496,16 +491,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                                               children: [
                                                 Icon(
                                                   Icons.trending_up,
-                                                  color: Colors
-                                                      .greenAccent.shade100,
+                                                  color:
+                                                      Colors.greenAccent.shade100,
                                                   size: 14,
                                                 ),
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
                                                   style: TextStyle(
-                                                    color: Colors
-                                                        .greenAccent.shade100,
+                                                    color: Colors.greenAccent.shade100,
                                                     fontSize: 12,
                                                     fontWeight: FontWeight.bold,
                                                   ),
@@ -519,24 +513,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                                         GestureDetector(
                                           onTap: _showTeamSwitcher,
                                           child: Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 4),
+                                            padding: const EdgeInsets.only(top: 4),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text(
                                                   _currentTeamName ?? 'My Team',
                                                   style: TextStyle(
-                                                    color: Colors.white
-                                                        .withOpacity(0.9),
+                                                    color: Colors.white.withOpacity(0.9),
                                                     fontSize: 14,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 4),
                                                 Icon(
                                                   Icons.swap_horiz,
-                                                  color: Colors.white
-                                                      .withOpacity(0.9),
+                                                  color: Colors.white.withOpacity(0.9),
                                                   size: 16,
                                                 ),
                                               ],
@@ -762,6 +753,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     fontSize: 13,
                   ),
                 ),
+
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
@@ -950,7 +942,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _timeRangeButton(String text, int index) {
     final isSelected = _selectedTimeRange == index;
     return GestureDetector(
-      //onTap: () => setState(() => _selectedTimeRange = index),
       onTap: () {
         setState(() {
           _selectedTimeRange = index;
@@ -1017,7 +1008,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final firstDayNextMonth = DateTime(now.year, now.month + 1, 1);
-    final daysInMonth = firstDayNextMonth.difference(firstDayOfMonth).inDays;
+    final daysInMonth =
+        firstDayNextMonth.difference(firstDayOfMonth).inDays;
 
     final Map<int, int> dayCounts = {
       for (int i = 0; i < daysInMonth; i++) i: 0,

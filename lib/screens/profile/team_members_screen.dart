@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../widgets/user_avatar.dart'; // Import the UserAvatar widget
 
 class TeamMembersScreen extends StatefulWidget {
   final String teamId;
@@ -54,23 +55,6 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
         );
       }
     }
-  }
-
-  Color _getAvatarColor(String name) {
-    // Generate a consistent color based on the name
-    final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.red,
-      Colors.teal,
-      Colors.indigo,
-      Colors.pink,
-    ];
-
-    int hashCode = name.hashCode;
-    return colors[hashCode.abs() % colors.length];
   }
 
   @override
@@ -131,9 +115,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
         final name = member['full_name'] ?? 'Unknown';
         final email = member['email'] ?? '';
         final role = member['role'] ?? 'member';
-        final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : '?';
-        final avatarColor = _getAvatarColor(name);
-
+        final avatarUrl = member['avatar_url'];
+        
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           color: Theme.of(context).colorScheme.surface,
@@ -143,17 +126,10 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.all(12),
-            leading: CircleAvatar(
-              backgroundColor: avatarColor,
-              radius: 24,
-              child: Text(
-                firstLetter,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
+            leading: UserAvatar(
+              avatarUrl: avatarUrl,
+              fullName: name,
+              size: 48,
             ),
             title: Text(
               name,
@@ -173,6 +149,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 const SizedBox(height: 4),
                 Container(

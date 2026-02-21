@@ -125,42 +125,40 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(
+          backgroundColor: const Color(0xFF2A2A2A),
+          title: const Text(
             'Team Created Successfully!',
-            style: Theme.of(context).textTheme.titleLarge,
+            style: TextStyle(color: Colors.white),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              const Text(
                 'Your Team ID is:',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 16),
               Container(
                 padding:
                     const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
+                  color: const Color(0xFF1A1A1A),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   teamId,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: Colors.white,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Share this ID with your team members so they can join your team.',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -185,22 +183,21 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
+    return WillPopScope(
+      onWillPop: () async => false, // Prevent dismissal
       child: AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
+        backgroundColor: const Color(0xFF2A2A2A),
+        title: const Text(
           'Complete Your Setup',
-          style: Theme.of(context).textTheme.titleLarge,
+          style: TextStyle(color: Colors.white),
         ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              const Text(
                 'Choose how you want to proceed:',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 24),
               // Toggle between Join and Create
@@ -318,11 +315,9 @@ class _OptionCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? Colors.green.withOpacity(0.2)
-              : Theme.of(context).colorScheme.surfaceContainerLow,
+              : const Color(0xFF1A1A1A),
           border: Border.all(
-            color: isSelected
-                ? Colors.green
-                : Theme.of(context).colorScheme.outline,
+            color: isSelected ? Colors.green : Colors.grey.shade800,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -332,18 +327,14 @@ class _OptionCard extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: isSelected
-                  ? Colors.green
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: isSelected ? Colors.green : Colors.grey,
               size: 32,
             ),
             const SizedBox(height: 8),
             Text(
               title,
               style: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isSelected ? Colors.white : Colors.grey,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 14,
               ),

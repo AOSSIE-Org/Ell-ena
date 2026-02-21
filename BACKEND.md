@@ -11,7 +11,8 @@ This document provides a comprehensive guide to set up the Supabase backend for 
 5. [Deploying Database Schema](#deploying-database-schema)
 6. [Setting Up Authentication](#setting-up-authentication)
 7. [Deploying Edge Functions](#deploying-edge-functions)
-8. [Troubleshooting](#troubleshooting)
+8. [Supabase Avatar Storage Setup](#profile-avatars-supabase-storage-setup)
+9. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -388,6 +389,120 @@ supabase functions deploy search-meetings
 supabase functions deploy start-bot
 supabase functions deploy summarize-transcription
 ````
+
+### Function Descriptions
+
+- **fetch-transcript**: Retrieves meeting transcriptions
+- **generate-embeddings**: Creates vector embeddings for meeting content
+- **get-embedding**: Retrieves embeddings for specific content
+- **search-meetings**: Performs semantic search across meeting transcriptions
+- **start-bot**: Initializes the AI assistant
+- **summarize-transcription**: Generates AI summaries of meeting transcriptions
+
+## Profile Avatars (Supabase Storage Setup)
+
+### Step 1: Create the Storage Bucket
+
+1. Open your Supabase project dashboard
+2. Go to **Storage → Buckets**
+3. Click **Create Bucket**
+4. Use the following configuration:
+
+   - **Name:** `avatars`
+   - **Public bucket:** ❌ Disabled
+
+⚠️ The bucket name is case-sensitive and must be exactly `avatars`.
+
+---
+
+### Step 2: Define Folder Structure
+
+Avatars are stored per user using this structure:
+
+avatars/
+└── profile-images/
+└── {userId}/
+└── {userId}_{timestamp}.jpg
+
+Example: avatars/profile-images/337ecb64-70df-4f97-b9b3-cb41561e0097/
+         └── 337ecb64-70df-4f97-b9b3-cb41561e0097_1769287592829.jpg
+
+
+This prevents filename collisions and allows safe cleanup.
+
+---
+
+### Step 3: Configure Storage Policies
+
+-- All policies apply to the storage.objects table
+
+-- 1. Allow authenticated users to read avatars
+CREATE POLICY "Allow authenticated users to read avatars"
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+);
+
+-- 2. Allow authenticated users to upload avatars
+CREATE POLICY "Allow authenticated users to upload avatars"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'avatars'
+);
+
+-- 3. Allow users to update their own avatars
+CREATE POLICY "Allow users to update their own avatars"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND owner_id = auth.uid()::text
+)
+WITH CHECK (
+  bucket_id = 'avatars'
+  AND owner_id = auth.uid()::text
+);
+
+-- 4. Allow users to delete their own avatars
+CREATE POLICY "Allow users to delete their own avatars"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND owner_id = auth.uid()::text
+);
+
+
+#### User Profile Avatar Database Fields
+
+The users table includes additional fields for managing profile images.
+
+| Column Name                | Type      | Description                            |
+| -------------------------- | --------- | -------------------------------------- |
+| `avatar_url`               | text      | Public URL used by the frontend        |
+| `profile_image_path`       | text      | Supabase Storage path used for cleanup |
+| `profile_image_updated_at` | timestamp | Last avatar update time                |
+
+
+### Avatar Update & Cleanup Flow
+
+When a user updates their avatar:
+
+1. Existing image at profile_image_path is deleted
+2. New image is uploaded to Supabase Storage
+3. User record is updated:
+   - avatar_url
+   - profile_image_path
+   - profile_image_updated_at
+4. UI updates instantly across the app
+
+This ensures no orphaned images remain in storage.
 
 ## Troubleshooting
 
