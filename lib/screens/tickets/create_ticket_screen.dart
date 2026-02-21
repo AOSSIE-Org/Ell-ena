@@ -13,37 +13,37 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _supabaseService = SupabaseService();
-  
+
   String _selectedPriority = 'medium';
   String _selectedCategory = 'Bug';
   List<Map<String, dynamic>> _teamMembers = [];
   String? _selectedAssignee;
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
     _loadTeamMembers();
   }
-  
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTeamMembers() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null && userProfile['team_id'] != null) {
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
         final teamMembers = _supabaseService.teamMembersCache;
-        
+
         if (mounted) {
           setState(() {
             _teamMembers = teamMembers;
@@ -64,14 +64,14 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       }
     }
   }
-  
+
   Future<void> _createTicket() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final result = await _supabaseService.createTicket(
         title: _titleController.text.trim(),
@@ -80,7 +80,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         category: _selectedCategory,
         assignedToUserId: _selectedAssignee,
       );
-      
+
       if (result['success']) {
         if (mounted) {
           Navigator.pop(context, true);
@@ -90,7 +90,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           setState(() {
             _isLoading = false;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to create ticket: ${result['error']}'),
@@ -105,7 +105,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating ticket: $e'),
@@ -119,11 +119,11 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   @override
   Widget build(BuildContext context) {
     final ticketCategories = _supabaseService.getTicketCategories();
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Create Ticket'),
       ),
       body: _isLoading
@@ -408,10 +408,10 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
             ),
     );
   }
-  
+
   Widget _buildPriorityOption(String value, String label, Color color) {
     final isSelected = _selectedPriority == value;
-    
+
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -422,7 +422,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.2) : const Color(0xFF2D2D2D),
+            color: isSelected
+                ? color.withOpacity(0.2)
+                : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,

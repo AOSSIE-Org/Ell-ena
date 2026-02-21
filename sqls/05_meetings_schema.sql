@@ -62,8 +62,10 @@ ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY meetings_view_policy ON meetings
     FOR SELECT
     USING (
-        team_id IN (
-            SELECT team_id FROM users WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id
         )
     );
 
@@ -72,8 +74,10 @@ CREATE POLICY meetings_insert_policy ON meetings
     FOR INSERT
     WITH CHECK (
         auth.uid() = created_by AND
-        team_id IN (
-            SELECT team_id FROM users WHERE id = auth.uid()
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id
         )
     );
 
@@ -82,9 +86,11 @@ CREATE POLICY meetings_delete_policy ON meetings
     FOR DELETE
     USING (
         auth.uid() = created_by OR
-        auth.uid() IN (
-            SELECT id FROM users 
-            WHERE team_id = meetings.team_id AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id 
+            AND users.role = 'admin'
         )
     );
 
@@ -93,9 +99,11 @@ CREATE POLICY meetings_update_policy ON meetings
     FOR UPDATE
     USING (
         auth.uid() = created_by OR
-        auth.uid() IN (
-            SELECT id FROM users 
-            WHERE team_id = meetings.team_id AND role = 'admin'
+        EXISTS (
+            SELECT 1 FROM users 
+            WHERE users.id = auth.uid() 
+            AND users.team_id = meetings.team_id 
+            AND users.role = 'admin'
         )
     );
 
