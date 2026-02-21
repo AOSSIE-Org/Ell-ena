@@ -137,9 +137,9 @@ class _TaskScreenState extends State<TaskScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF1A1A1A),
-        body: Center(child: CustomLoading()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CustomLoading()),
       );
     }
 
@@ -158,7 +158,7 @@ class _TaskScreenState extends State<TaskScreen> {
     final totalTasks = _tasks.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
@@ -205,6 +205,7 @@ class _TaskScreenState extends State<TaskScreen> {
         _tasks.where((task) => task['status'] == _selectedStatus).toList();
 
     if (filteredTasks.isEmpty) {
+      final colorScheme = Theme.of(context).colorScheme;
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -216,7 +217,7 @@ class _TaskScreenState extends State<TaskScreen> {
                       ? Icons.pending_actions_outlined
                       : Icons.task_alt_outlined,
               size: 80,
-              color: Colors.grey.shade600,
+              color: colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
@@ -224,7 +225,7 @@ class _TaskScreenState extends State<TaskScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade400,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -236,7 +237,7 @@ class _TaskScreenState extends State<TaskScreen> {
                       : 'Completed tasks will appear here',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -398,7 +399,9 @@ class _TaskScreenState extends State<TaskScreen> {
                       child: Text(
                         status['label'] as String,
                         style: TextStyle(
-                          color: isSelected ? color : Colors.white70,
+                          color: isSelected
+                              ? color
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -429,9 +432,9 @@ class _TaskScreenState extends State<TaskScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF2D2D2D),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -466,7 +469,10 @@ class _TaskScreenState extends State<TaskScreen> {
             borderRadius: BorderRadius.circular(10),
             child: Stack(
               children: [
-                Container(height: 8, color: Colors.grey.shade800),
+                Container(
+                    height: 8,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest),
                 Row(
                   children: [
                     _buildProgressBar(
@@ -511,7 +517,9 @@ class _TaskScreenState extends State<TaskScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12),
         ),
       ],
     );
@@ -597,11 +605,11 @@ class _TaskCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2D2D2D),
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -688,12 +696,18 @@ class _TaskCard extends StatelessWidget {
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    backgroundColor: const Color(0xFF2D2D2D),
-                                    title: const Text('Delete Task',
-                                        style: TextStyle(color: Colors.white)),
-                                    content: const Text(
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.surface,
+                                    title: Text('Delete Task',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge),
+                                    content: Text(
                                       'Are you sure you want to delete this task? This action cannot be undone.',
-                                      style: TextStyle(color: Colors.white70),
+                                      style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant),
                                     ),
                                     actions: [
                                       TextButton(
@@ -771,7 +785,10 @@ class _TaskCard extends StatelessWidget {
                           Text(
                             dueDate,
                             style: TextStyle(
-                                color: Colors.grey.shade400, fontSize: 12),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontSize: 12),
                           ),
                         ],
                       ),
@@ -791,8 +808,8 @@ class _TaskCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -819,7 +836,9 @@ class _TaskCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     description,
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 14),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -847,7 +866,9 @@ class _TaskCard extends StatelessWidget {
                           Text(
                             'Created by $creatorName',
                             style: TextStyle(
-                              color: Colors.grey.shade400,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -874,7 +895,9 @@ class _TaskCard extends StatelessWidget {
                             Text(
                               'Assigned to $assigneeName',
                               style: TextStyle(
-                                color: Colors.grey.shade400,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                                 fontSize: 12,
                               ),
                             ),
@@ -889,7 +912,7 @@ class _TaskCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade800,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
@@ -900,7 +923,7 @@ class _TaskCard extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.drag_indicator,
-                    color: Colors.grey.shade500,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                   const SizedBox(width: 8),

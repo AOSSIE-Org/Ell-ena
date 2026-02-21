@@ -10,7 +10,7 @@ import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
-  
+
   const HomeScreen({super.key, this.arguments});
 
   @override
@@ -42,34 +42,35 @@ class _HomeScreenState extends State<HomeScreen>
       curve: Curves.easeOut,
       reverseCurve: Curves.easeIn,
     );
-    
+
     // Initialize screens
     _initializeScreens();
-    
+
     // Handle initial arguments if provided
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.arguments != null) {
-        if (widget.arguments!.containsKey('screen') && widget.arguments!['screen'] is int) {
+        if (widget.arguments!.containsKey('screen') &&
+            widget.arguments!['screen'] is int) {
           setState(() {
             _selectedIndex = widget.arguments!['screen'];
           });
         }
-        
+
         // Handle initial message for chat screen
-        if (widget.arguments!.containsKey('initial_message') && 
-            widget.arguments!['initial_message'] is String && 
+        if (widget.arguments!.containsKey('initial_message') &&
+            widget.arguments!['initial_message'] is String &&
             _selectedIndex == 3) {
           // Update the chat screen with the initial message
           setState(() {
-            _screens[3] = ChatScreen(
-              arguments: {'initial_message': widget.arguments!['initial_message']}
-            );
+            _screens[3] = ChatScreen(arguments: {
+              'initial_message': widget.arguments!['initial_message']
+            });
           });
         }
       }
     });
   }
-  
+
   void _initializeScreens() {
     _screens = [
       const DashboardScreen(),
@@ -138,16 +139,15 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2D2D2D),
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.white70,
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: theme.colorScheme.onSurfaceVariant,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
@@ -182,10 +182,19 @@ class _ChatBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: message.isUser ? Colors.green.shade400 : Colors.grey.shade800,
+          color: message.isUser
+              ? Colors.green.shade400
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(message.text, style: const TextStyle(color: Colors.white)),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            color: message.isUser
+                ? Colors.white
+                : Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
       ),
     );
   }
