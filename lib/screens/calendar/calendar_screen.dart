@@ -12,7 +12,7 @@ import '../../widgets/custom_widgets.dart';
 import '../meetings/meeting_detail_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
-import '../chat/chat_screen.dart'; 
+import '../chat/chat_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -31,52 +31,52 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isLoading = true;
   String? _currentUserId;
   bool _isAdmin = false;
-  
+
   // Cache keys
   static const String _tasksKey = 'calendar_tasks';
   static const String _ticketsKey = 'calendar_tickets';
   static const String _meetingsKey = 'calendar_meetings';
   static const String _lastFetchTimeKey = 'calendar_last_fetch_time';
-  
+
   // Cache duration (5 minutes)
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   @override
   void initState() {
     super.initState();
-    
+
     // Ensure _focusedDay is within bounds on initialization
     _clampFocusedDay();
-    
+
     _selectedDay = _focusedDay;
     _loadCurrentUserInfo();
   }
-  
+
   // Clamp _focusedDay to be within valid range
   void _clampFocusedDay() {
     final now = DateTime.now();
     final firstDay = DateTime(now.year - 1, 1, 1);
     final lastDay = DateTime(now.year + 1, 12, 31);
-    
+
     if (_focusedDay.isBefore(firstDay)) {
       _focusedDay = firstDay;
     } else if (_focusedDay.isAfter(lastDay)) {
       _focusedDay = lastDay;
     }
   }
-  
+
   Future<void> _loadCurrentUserInfo() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null) {
         _currentUserId = _supabaseService.client.auth.currentUser?.id;
         _isAdmin = userProfile['role'] == 'admin';
       }
-      
+
       await _loadEventsWithCache();
     } catch (e) {
       debugPrint('Error loading user info: $e');
@@ -87,47 +87,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
-  
+
   // Check if cache is valid
   Future<bool> _isCacheValid() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastFetchTimeStr = prefs.getString(_lastFetchTimeKey);
-      
+
       if (lastFetchTimeStr == null) return false;
-      
+
       final lastFetchTime = DateTime.parse(lastFetchTimeStr);
       final now = DateTime.now();
-      
+
       return now.difference(lastFetchTime) < _cacheDuration;
     } catch (e) {
       debugPrint('Error checking cache validity: $e');
       return false;
     }
   }
-  
+
   // Load events from cache or network
   Future<void> _loadEventsWithCache() async {
     try {
       if (!mounted) return;
-      
+
       setState(() {
         _isLoading = true;
       });
-      
+
       // Clear existing events
       _events.clear();
-      
+
       // Check if cache is valid
       final isCacheValid = await _isCacheValid();
-      
+
       if (isCacheValid) {
         // Load from cache
         await _loadEventsFromCache();
       } else {
         // Load from network
         await _loadEventsFromNetwork();
-        
+
         // Save to cache
         await _saveEventsToCache();
       }
@@ -143,39 +143,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
-  
+
   // Load events from SharedPreferences cache
   Future<void> _loadEventsFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Load tasks
       final tasksJson = prefs.getString(_tasksKey);
       if (tasksJson != null) {
         final tasks = List<Map<String, dynamic>>.from(
-          jsonDecode(tasksJson).map((x) => Map<String, dynamic>.from(x))
-        );
+            jsonDecode(tasksJson).map((x) => Map<String, dynamic>.from(x)));
         _processTasksData(tasks);
       }
-      
+
       // Load tickets
       final ticketsJson = prefs.getString(_ticketsKey);
       if (ticketsJson != null) {
         final tickets = List<Map<String, dynamic>>.from(
-          jsonDecode(ticketsJson).map((x) => Map<String, dynamic>.from(x))
-        );
+            jsonDecode(ticketsJson).map((x) => Map<String, dynamic>.from(x)));
         _processTicketsData(tickets);
       }
-      
+
       // Load meetings
       final meetingsJson = prefs.getString(_meetingsKey);
       if (meetingsJson != null) {
         final meetings = List<Map<String, dynamic>>.from(
-          jsonDecode(meetingsJson).map((x) => Map<String, dynamic>.from(x))
-        );
+            jsonDecode(meetingsJson).map((x) => Map<String, dynamic>.from(x)));
         _processMeetingsData(meetings);
       }
-      
+
       debugPrint('Events loaded from cache');
     } catch (e) {
       debugPrint('Error loading events from cache: $e');
@@ -183,21 +180,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
       await _loadEventsFromNetwork();
     }
   }
-  
+
   // Save events to SharedPreferences cache
   Future<void> _saveEventsToCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Save last fetch time
       await prefs.setString(_lastFetchTimeKey, DateTime.now().toIso8601String());
-      
+
       // Tasks, tickets, and meetings are saved in their respective methods
     } catch (e) {
       debugPrint('Error saving events to cache: $e');
     }
   }
-  
+
   // Load events from network
   Future<void> _loadEventsFromNetwork() async {
     try {
@@ -207,51 +204,50 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _loadTickets(),
         _loadMeetings(),
       ]);
-      
+
       debugPrint('Events loaded from network');
     } catch (e) {
       debugPrint('Error loading events from network: $e');
     }
   }
-  
+
   // Load tasks
   Future<void> _loadTasks() async {
     try {
       final tasks = await _supabaseService.getTasks();
-      
+
       // Filter tasks for current user (created by or assigned to)
       final filteredTasks = tasks.where((task) {
         final createdBy = task['created_by'];
         final assignedTo = task['assigned_to'];
-        return _isAdmin || 
-               createdBy == _currentUserId || 
-               assignedTo == _currentUserId ||
-               assignedTo == null;
+        return _isAdmin ||
+            createdBy == _currentUserId ||
+            assignedTo == _currentUserId ||
+            assignedTo == null;
       }).toList();
-      
+
       // Process tasks data
       _processTasksData(filteredTasks);
-      
+
       // Save to cache
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tasksKey, jsonEncode(filteredTasks));
-      
     } catch (e) {
       debugPrint('Error loading tasks: $e');
     }
   }
-  
+
   // Process tasks data
   void _processTasksData(List<Map<String, dynamic>> tasks) {
     for (var task in tasks) {
       if (task['due_date'] != null) {
         final dueDate = DateTime.parse(task['due_date']);
         final dateOnly = DateTime(dueDate.year, dueDate.month, dueDate.day);
-        
+
         if (!_events.containsKey(dateOnly)) {
           _events[dateOnly] = [];
         }
-        
+
         _events[dateOnly]!.add(CalendarEvent(
           title: task['title'] ?? 'Untitled Task',
           startTime: const TimeOfDay(hour: 23, minute: 0),
@@ -262,45 +258,44 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
-  
+
   // Load tickets
   Future<void> _loadTickets() async {
     try {
       final tickets = await _supabaseService.getTickets();
-      
+
       // Filter tickets for current user (created by or assigned to)
       final filteredTickets = tickets.where((ticket) {
         final createdBy = ticket['created_by'];
         final assignedTo = ticket['assigned_to'];
-        return _isAdmin || 
-               createdBy == _currentUserId || 
-               assignedTo == _currentUserId ||
-               assignedTo == null;
+        return _isAdmin ||
+            createdBy == _currentUserId ||
+            assignedTo == _currentUserId ||
+            assignedTo == null;
       }).toList();
-      
+
       // Process tickets data
       _processTicketsData(filteredTickets);
-      
+
       // Save to cache
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_ticketsKey, jsonEncode(filteredTickets));
-      
     } catch (e) {
       debugPrint('Error loading tickets: $e');
     }
   }
-  
+
   // Process tickets data
   void _processTicketsData(List<Map<String, dynamic>> tickets) {
     for (var ticket in tickets) {
       if (ticket['created_at'] != null) {
         final createdAt = DateTime.parse(ticket['created_at']);
         final dateOnly = DateTime(createdAt.year, createdAt.month, createdAt.day);
-        
+
         if (!_events.containsKey(dateOnly)) {
           _events[dateOnly] = [];
         }
-        
+
         _events[dateOnly]!.add(CalendarEvent(
           title: ticket['title'] ?? 'Untitled Ticket',
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
@@ -311,35 +306,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
       }
     }
   }
-  
+
   // Load meetings
   Future<void> _loadMeetings() async {
     try {
       final meetings = await _supabaseService.getMeetings();
-      
+
       // Process meetings data (all meetings are visible to everyone)
       _processMeetingsData(meetings);
-      
+
       // Save to cache
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_meetingsKey, jsonEncode(meetings));
-      
     } catch (e) {
       debugPrint('Error loading meetings: $e');
     }
   }
-  
+
   // Process meetings data
   void _processMeetingsData(List<Map<String, dynamic>> meetings) {
     for (var meeting in meetings) {
       if (meeting['meeting_date'] != null) {
         final meetingDate = DateTime.parse(meeting['meeting_date']);
         final dateOnly = DateTime(meetingDate.year, meetingDate.month, meetingDate.day);
-        
+
         if (!_events.containsKey(dateOnly)) {
           _events[dateOnly] = [];
         }
-        
+
         // For meetings, assume 1 hour duration
         _events[dateOnly]!.add(CalendarEvent(
           title: meeting['title'] ?? 'Untitled Meeting',
@@ -378,9 +372,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendar() {
     final now = DateTime.now();
-    
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8), 
+      margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF2D2D2D),
         borderRadius: BorderRadius.circular(20),
@@ -412,7 +406,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             final now = DateTime.now();
             final firstDay = DateTime(now.year - 1, 1, 1);
             final lastDay = DateTime(now.year + 1, 12, 31);
-            
+
             // Clamp focusedDay to be within bounds
             DateTime clampedFocusedDay = focusedDay;
             if (focusedDay.isBefore(firstDay)) {
@@ -420,7 +414,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             } else if (focusedDay.isAfter(lastDay)) {
               clampedFocusedDay = lastDay;
             }
-            
+
             setState(() {
               _focusedDay = clampedFocusedDay;
             });
@@ -428,7 +422,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
               if (events.isEmpty) return const SizedBox.shrink();
-              
+
               return Positioned(
                 bottom: 1,
                 child: Container(
@@ -500,7 +494,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         final hour = index;
         final time = TimeOfDay(hour: hour, minute: 0);
         final events = _getEventsForHour(hour);
-        
+
         // Calculate dynamic height based on number of events (minimum 60)
         final double timeSlotHeight = events.isEmpty ? 60 : max(60, events.length * 40.0);
 
@@ -602,7 +596,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _handleEventTap(CalendarEvent event) async {
     dynamic result;
-    
+
     switch (event.type) {
       case EventType.meeting:
         // Navigate to meeting detail screen
@@ -632,7 +626,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
         break;
     }
-    
+
     // Refresh events if something was updated
     if (result == true) {
       await _loadEventsWithCache(); // Use cache loading
@@ -703,13 +697,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required EventType? eventType,
   }) {
     final uniqueKey = Key(title);
-    
+    // New AI swipe color
+    final aiSwipeColor = const Color.fromARGB(255, 87, 255, 68);
+
     return Dismissible(
       key: uniqueKey,
       direction: DismissDirection.horizontal,
       background: Container(
         decoration: BoxDecoration(
-          color: Colors.purple.withOpacity(0.8),
+          color: aiSwipeColor.withOpacity(0.8), // Updated from purple
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -834,15 +830,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ],
                 ),
                 const SizedBox(width: 16),
-                // Right swipe indicator
+                // Right swipe indicator (AI)
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.swipe_right, color: Colors.purple.withOpacity(0.7), size: 16),
+                    Icon(Icons.swipe_right, color: aiSwipeColor.withOpacity(0.7), size: 16), // Updated
                     Text(
                       'AI',
                       style: TextStyle(
-                        color: Colors.purple.withOpacity(0.7),
+                        color: aiSwipeColor.withOpacity(0.7), // Updated
                         fontSize: 10,
                       ),
                     ),
@@ -858,7 +854,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _handleCreateWithAISwipe(TimeOfDay selectedTime, {required EventType? eventType}) {
     if (_selectedDay == null) return;
-    
+
     final selectedDateTime = DateTime(
       _selectedDay!.year,
       _selectedDay!.month,
@@ -866,14 +862,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       selectedTime.hour,
       selectedTime.minute,
     );
-    
+
     // Format the date for the AI
     final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDateTime);
     final formattedTime = selectedTime.format(context);
-    
+
     // Generate different messages based on the event type
     String message;
-    
+
     if (eventType == EventType.meeting) {
       message = 'I need to schedule a meeting on $formattedDate at $formattedTime';
     } else if (eventType == EventType.task) {
@@ -883,13 +879,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     } else {
       message = 'I need to create something with AI on $formattedDate at $formattedTime';
     }
-    
+
     // Navigate to chat screen with the generated message
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChatScreen(
-          arguments: {'initial_message': message}
+          arguments: {'initial_message': message},
         ),
       ),
     );
@@ -897,7 +893,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _handleCreate(EventType type, TimeOfDay selectedTime) async {
     if (_selectedDay == null) return;
-    
+
     final selectedDateTime = DateTime(
       _selectedDay!.year,
       _selectedDay!.month,
@@ -905,9 +901,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       selectedTime.hour,
       selectedTime.minute,
     );
-    
+
     dynamic result;
-    
+
     switch (type) {
       case EventType.meeting:
         result = await Navigator.push(
@@ -934,7 +930,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
         break;
     }
-    
+
     // Refresh events if something was created
     if (result == true) {
       await _loadEventsWithCache(); // Use cache loading
