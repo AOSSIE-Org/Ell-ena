@@ -8,9 +8,8 @@ import 'meeting_detail_screen.dart';
 import 'meeting_insights_screen.dart';
 
 class MeetingScreen extends StatefulWidget {
-  static final GlobalKey<_MeetingScreenState> globalKey =
-      GlobalKey<_MeetingScreenState>();
-
+  static final GlobalKey<_MeetingScreenState> globalKey = GlobalKey<_MeetingScreenState>();
+  
   const MeetingScreen({Key? key}) : super(key: key);
 
   static void refreshMeetings() {
@@ -27,18 +26,18 @@ class _MeetingScreenState extends State<MeetingScreen> {
   bool _isAdmin = false;
   String _selectedFilter = 'upcoming';
   List<Map<String, dynamic>> _meetings = [];
-
+  
   @override
   void initState() {
     super.initState();
     _loadInitialData();
   }
-
+  
   Future<void> _loadInitialData() async {
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       // Check if user is admin
       final userProfile = await _supabaseService.getCurrentUserProfile();
@@ -47,17 +46,17 @@ class _MeetingScreenState extends State<MeetingScreen> {
           _isAdmin = userProfile?['role'] == 'admin';
         });
       }
-
+      
       // Initial load of meetings
       final meetings = await _supabaseService.getMeetings();
-
+      
       if (mounted) {
         setState(() {
           _meetings = meetings;
           _isLoading = false;
         });
       }
-
+      
       debugPrint('Meetings loaded: ${meetings.length}');
     } catch (e) {
       debugPrint('Error loading initial data: $e');
@@ -68,11 +67,11 @@ class _MeetingScreenState extends State<MeetingScreen> {
       }
     }
   }
-
+  
   Future<void> _deleteMeeting(String meetingId) async {
     try {
       final result = await _supabaseService.deleteMeeting(meetingId);
-
+      
       if (mounted && !result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -95,10 +94,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
       }
     }
   }
-
+  
   Future<void> _launchMeetingUrl(String? url) async {
     if (url == null || url.isEmpty) return;
-
+    
     try {
       final Uri uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
@@ -129,21 +128,21 @@ class _MeetingScreenState extends State<MeetingScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CustomLoading()),
+      return const Scaffold(
+        backgroundColor: Color(0xFF1A1A1A),
+        body: Center(child: CustomLoading()),
       );
     }
-
+    
     // Make sure the key is properly associated with this instance
     if (MeetingScreen.globalKey.currentState != this) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         MeetingScreen.refreshMeetings();
       });
     }
-
+    
     final now = DateTime.now();
-
+    
     // Filter meetings based on selected filter
     final filteredMeetings = _meetings.where((meeting) {
       final meetingDate = DateTime.parse(meeting['meeting_date']);
@@ -153,16 +152,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
         return meetingDate.isBefore(now);
       }
     }).toList();
-
-    final upcomingCount = _meetings
-        .where((m) => DateTime.parse(m['meeting_date']).isAfter(now))
-        .length;
-    final pastCount = _meetings
-        .where((m) => DateTime.parse(m['meeting_date']).isBefore(now))
-        .length;
-
+    
+    final upcomingCount = _meetings.where((m) => 
+      DateTime.parse(m['meeting_date']).isAfter(now)).length;
+    final pastCount = _meetings.where((m) => 
+      DateTime.parse(m['meeting_date']).isBefore(now)).length;
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFF1A1A1A),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
@@ -171,7 +168,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
               builder: (context) => const CreateMeetingScreen(),
             ),
           );
-
+          
           if (result == true) {
             // Meeting was created, refresh meetings
             _loadInitialData();
@@ -202,9 +199,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.only(
+      decoration: const BoxDecoration(
+        color: Color(0xFF2D2D2D),
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -259,9 +256,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
@@ -272,7 +267,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       {'id': 'upcoming', 'label': 'Upcoming', 'color': Colors.blue},
       {'id': 'past', 'label': 'Past', 'color': Colors.purple},
     ];
-
+    
     return Container(
       height: 36,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -280,16 +275,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
         children: filterOptions.map((filter) {
           final isSelected = filter['id'] == _selectedFilter;
           final color = filter['color'] as MaterialColor;
-
+          
           return Expanded(
             child: GestureDetector(
-              onTap: () =>
-                  setState(() => _selectedFilter = filter['id'] as String),
+              onTap: () => setState(() => _selectedFilter = filter['id'] as String),
               child: Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? color.withOpacity(0.2) : Colors.transparent,
+                  color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isSelected ? color : Colors.transparent,
@@ -299,11 +292,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 child: Text(
                   filter['label'] as String,
                   style: TextStyle(
-                    color: isSelected
-                        ? color
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? color : Colors.white70,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     fontSize: 13,
                   ),
                 ),
@@ -322,11 +312,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _selectedFilter == 'upcoming'
-                  ? Icons.calendar_today
-                  : Icons.history,
+              _selectedFilter == 'upcoming' ? Icons.calendar_today : Icons.history,
               size: 70,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: Colors.grey.shade600,
             ),
             const SizedBox(height: 16),
             Text(
@@ -334,17 +322,17 @@ class _MeetingScreenState extends State<MeetingScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: Colors.grey.shade400,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              _selectedFilter == 'upcoming'
-                  ? 'Create new meetings to get started'
-                  : 'Past meetings will appear here',
+              _selectedFilter == 'upcoming' 
+                ? 'Create new meetings to get started' 
+                : 'Past meetings will appear here',
               style: TextStyle(
                 fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
             ),
@@ -352,7 +340,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
         ),
       );
     }
-
+    
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: filteredMeetings.length,
@@ -360,7 +348,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
         final meeting = filteredMeetings[index];
         final meetingDate = DateTime.parse(meeting['meeting_date']);
         final isUpcoming = meetingDate.isAfter(DateTime.now());
-
+        
         return _MeetingCard(
           meeting: meeting,
           isAdmin: _isAdmin,
@@ -371,11 +359,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    MeetingDetailScreen(meetingId: meeting['id']),
+                builder: (context) => MeetingDetailScreen(meetingId: meeting['id']),
               ),
             );
-
+            
             if (result == true) {
               // Meeting was updated in detail screen, refresh meetings
               _loadInitialData();
@@ -409,27 +396,25 @@ class _MeetingCard extends StatelessWidget {
     final meetingDate = DateTime.parse(meeting['meeting_date']);
     final dateFormat = DateFormat('E, MMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
-    final hasUrl = meeting['meeting_url'] != null &&
-        meeting['meeting_url'].toString().isNotEmpty;
-    final isCreator = meeting['creator'] != null &&
-        meeting['creator']['id'] ==
-            SupabaseService().client.auth.currentUser?.id;
+    final hasUrl = meeting['meeting_url'] != null && meeting['meeting_url'].toString().isNotEmpty;
+    final isCreator = meeting['creator'] != null && 
+        meeting['creator']['id'] == SupabaseService().client.auth.currentUser?.id;
     final canCancel = isUpcoming && (isAdmin || isCreator);
-
+    
     // Limit title to 25 characters
-    final title = (meeting['title'] ?? 'Untitled Meeting').length > 25
-        ? '${(meeting['title'] ?? 'Untitled Meeting').substring(0, 25)}...'
+    final title = (meeting['title'] ?? 'Untitled Meeting').length > 25 
+        ? '${(meeting['title'] ?? 'Untitled Meeting').substring(0, 25)}...' 
         : (meeting['title'] ?? 'Untitled Meeting');
-
+    
     // Get creator name
     String creatorName = 'Unknown';
     if (meeting['creator'] != null && meeting['creator']['full_name'] != null) {
       creatorName = meeting['creator']['full_name'];
     }
-
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      color: Theme.of(context).colorScheme.surface,
+      color: const Color(0xFF2D2D2D),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -453,17 +438,15 @@ class _MeetingCard extends StatelessWidget {
                 children: [
                   Icon(
                     isUpcoming ? Icons.calendar_today : Icons.event_available,
-                    color: isUpcoming
-                        ? Colors.green.shade400
-                        : Colors.grey.shade400,
+                    color: isUpcoming ? Colors.green.shade400 : Colors.grey.shade400,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       title,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -473,8 +456,7 @@ class _MeetingCard extends StatelessWidget {
                   if (canCancel)
                     IconButton(
                       onPressed: () => onDelete(meeting['id']),
-                      icon:
-                          const Icon(Icons.delete, color: Colors.red, size: 18),
+                      icon: const Icon(Icons.delete, color: Colors.red, size: 18),
                       tooltip: 'Cancel Meeting',
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -482,7 +464,7 @@ class _MeetingCard extends StatelessWidget {
                 ],
               ),
             ),
-
+            
             // Meeting details
             Padding(
               padding: const EdgeInsets.all(16),
@@ -494,16 +476,16 @@ class _MeetingCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.access_time,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        color: Colors.grey.shade400,
                         size: 14,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        isUpcoming
+                        isUpcoming 
                             ? '${dateFormat.format(meetingDate)}, ${timeFormat.format(meetingDate)}'
                             : 'Yesterday, ${timeFormat.format(meetingDate)}',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Colors.grey.shade300,
                           fontSize: 13,
                         ),
                       ),
@@ -528,9 +510,9 @@ class _MeetingCard extends StatelessWidget {
                         ),
                     ],
                   ),
-
+                  
                   const SizedBox(height: 8),
-
+                  
                   // Creator info
                   Row(
                     children: [
@@ -538,9 +520,7 @@ class _MeetingCard extends StatelessWidget {
                         radius: 10,
                         backgroundColor: Colors.green.shade700,
                         child: Text(
-                          creatorName.isNotEmpty
-                              ? creatorName[0].toUpperCase()
-                              : '?',
+                          creatorName.isNotEmpty ? creatorName[0].toUpperCase() : '?',
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -552,7 +532,7 @@ class _MeetingCard extends StatelessWidget {
                       Text(
                         'Created by $creatorName',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Colors.grey.shade400,
                           fontSize: 12,
                         ),
                       ),
@@ -576,7 +556,7 @@ class _MeetingCard extends StatelessWidget {
                         ),
                     ],
                   ),
-
+                  
                   // Transcription and AI Summary buttons for past meetings with URL
                   if (!isUpcoming && hasUrl)
                     Padding(
@@ -614,8 +594,7 @@ class _MeetingCard extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.symmetric(vertical: 6),
                               ),
                             ),
                           ),
@@ -650,8 +629,7 @@ class _MeetingCard extends StatelessWidget {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.symmetric(vertical: 6),
                               ),
                             ),
                           ),
@@ -666,4 +644,4 @@ class _MeetingCard extends StatelessWidget {
       ),
     );
   }
-}
+} 

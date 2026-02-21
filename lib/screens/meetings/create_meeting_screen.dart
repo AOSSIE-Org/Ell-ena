@@ -14,15 +14,14 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _urlController = TextEditingController();
-  final _durationController =
-      TextEditingController(text: '60'); // Default to 60 minutes
+  final _durationController = TextEditingController(text: '60'); // Default to 60 minutes
   final _supabaseService = SupabaseService();
-
+  
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
   bool _isGoogleMeetUrl = true;
-
+  
   @override
   void dispose() {
     _titleController.dispose();
@@ -31,23 +30,23 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
     _durationController.dispose();
     super.dispose();
   }
-
+  
   // Validate if the URL is a Google Meet URL
   bool _validateGoogleMeetUrl(String url) {
     if (url.isEmpty) return true; // Empty URL is valid (not required)
     return url.contains('meet.google.com');
   }
-
+  
   // Check URL and update state
   void _checkUrl(String url) {
     setState(() {
       _isGoogleMeetUrl = _validateGoogleMeetUrl(url);
     });
   }
-
+  
   Future<void> _createMeeting() async {
     if (!_formKey.currentState!.validate()) return;
-
+    
     if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -57,7 +56,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       );
       return;
     }
-
+    
     if (_selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -67,24 +66,23 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       );
       return;
     }
-
+    
     // Validate meeting URL if provided
     final meetingUrl = _urlController.text.trim();
     if (meetingUrl.isNotEmpty && !_validateGoogleMeetUrl(meetingUrl)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Only Google Meet URLs are supported for transcription'),
+          content: Text('Only Google Meet URLs are supported for transcription'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
-
+    
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       // Combine date and time
       final meetingDateTime = DateTime(
@@ -94,7 +92,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         _selectedTime!.hour,
         _selectedTime!.minute,
       );
-
+      
       // Parse duration
       int duration = 60;
       try {
@@ -104,17 +102,17 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         // Default to 60 if parsing fails
         duration = 60;
       }
-
+      
       final result = await _supabaseService.createMeeting(
         title: _titleController.text.trim(),
-        description: _descriptionController.text.trim().isNotEmpty
-            ? _descriptionController.text.trim()
+        description: _descriptionController.text.trim().isNotEmpty 
+            ? _descriptionController.text.trim() 
             : null,
         meetingDate: meetingDateTime,
         meetingUrl: meetingUrl.isNotEmpty ? meetingUrl : null,
         durationMinutes: duration,
       );
-
+      
       if (mounted) {
         if (result['success']) {
           Navigator.pop(context, true);
@@ -122,7 +120,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
           setState(() {
             _isLoading = false;
           });
-
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to create meeting: ${result['error']}'),
@@ -137,7 +135,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
         setState(() {
           _isLoading = false;
         });
-
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating meeting: $e'),
@@ -147,30 +145,56 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
       }
     }
   }
-
+  
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) => child!,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.green,
+              onPrimary: Colors.white,
+              surface: Color(0xFF2D2D2D),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF1A1A1A),
+          ),
+          child: child!,
+        );
+      },
     );
-
+    
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
       });
     }
   }
-
+  
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime ?? TimeOfDay.now(),
-      builder: (context, child) => child!,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.green,
+              onPrimary: Colors.white,
+              surface: Color(0xFF2D2D2D),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF1A1A1A),
+          ),
+          child: child!,
+        );
+      },
     );
-
+    
     if (picked != null) {
       setState(() {
         _selectedTime = picked;
@@ -181,9 +205,9 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: const Color(0xFF2D2D2D),
         title: const Text('Create Meeting'),
       ),
       body: _isLoading
@@ -217,7 +241,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-
+                    
                     // Description
                     TextFormField(
                       controller: _descriptionController,
@@ -235,7 +259,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-
+                    
                     // Date and Time
                     Row(
                       children: [
@@ -250,18 +274,14 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.calendar_today,
-                                      color: Colors.grey),
+                                  const Icon(Icons.calendar_today, color: Colors.grey),
                                   const SizedBox(width: 8),
                                   Text(
                                     _selectedDate == null
                                         ? 'Select Date *'
-                                        : DateFormat('MMM dd, yyyy')
-                                            .format(_selectedDate!),
+                                        : DateFormat('MMM dd, yyyy').format(_selectedDate!),
                                     style: TextStyle(
-                                      color: _selectedDate == null
-                                          ? Colors.grey
-                                          : Colors.white,
+                                      color: _selectedDate == null ? Colors.grey : Colors.white,
                                     ),
                                   ),
                                 ],
@@ -281,17 +301,14 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.access_time,
-                                      color: Colors.grey),
+                                  const Icon(Icons.access_time, color: Colors.grey),
                                   const SizedBox(width: 8),
                                   Text(
                                     _selectedTime == null
                                         ? 'Select Time *'
                                         : _selectedTime!.format(context),
                                     style: TextStyle(
-                                      color: _selectedTime == null
-                                          ? Colors.grey
-                                          : Colors.white,
+                                      color: _selectedTime == null ? Colors.grey : Colors.white,
                                     ),
                                   ),
                                 ],
@@ -302,7 +319,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
+                    
                     // Duration
                     TextFormField(
                       controller: _durationController,
@@ -333,7 +350,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-
+                    
                     // Meeting URL
                     TextFormField(
                       controller: _urlController,
@@ -343,28 +360,22 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                         labelStyle: const TextStyle(color: Colors.grey),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(
-                            color: _urlController.text.isNotEmpty &&
-                                    !_isGoogleMeetUrl
+                            color: _urlController.text.isNotEmpty && !_isGoogleMeetUrl
                                 ? Colors.red
                                 : Colors.grey,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderSide: BorderSide(
-                            color: _urlController.text.isNotEmpty &&
-                                    !_isGoogleMeetUrl
+                            color: _urlController.text.isNotEmpty && !_isGoogleMeetUrl
                                 ? Colors.red
                                 : Colors.green,
                           ),
                         ),
                         suffixIcon: _urlController.text.isNotEmpty
                             ? Icon(
-                                _isGoogleMeetUrl
-                                    ? Icons.check_circle
-                                    : Icons.error,
-                                color: _isGoogleMeetUrl
-                                    ? Colors.green
-                                    : Colors.red,
+                                _isGoogleMeetUrl ? Icons.check_circle : Icons.error,
+                                color: _isGoogleMeetUrl ? Colors.green : Colors.red,
                               )
                             : null,
                       ),
@@ -372,20 +383,19 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
                         _checkUrl(value);
                       },
                     ),
-
+                    
                     // Warning message for non-Google Meet URLs
                     if (_urlController.text.isNotEmpty && !_isGoogleMeetUrl)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
                           'Ellena AI transcription only works with Google Meet URLs',
-                          style: TextStyle(
-                              color: Colors.red.shade300, fontSize: 12),
+                          style: TextStyle(color: Colors.red.shade300, fontSize: 12),
                         ),
                       ),
-
+                    
                     const SizedBox(height: 24),
-
+                    
                     // Create button
                     SizedBox(
                       width: double.infinity,
@@ -407,4 +417,4 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
             ),
     );
   }
-}
+} 
