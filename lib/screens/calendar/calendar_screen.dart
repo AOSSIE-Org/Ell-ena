@@ -44,8 +44,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Ensure _focusedDay is within bounds on initialization
+    _clampFocusedDay();
+
     _selectedDay = _focusedDay;
     _loadCurrentUserInfo();
+  }
+
+  // Clamp _focusedDay to be within valid range
+  void _clampFocusedDay() {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year - 1, 1, 1);
+    final lastDay = DateTime(now.year + 1, 12, 31);
+
+    if (_focusedDay.isBefore(firstDay)) {
+      _focusedDay = firstDay;
+    } else if (_focusedDay.isAfter(lastDay)) {
+      _focusedDay = lastDay;
+    }
   }
 
   Future<void> _loadCurrentUserInfo() async {
@@ -170,8 +187,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final prefs = await SharedPreferences.getInstance();
 
       // Save last fetch time
-      await prefs.setString(
-          _lastFetchTimeKey, DateTime.now().toIso8601String());
+      await prefs.setString(_lastFetchTimeKey, DateTime.now().toIso8601String());
 
       // Tasks, tickets, and meetings are saved in their respective methods
     } catch (e) {
@@ -274,8 +290,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     for (var ticket in tickets) {
       if (ticket['created_at'] != null) {
         final createdAt = DateTime.parse(ticket['created_at']);
-        final dateOnly =
-            DateTime(createdAt.year, createdAt.month, createdAt.day);
+        final dateOnly = DateTime(createdAt.year, createdAt.month, createdAt.day);
 
         if (!_events.containsKey(dateOnly)) {
           _events[dateOnly] = [];
@@ -314,8 +329,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     for (var meeting in meetings) {
       if (meeting['meeting_date'] != null) {
         final meetingDate = DateTime.parse(meeting['meeting_date']);
-        final dateOnly =
-            DateTime(meetingDate.year, meetingDate.month, meetingDate.day);
+        final dateOnly = DateTime(meetingDate.year, meetingDate.month, meetingDate.day);
 
         if (!_events.containsKey(dateOnly)) {
           _events[dateOnly] = [];
@@ -343,7 +357,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFF1A1A1A),
       body: _isLoading
           ? const CalendarLoadingSkeleton()
           : SafeArea(
@@ -360,18 +374,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildCalendar() {
-    final colorScheme = Theme.of(context).colorScheme;
+    final now = DateTime.now();
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: const Color(0xFF2D2D2D),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
-          firstDay: DateTime.utc(2024, 1, 1),
-          lastDay: DateTime.utc(2025, 12, 31),
+          // FIX: Use dynamic dates that always include the current year
+          firstDay: DateTime(now.year - 1, 1, 1),
+          lastDay: DateTime(now.year + 1, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
@@ -387,25 +403,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _calendarFormat = format;
             });
           },
+          // FIX: Always update _focusedDay on page change
+          onPageChanged: (focusedDay) {
+            // Ensure focusedDay is within bounds
+            final now = DateTime.now();
+            final firstDay = DateTime(now.year - 1, 1, 1);
+            final lastDay = DateTime(now.year + 1, 12, 31);
+
+            // Clamp focusedDay to be within bounds
+            DateTime clampedFocusedDay = focusedDay;
+            if (focusedDay.isBefore(firstDay)) {
+              clampedFocusedDay = firstDay;
+            } else if (focusedDay.isAfter(lastDay)) {
+              clampedFocusedDay = lastDay;
+            }
+
+            setState(() {
+              _focusedDay = clampedFocusedDay;
+            });
+          },
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
               if (events.isEmpty) return const SizedBox.shrink();
-              final isLight = Theme.of(context).brightness == Brightness.light;
-              final markerOpacity = isLight ? 0.55 : 0.3;
+
               return Positioned(
                 bottom: 1,
                 child: Container(
                   height: 16,
                   width: events.length > 3 ? 35 : (events.length * 8 + 10),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(markerOpacity),
+                    color: Colors.green.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Text(
                       '${events.length}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -415,43 +449,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
               );
             },
           ),
-          calendarStyle: CalendarStyle(
-            defaultTextStyle: TextStyle(color: colorScheme.onSurface),
-            weekendTextStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-            selectedTextStyle: TextStyle(color: colorScheme.onPrimary),
-            todayTextStyle: TextStyle(color: colorScheme.onSurface),
-            outsideTextStyle:
-                TextStyle(color: colorScheme.onSurface.withOpacity(0.38)),
-            selectedDecoration: const BoxDecoration(
+          calendarStyle: const CalendarStyle(
+            defaultTextStyle: TextStyle(color: Colors.white),
+            weekendTextStyle: TextStyle(color: Colors.white70),
+            selectedTextStyle: TextStyle(color: Colors.black),
+            todayTextStyle: TextStyle(color: Colors.black),
+            outsideTextStyle: TextStyle(color: Colors.white38),
+            selectedDecoration: BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.8),
+              color: Colors.greenAccent,
               shape: BoxShape.circle,
             ),
             markersMaxCount: 0,
-            markerDecoration: const BoxDecoration(
+            markerDecoration: BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
             ),
           ),
-          headerStyle: HeaderStyle(
+          headerStyle: const HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
             titleTextStyle: TextStyle(
-              color: colorScheme.onSurface,
+              color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
-            leftChevronIcon:
-                Icon(Icons.chevron_left, color: colorScheme.onSurface),
-            rightChevronIcon:
-                Icon(Icons.chevron_right, color: colorScheme.onSurface),
+            leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
+            rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
           ),
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: colorScheme.onSurface),
-            weekendStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+          daysOfWeekStyle: const DaysOfWeekStyle(
+            weekdayStyle: TextStyle(color: Colors.white),
+            weekendStyle: TextStyle(color: Colors.white70),
           ),
         ),
       ),
@@ -626,32 +657,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildDialogOption(
-              'Schedule a Meeting',
-              Icons.people,
-              Colors.blue,
-              () => _handleCreate(EventType.meeting, selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Schedule a Meeting',
+              icon: Icons.people,
+              color: Colors.blue,
+              selectedTime: selectedTime,
+              eventType: EventType.meeting,
             ),
             const SizedBox(height: 8),
-            _buildDialogOption(
-              'Create a Task',
-              Icons.task,
-              Colors.green,
-              () => _handleCreate(EventType.task, selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Create a Task',
+              icon: Icons.task,
+              color: Colors.green,
+              selectedTime: selectedTime,
+              eventType: EventType.task,
             ),
             const SizedBox(height: 8),
-            _buildDialogOption(
-              'Create a Ticket',
-              Icons.confirmation_number,
-              Colors.orange,
-              () => _handleCreate(EventType.ticket, selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Create a Ticket',
+              icon: Icons.confirmation_number,
+              color: Colors.orange,
+              selectedTime: selectedTime,
+              eventType: EventType.ticket,
             ),
             const SizedBox(height: 8),
-            _buildDialogOption(
-              'Create with Ell-ena AI',
-              Icons.smart_toy,
-              Colors.purple,
-              () => _handleCreateWithAI(selectedTime),
+            _buildSwipeableDialogOption(
+              title: 'Create with Ell-ena AI',
+              icon: Icons.smart_toy,
+              color: Colors.purple,
+              selectedTime: selectedTime,
+              eventType: null, // Special case for AI
             ),
           ],
         ),
@@ -659,41 +694,209 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildDialogOption(
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  Widget _buildSwipeableDialogOption({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required TimeOfDay selectedTime,
+    required EventType? eventType,
+  }) {
+    final uniqueKey = Key(title);
+    // New AI swipe color
+    final aiSwipeColor = const Color.fromARGB(255, 87, 255, 68);
+
+    return Dismissible(
+      key: uniqueKey,
+      direction: DismissDirection.horizontal,
+      background: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: aiSwipeColor.withOpacity(0.8), // Updated from purple
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.only(left: 20),
+              child: Row(
+                children: [
+                  Icon(Icons.smart_toy, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create with AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+      secondaryBackground: Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 20),
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      confirmDismiss: (direction) async {
+        // Handle navigation immediately and prevent default dismissal
+        if (direction == DismissDirection.endToStart) {
+          // Swipe left → Regular creation
+          if (eventType != null) {
+            Navigator.of(context).pop(); // Close dialog first
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _handleCreate(eventType, selectedTime);
+              }
+            });
+          } else {
+            // For AI option, regular creation is also AI (but with tap message)
+            Navigator.of(context).pop(); // Close dialog first
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+              }
+            });
+          }
+        } else if (direction == DismissDirection.startToEnd) {
+          // Swipe right → AI creation
+          Navigator.of(context).pop(); // Close dialog first
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+            }
+          });
+        }
+        // Return false to prevent the Dismissible's default dismissal behavior
+        // since we're handling navigation manually
+        return false;
+      },
+      // Removed the onDismissed callback since we're handling everything in confirmDismiss
+      child: GestureDetector(
+        onTap: () {
+          if (eventType != null) {
+            Navigator.of(context).pop(); // Close dialog first
+            _handleCreate(eventType, selectedTime);
+          } else {
+            // For AI option, tap also goes to AI
+            Navigator.of(context).pop(); // Close dialog first
+            _handleCreateWithAISwipe(selectedTime, eventType: eventType);
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF3D3D3D),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Icon(icon, color: color),
+            title: Text(title, style: const TextStyle(color: Colors.white)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Left swipe indicator
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.swipe_left, color: color.withOpacity(0.7), size: 16),
+                    Text(
+                      'Create',
+                      style: TextStyle(
+                        color: color.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                // Right swipe indicator (AI)
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.swipe_right, color: aiSwipeColor.withOpacity(0.7), size: 16), // Updated
+                    Text(
+                      'AI',
+                      style: TextStyle(
+                        color: aiSwipeColor.withOpacity(0.7), // Updated
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleCreateWithAISwipe(TimeOfDay selectedTime, {required EventType? eventType}) {
+    if (_selectedDay == null) return;
+
+    final selectedDateTime = DateTime(
+      _selectedDay!.year,
+      _selectedDay!.month,
+      _selectedDay!.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+
+    // Format the date for the AI
+    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDateTime);
+    final formattedTime = selectedTime.format(context);
+
+    // Generate different messages based on the event type
+    String message;
+
+    if (eventType == EventType.meeting) {
+      message = 'I need to schedule a meeting on $formattedDate at $formattedTime';
+    } else if (eventType == EventType.task) {
+      message = 'I need to create a task on $formattedDate at $formattedTime';
+    } else if (eventType == EventType.ticket) {
+      message = 'I need to create a ticket on $formattedDate at $formattedTime';
+    } else {
+      message = 'I need to create something with AI on $formattedDate at $formattedTime';
+    }
+
+    // Navigate to chat screen with the generated message
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          arguments: {'initial_message': message},
         ),
       ),
     );
   }
 
   Future<void> _handleCreate(EventType type, TimeOfDay selectedTime) async {
-    Navigator.of(context).pop(); // Close dialog
-
     if (_selectedDay == null) return;
 
     final selectedDateTime = DateTime(
@@ -737,36 +940,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (result == true) {
       await _loadEventsWithCache(); // Use cache loading
     }
-  }
-
-  // Handle creation with AI assistant
-  void _handleCreateWithAI(TimeOfDay selectedTime) {
-    Navigator.of(context).pop(); // Close dialog
-
-    if (_selectedDay == null) return;
-
-    final selectedDateTime = DateTime(
-      _selectedDay!.year,
-      _selectedDay!.month,
-      _selectedDay!.day,
-      selectedTime.hour,
-      selectedTime.minute,
-    );
-
-    // Format the date for the AI
-    final formattedDate = DateFormat('yyyy-MM-dd').format(selectedDateTime);
-    final formattedTime = selectedTime.format(context);
-    final message =
-        'I need to create a task for $formattedDate at $formattedTime';
-
-    // Use the NavigationService to navigate to the chat screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            ChatScreen(arguments: {'initial_message': message}),
-      ),
-    );
   }
 }
 
