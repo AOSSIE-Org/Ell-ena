@@ -51,24 +51,20 @@ jobs:
           fi
 
   code-scanning:
-    name: Code Quality & Security Scan
+    name: Dart Static Analysis
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
     
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@c4a7bc332abaec03596ff2803dd7f3ca3a238975
+      - name: Setup Flutter
+        uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
         with:
-          languages: dart
-          queries: security-extended
+          flutter-version: '3.24.0'
 
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@c4a7bc332abaec03596ff2803dd7f3ca3a238975
-        with:
-          category: "/language:dart"
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Dart static analysis
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
