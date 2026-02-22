@@ -1,0 +1,72 @@
+name: Security Dependency Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan
+  push:
+    paths:
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/security.yml'
+  pull_request:
+    paths:
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+
+jobs:
+  security-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Dart security analyzer
+        run: dart pub outdated --json-report --json-report-file=outdated.json
+        continue-on-error: true
+
+      - name: Check for known vulnerabilities
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          allow-deps: ''
+          deny-deps: ''
+          remove-deny-after-success: false
+
+      - name: Report outdated packages
+        if: always()
+        run: |
+          if [ -f outdated.json ]; then
+            echo "## Package Outdated Report" >> $GITHUB_STEP_SUMMARY
+            echo "```json" >> $GITHUB_STEP_SUMMARY
+            cat outdated.json >> $GITHUB_STEP_SUMMARY
+            echo "```" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  code-scanning:
+    name: Code Quality & Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: dart
+          queries: security-extended
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:dart"
