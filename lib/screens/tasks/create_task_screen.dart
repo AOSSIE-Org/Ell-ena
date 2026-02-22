@@ -14,7 +14,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _supabaseService = SupabaseService();
-  bool _isLoading = false;
+
+  bool _isLoadingMembers = true;   // for loading team members
+  bool _isSubmitting = false;      // for form submission
+
   DateTime? _selectedDueDate;
   String? _selectedAssigneeId;
   List<Map<String, dynamic>> _teamMembers = [];
@@ -34,7 +37,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   Future<void> _loadTeamMembers() async {
     setState(() {
-      _isLoading = true;
+      _isLoadingMembers = true;
     });
 
     try {
@@ -48,19 +51,19 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         if (mounted) {
           setState(() {
             _teamMembers = members;
-            _isLoading = false;
+            _isLoadingMembers = false;
           });
         }
       } else if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingMembers = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading team members: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingMembers = false;
         });
       }
     }
@@ -100,7 +103,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true;
+      _isSubmitting = true;
     });
 
     try {
@@ -115,7 +118,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         Navigator.pop(context, true);
       } else if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isSubmitting = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +132,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       debugPrint('Error creating task: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isSubmitting = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -150,8 +153,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         title: const Text('Create Task'),
         backgroundColor: const Color(0xFF2D2D2D),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50)))
+      body: _isLoadingMembers
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4CAF50)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -194,7 +199,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Description
                     const Text(
                       'Description',
@@ -225,7 +230,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       maxLines: 4,
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Due Date
                     const Text(
                       'Due Date',
@@ -261,7 +266,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                             Text(
                               _selectedDueDate == null
                                   ? 'Select due date'
-                                  : DateFormat('MMM dd, yyyy').format(_selectedDueDate!),
+                                  : DateFormat('MMM dd, yyyy')
+                                      .format(_selectedDueDate!),
                               style: TextStyle(
                                 color: _selectedDueDate == null
                                     ? Theme.of(context)
@@ -275,7 +281,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Assign To
                     const Text(
                       'Assign To',
@@ -287,7 +293,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color:
                             Theme.of(context).colorScheme.surfaceContainerLow,
@@ -304,8 +311,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           isExpanded: true,
                           icon: Icon(
                             Icons.arrow_drop_down,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface),
@@ -339,10 +347,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(member['full_name']?.toString() ?? 'Unknown'),
+                                    Text(member['full_name']?.toString() ??
+                                        'Unknown'),
                                     if (member['role'] == 'admin')
                                       Container(
-                                        margin: const EdgeInsets.only(left: 8),
+                                        margin:
+                                            const EdgeInsets.only(left: 8),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
                                           vertical: 2,
@@ -381,7 +391,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _createTask,
+                        onPressed: _isSubmitting ? null : _createTask,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4CAF50),
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -390,7 +400,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           ),
                           disabledBackgroundColor: Colors.grey.shade800,
                         ),
-                        child: _isLoading
+                        child: _isSubmitting
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,

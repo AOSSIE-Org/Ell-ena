@@ -18,7 +18,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   String _selectedCategory = 'Bug';
   List<Map<String, dynamic>> _teamMembers = [];
   String? _selectedAssignee;
-  bool _isLoading = true;
+  bool _isLoadingMembers = true;   // controls full‑screen spinner while loading members
+  bool _isSubmitting = false;      // controls button state & in‑button spinner
 
   @override
   void initState() {
@@ -35,7 +36,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
   Future<void> _loadTeamMembers() async {
     setState(() {
-      _isLoading = true;
+      _isLoadingMembers = true;
     });
 
     try {
@@ -47,19 +48,19 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         if (mounted) {
           setState(() {
             _teamMembers = teamMembers;
-            _isLoading = false;
+            _isLoadingMembers = false;
           });
         }
       } else if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingMembers = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading team members: $e');
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingMembers = false;
         });
       }
     }
@@ -69,7 +70,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true;
+      _isSubmitting = true;
     });
 
     try {
@@ -87,10 +88,6 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         }
       } else {
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to create ticket: ${result['error']}'),
@@ -102,16 +99,18 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
     } catch (e) {
       debugPrint('Error creating ticket: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating ticket: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
   }
@@ -126,7 +125,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Create Ticket'),
       ),
-      body: _isLoading
+      body: _isLoadingMembers
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50)))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -170,7 +169,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Description
                     const Text(
                       'Description *',
@@ -207,7 +206,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Priority
                     const Text(
                       'Priority',
@@ -228,7 +227,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Category
                     const Text(
                       'Category',
@@ -278,7 +277,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Assignee
                     const Text(
                       'Assign To',
@@ -369,12 +368,12 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     // Submit button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _createTicket,
+                        onPressed: _isSubmitting ? null : _createTicket,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4CAF50),
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -383,7 +382,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                           ),
                           disabledBackgroundColor: Colors.grey.shade800,
                         ),
-                        child: _isLoading
+                        child: _isSubmitting
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
