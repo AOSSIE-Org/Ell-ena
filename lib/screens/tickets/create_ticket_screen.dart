@@ -122,7 +122,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: const Color(0xFF2D2D2D), // keeps uniform dark AppBar
         title: const Text('Create Ticket'),
       ),
       body: _isLoadingMembers
@@ -150,7 +150,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                         hintText: 'Enter ticket title',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
-                        fillColor: const Color(0xFF2D2D2D),
+                        fillColor: Theme.of(context).colorScheme.surface, // theme-based
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -186,7 +186,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                         hintText: 'Enter ticket description',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
-                        fillColor: const Color(0xFF2D2D2D),
+                        fillColor: Theme.of(context).colorScheme.surface, // theme-based
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -241,7 +241,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2D2D2D),
+                        color: Theme.of(context).colorScheme.surfaceContainerLow, // theme-based
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -266,7 +266,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                               ),
                             );
                           }).toList(),
-                          dropdownColor: const Color(0xFF2D2D2D),
+                          dropdownColor: Theme.of(context).colorScheme.surface, // theme-based
                           style: const TextStyle(color: Colors.white),
                           isExpanded: true,
                           icon: Icon(
@@ -291,7 +291,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2D2D2D),
+                        color: Theme.of(context).colorScheme.surfaceContainerLow, // theme-based
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -357,7 +357,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                               );
                             }).toList(),
                           ],
-                          dropdownColor: const Color(0xFF2D2D2D),
+                          dropdownColor: Theme.of(context).colorScheme.surface, // theme-based
                           style: const TextStyle(color: Colors.white),
                           isExpanded: true,
                           icon: Icon(
