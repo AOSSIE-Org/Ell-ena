@@ -31,16 +31,14 @@ jobs:
         run: flutter pub get
 
       - name: Run Dart security analyzer
-        run: dart pub outdated --json-report --json-report-file=outdated.json
+        run: dart pub outdated --json > outdated.json
         continue-on-error: true
 
       - name: Check for known vulnerabilities
+        if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
-          allow-deps: ''
-          deny-deps: ''
-          remove-deny-after-success: false
 
       - name: Report outdated packages
         if: always()
