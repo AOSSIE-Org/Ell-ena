@@ -11,14 +11,17 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "")
+if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "") {
   throw new Error("GEMINI_API_KEY is not set");
+}
 
-if (!SUPABASE_URL || SUPABASE_URL.trim() === "")
+if (!SUPABASE_URL || SUPABASE_URL.trim() === "") {
   throw new Error("SUPABASE_URL is not set");
+}
 
-if (!SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY.trim() === "")
+if (!SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY.trim() === "") {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+}
 
 const ENTITY_CONFIG: Record<
   string,
@@ -42,10 +45,12 @@ const ENTITY_CONFIG: Record<
 };
 
 function flattenObject(obj: unknown): string {
-  if (obj == null) return "";
+  if (obj === null || obj === undefined) return "";
   if (typeof obj === "string") return obj;
-  if (typeof obj === "number" || typeof obj === "boolean") return String(obj);
-  if (Array.isArray(obj)) return obj.map(flattenObject).join(" ");
+  if (typeof obj === "number" || typeof obj === "boolean")
+    return String(obj);
+  if (Array.isArray(obj))
+    return obj.map(flattenObject).join(" ");
   if (typeof obj === "object")
     return Object.values(obj as Record<string, unknown>)
       .map(flattenObject)
@@ -59,35 +64,48 @@ serve(async (req) => {
   }
 
   try {
-    // ---------- Parse JSON Safely ----------
-    let rawBody: unknown;
+    // ---------- Safe JSON Parse ----------
+    let parsed: unknown;
     try {
-      rawBody = await req.json();
+      parsed = await req.json();
     } catch {
       throw new Error("Invalid JSON body");
     }
 
-    if (!rawBody || typeof rawBody !== "object") {
+    if (!parsed || typeof parsed !== "object") {
       throw new Error("Body must be a JSON object");
     }
 
-    const body = rawBody as Record<string, unknown>;
+    const body = parsed as Record<string, unknown>;
 
-    let entity_type = body.entity_type as string | undefined;
-    let entity_id = body.entity_id as string | number | undefined;
+    let entity_type: unknown = body.entity_type;
+    let entity_id: unknown = body.entity_id;
 
-    if (body.meeting_id) {
+    // Backward compatibility
+    if (body.meeting_id !== undefined) {
       entity_type = "meeting";
-      entity_id = body.meeting_id as string | number;
+      entity_id = body.meeting_id;
     }
 
+    // ---------- Strict Entity Type Validation ----------
     if (
-      !entity_type ||
-      !entity_id ||
       typeof entity_type !== "string" ||
-      !Object.prototype.hasOwnProperty.call(ENTITY_CONFIG, entity_type)
+      !Object.prototype.hasOwnProperty.call(
+        ENTITY_CONFIG,
+        entity_type
+      )
     ) {
-      throw new Error("Invalid entity_type or entity_id");
+      throw new Error("Invalid entity_type");
+    }
+
+    // ---------- Strict Entity ID Validation ----------
+    if (
+      entity_id === null ||
+      entity_id === undefined ||
+      (typeof entity_id !== "string" &&
+        typeof entity_id !== "number")
+    ) {
+      throw new Error("Invalid entity_id");
     }
 
     const config = ENTITY_CONFIG[entity_type];
@@ -97,7 +115,7 @@ serve(async (req) => {
       SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Always convert ID to string for safety
+    // Always convert to string for Postgres comparison safety
     const safeId = String(entity_id);
 
     const { data, error } = await supabaseClient
@@ -116,20 +134,19 @@ serve(async (req) => {
 
     const rawValue = data[config.textField];
 
-    let textToEmbed =
-      entity_type === "meeting"
-        ? flattenObject(rawValue)
-        : String(rawValue ?? "");
+    // ---------- FIXED: Always use flattenObject ----------
+    let textToEmbed = flattenObject(rawValue);
 
     if (!textToEmbed || textToEmbed.trim() === "") {
       throw new Error("Text content is empty");
     }
 
+    // Length guard
     if (textToEmbed.length > 8000) {
-      textToEmbed = textToEmbed.substring(0, 8000);
+      textToEmbed = textToEmbed.slice(0, 8000);
     }
 
-    // ---------- Gemini Call with Robust Timeout ----------
+    // ---------- Gemini Call with Safe Timeout ----------
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -200,7 +217,9 @@ serve(async (req) => {
       .eq("id", safeId);
 
     if (updateError) {
-      throw new Error(`Database update error: ${updateError.message}`);
+      throw new Error(
+        `Database update error: ${updateError.message}`
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -210,11 +229,16 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error:
-          error instanceof Error ? error.message : "Unknown error",
+          error instanceof Error
+            ? error.message
+            : "Unknown error",
       }),
       {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
     );
   }
