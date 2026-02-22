@@ -1,8 +1,3 @@
--- Ensure required extensions exist
-CREATE EXTENSION IF NOT EXISTS pg_net;
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-
--- Generic function to process missing embeddings
 CREATE OR REPLACE FUNCTION process_missing_embeddings(
     p_table TEXT,
     p_entity_type TEXT,
@@ -11,77 +6,55 @@ CREATE OR REPLACE FUNCTION process_missing_embeddings(
 RETURNS void AS $$
 DECLARE
     record_id TEXT;
-    embedding_function_url TEXT := 'https://<your-project-ref>.supabase.co/functions/v1/generate-embeddings';
+    req_id BIGINT;
+
+    -- ⚠ Replace PROJECT_REF in production
+    embedding_function_url TEXT :=
+        'https://PROJECT_REF.supabase.co/functions/v1/generate-embeddings';
 BEGIN
+    -- Enforce supported tables only (prevents misuse)
+    IF p_table NOT IN ('tasks', 'tickets') THEN
+        RAISE EXCEPTION 'Unsupported table: %', p_table;
+    END IF;
+
+    IF p_entity_type NOT IN ('task', 'ticket') THEN
+        RAISE EXCEPTION 'Unsupported entity_type: %', p_entity_type;
+    END IF;
+
+    -- Fail fast if placeholder not replaced
+    IF embedding_function_url LIKE '%PROJECT_REF%' THEN
+        RAISE EXCEPTION 'embedding_function_url placeholder not replaced';
+    END IF;
+
+    -- Defensive limit clamp
+    p_limit := greatest(1, least(p_limit, 500));
+
     FOR record_id IN EXECUTE format(
-        'SELECT id::text FROM %I WHERE description IS NOT NULL AND description_embedding IS NULL LIMIT %s',
+        'SELECT id::text FROM %I
+         WHERE description IS NOT NULL
+           AND description_embedding IS NULL
+         LIMIT %s',
         p_table,
         p_limit
     )
     LOOP
-        RAISE LOG 'Generating embedding for %=%', p_entity_type, record_id;
-
-        PERFORM net.http_post(
+        SELECT net.http_post(
             url := embedding_function_url,
             body := jsonb_build_object(
                 'entity_type', p_entity_type,
                 'entity_id', record_id
             ),
             headers := jsonb_build_object(
-                'Content-Type', 'application/json',
-                'Authorization', 'Bearer <YOUR_SERVICE_ROLE_KEY>'
+                'Content-Type', 'application/json'
+                -- Maintainers must add Authorization header if verify_jwt = true
             )
-        );
+        )
+        INTO req_id;
+
+        RAISE LOG 'Queued embedding request id=% for %=%',
+            req_id, p_entity_type, record_id;
 
         PERFORM pg_sleep(0.2);
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
-
-
--- Wrapper for tasks
-CREATE OR REPLACE FUNCTION process_tasks_missing_embeddings()
-RETURNS void AS $$
-BEGIN
-    PERFORM process_missing_embeddings('tasks', 'task');
-END;
-$$ LANGUAGE plpgsql;
-
-
--- Wrapper for tickets
-CREATE OR REPLACE FUNCTION process_tickets_missing_embeddings()
-RETURNS void AS $$
-BEGIN
-    PERFORM process_missing_embeddings('tickets', 'ticket');
-END;
-$$ LANGUAGE plpgsql;
-
-
--- Safely remove existing cron jobs if they exist
-DO $$
-BEGIN
-    PERFORM cron.unschedule('process-task-embeddings');
-EXCEPTION WHEN OTHERS THEN
-    NULL;
-END $$;
-
-DO $$
-BEGIN
-    PERFORM cron.unschedule('process-ticket-embeddings');
-EXCEPTION WHEN OTHERS THEN
-    NULL;
-END $$;
-
-
--- Schedule processors every 5 minutes
-SELECT cron.schedule(
-    'process-task-embeddings',
-    '*/5 * * * *',
-    $$SELECT process_tasks_missing_embeddings();$$
-);
-
-SELECT cron.schedule(
-    'process-ticket-embeddings',
-    '*/5 * * * *',
-    $$SELECT process_tickets_missing_embeddings();$$
-);

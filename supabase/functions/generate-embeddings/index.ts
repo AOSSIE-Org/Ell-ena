@@ -1,13 +1,5 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
-// supabase/functions/generate-embeddings/index.ts
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import "https://deno.land/std@0.192.0/dotenv/load.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +10,15 @@ const corsHeaders = {
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+if (!GEMINI_API_KEY || GEMINI_API_KEY.trim() === "")
+  throw new Error("GEMINI_API_KEY is not set");
+
+if (!SUPABASE_URL || SUPABASE_URL.trim() === "")
+  throw new Error("SUPABASE_URL is not set");
+
+if (!SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY.trim() === "")
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
 
 const ENTITY_CONFIG: Record<
   string,
@@ -40,15 +41,15 @@ const ENTITY_CONFIG: Record<
   },
 };
 
-// Recursively flatten nested objects into a single text string
-function flattenObject(obj: any): string {
-  if (obj === null || obj === undefined) return "";
+function flattenObject(obj: unknown): string {
+  if (obj == null) return "";
   if (typeof obj === "string") return obj;
-  if (typeof obj === "number" || typeof obj === "boolean")
-    return String(obj);
+  if (typeof obj === "number" || typeof obj === "boolean") return String(obj);
   if (Array.isArray(obj)) return obj.map(flattenObject).join(" ");
   if (typeof obj === "object")
-    return Object.values(obj).map(flattenObject).join(" ");
+    return Object.values(obj as Record<string, unknown>)
+      .map(flattenObject)
+      .join(" ");
   return "";
 }
 
@@ -58,131 +59,162 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
+    // ---------- Parse JSON Safely ----------
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      throw new Error("Invalid JSON body");
+    }
 
-    // Support both legacy meeting_id and new entity_type/entity_id format
-    let entity_type = body.entity_type;
-    let entity_id = body.entity_id;
+    if (!rawBody || typeof rawBody !== "object") {
+      throw new Error("Body must be a JSON object");
+    }
+
+    const body = rawBody as Record<string, unknown>;
+
+    let entity_type = body.entity_type as string | undefined;
+    let entity_id = body.entity_id as string | number | undefined;
 
     if (body.meeting_id) {
       entity_type = "meeting";
-      entity_id = body.meeting_id;
+      entity_id = body.meeting_id as string | number;
     }
 
-    if (!entity_type || !entity_id || !ENTITY_CONFIG[entity_type]) {
+    if (
+      !entity_type ||
+      !entity_id ||
+      typeof entity_type !== "string" ||
+      !Object.prototype.hasOwnProperty.call(ENTITY_CONFIG, entity_type)
+    ) {
       throw new Error("Invalid entity_type or entity_id");
     }
 
     const config = ENTITY_CONFIG[entity_type];
 
-    // Initialize Supabase client with service role key
     const supabaseClient = createClient(
-      SUPABASE_URL ?? "",
-      SUPABASE_SERVICE_ROLE_KEY ?? ""
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Fetch entity data
+    // Always convert ID to string for safety
+    const safeId = String(entity_id);
+
     const { data, error } = await supabaseClient
       .from(config.table)
       .select(config.textField)
-      .eq("id", entity_id)
+      .eq("id", safeId)
       .single();
 
-    if (error || !data?.[config.textField]) {
-      throw new Error(
-        `Error fetching ${entity_type}: ${
-          error?.message || "No content found"
-        }`
-      );
+    if (error) {
+      throw new Error(`Database fetch error: ${error.message}`);
     }
 
-    // Prepare text for embedding
-    let textToEmbed: string;
+    if (!data || !(config.textField in data)) {
+      throw new Error("No content found for embedding");
+    }
+
     const rawValue = data[config.textField];
 
-    if (entity_type === "meeting") {
-      textToEmbed = flattenObject(rawValue);
-    } else {
-      textToEmbed = String(rawValue);
+    let textToEmbed =
+      entity_type === "meeting"
+        ? flattenObject(rawValue)
+        : String(rawValue ?? "");
+
+    if (!textToEmbed || textToEmbed.trim() === "") {
+      throw new Error("Text content is empty");
     }
 
-    // Truncate text to reduce risk of exceeding embedding model token limits
     if (textToEmbed.length > 8000) {
       textToEmbed = textToEmbed.substring(0, 8000);
     }
 
-    // Generate embedding using Gemini
-    const embeddingResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/embedding-001:embedContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "embedding-001",
-          content: {
-            parts: [
-              {
-                text: textToEmbed,
-              },
-            ],
-          },
-          taskType: "RETRIEVAL_DOCUMENT",
-        }),
-      }
-    );
+    // ---------- Gemini Call with Robust Timeout ----------
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!embeddingResponse.ok) {
-      let errorMessage = "Unknown error";
-      try {
-        const errorJson = await embeddingResponse.json();
-        errorMessage = errorJson?.error?.message || errorMessage;
-      } catch {
-        errorMessage = await embeddingResponse.text();
+    let embeddingResponse: Response;
+
+    try {
+      embeddingResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1/models/embedding-001:embedContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "embedding-001",
+            content: { parts: [{ text: textToEmbed }] },
+            taskType: "RETRIEVAL_DOCUMENT",
+          }),
+          signal: controller.signal,
+        }
+      );
+    } catch (err) {
+      if (
+        err instanceof DOMException &&
+        err.name === "AbortError"
+      ) {
+        throw new Error("Embedding API request timed out");
       }
-      throw new Error(`Error generating embedding: ${errorMessage}`);
+      throw err;
+    } finally {
+      clearTimeout(timeout);
     }
 
-    const embeddingData = await embeddingResponse.json();
-    const embedding = embeddingData?.embedding?.values;
+    if (!embeddingResponse.ok) {
+      const errorText = await embeddingResponse.text();
+      throw new Error(`Embedding API error: ${errorText}`);
+    }
 
-    if (!embedding) {
+    let embeddingData: unknown;
+
+    try {
+      embeddingData = await embeddingResponse.json();
+    } catch {
+      throw new Error("Invalid embedding API JSON response");
+    }
+
+    if (
+      !embeddingData ||
+      typeof embeddingData !== "object" ||
+      !("embedding" in embeddingData)
+    ) {
       throw new Error("Invalid embedding response format");
     }
 
-    // Update entity with embedding
+    const embeddingObj = (embeddingData as Record<string, unknown>).embedding;
+
+    if (
+      !embeddingObj ||
+      typeof embeddingObj !== "object" ||
+      !Array.isArray((embeddingObj as any).values)
+    ) {
+      throw new Error("Invalid embedding values format");
+    }
+
+    const embedding = (embeddingObj as any).values;
+
     const { error: updateError } = await supabaseClient
       .from(config.table)
       .update({ [config.embeddingField]: embedding })
-      .eq("id", entity_id);
+      .eq("id", safeId);
 
     if (updateError) {
-      throw new Error(
-        `Error updating ${entity_type} with embedding: ${updateError.message}`
-      );
+      throw new Error(`Database update error: ${updateError.message}`);
     }
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error:
+          error instanceof Error ? error.message : "Unknown error",
       }),
       {
         status: 400,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   }
