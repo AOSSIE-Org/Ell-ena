@@ -405,11 +405,13 @@ class _MeetingCard extends StatelessWidget {
   });
 
   String _getRelativeDate(DateTime date) {
+    // Ensure the date is converted to local time before making midnight comparisons
+    final localDate = date.toLocal();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final yesterday = today.subtract(const Duration(days: 1));
-    final dateOnly = DateTime(date.year, date.month, date.day);
+    final dateOnly = DateTime(localDate.year, localDate.month, localDate.day);
 
     if (dateOnly == today) {
       return 'Today';
@@ -418,21 +420,21 @@ class _MeetingCard extends StatelessWidget {
     } else if (dateOnly == yesterday) {
       return 'Yesterday';
     } else if (isUpcoming) {
-      return DateFormat('E, MMM d, yyyy').format(date);
+      return DateFormat('E, MMM d, yyyy').format(localDate);
     } else {
       final difference = today.difference(dateOnly).inDays;
       if (difference > 0 && difference < 30) {
-        return '$difference days ago';
+        return '$difference ${difference == 1 ? 'day' : 'days'} ago';
       } else {
-        return DateFormat('MMM d, yyyy').format(date);
+        return DateFormat('MMM d, yyyy').format(localDate);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final meetingDate = DateTime.parse(meeting['meeting_date']);
-    final dateFormat = DateFormat('E, MMM d, yyyy');
+    // Parse the date and force it into the local timezone for rendering
+    final meetingDate = DateTime.parse(meeting['meeting_date']).toLocal();
     final timeFormat = DateFormat('h:mm a');
     final hasUrl = meeting['meeting_url'] != null &&
         meeting['meeting_url'].toString().isNotEmpty;
