@@ -404,6 +404,31 @@ class _MeetingCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String _getRelativeDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (dateOnly == today) {
+      return 'Today';
+    } else if (dateOnly == tomorrow) {
+      return 'Tomorrow';
+    } else if (dateOnly == yesterday) {
+      return 'Yesterday';
+    } else if (isUpcoming) {
+      return DateFormat('E, MMM d, yyyy').format(date);
+    } else {
+      final difference = today.difference(dateOnly).inDays;
+      if (difference > 0 && difference < 30) {
+        return '$difference days ago';
+      } else {
+        return DateFormat('MMM d, yyyy').format(date);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final meetingDate = DateTime.parse(meeting['meeting_date']);
@@ -499,9 +524,7 @@ class _MeetingCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        isUpcoming
-                            ? '${dateFormat.format(meetingDate)}, ${timeFormat.format(meetingDate)}'
-                            : 'Yesterday, ${timeFormat.format(meetingDate)}',
+                        '${_getRelativeDate(meetingDate)}, ${timeFormat.format(meetingDate)}',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 13,
