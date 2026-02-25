@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ell_ena/core/errors/app_error_handler.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
 import '../../widgets/custom_widgets.dart';
@@ -48,27 +49,20 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
         googleRefreshToken: widget.googleRefreshToken,
       );
 
-      if (mounted) {
-        if (result['success']) {
+      if (result['success'] == true) {
+        if (mounted) {
           Navigator.of(context).pop();
           NavigationService().navigateToReplacement(const HomeScreen());
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Failed to join team'),
-              backgroundColor: Colors.red,
-            ),
-          );
+        }
+      } else {
+        if (mounted) {
+          AppErrorHandler.instance
+              .handle(context, result['error'] ?? 'Failed to join team');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {
@@ -90,27 +84,20 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
         googleRefreshToken: widget.googleRefreshToken,
       );
 
-      if (mounted) {
-        if (result['success']) {
+      if (result['success'] == true) {
+        if (mounted) {
           // Show team ID dialog
           _showTeamIdDialog(result['teamId']);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Failed to create team'),
-              backgroundColor: Colors.red,
-            ),
-          );
+        }
+      } else {
+        if (mounted) {
+          AppErrorHandler.instance
+              .handle(context, result['error'] ?? 'Failed to create team');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {
@@ -168,6 +155,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           actions: [
             TextButton(
               onPressed: () {
+                if (!mounted) return;
                 Navigator.of(context).pop();
                 Navigator.of(context).pop();
                 NavigationService().navigateToReplacement(const HomeScreen());

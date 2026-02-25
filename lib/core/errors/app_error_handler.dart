@@ -65,6 +65,16 @@ class AppErrorHandler {
       );
     }
 
+    // Team not found (e.g. from join team flow)
+    if (message == 'Team ID not found' ||
+        messageLower.contains('team id not found')) {
+      return AppError.database(
+        code: 'team_not_found',
+        userMessage: 'Team ID not found. Please check and try again.',
+        originalError: error,
+      );
+    }
+
     // Explicit user_not_found (e.g. from forgot password check)
     if (error == 'user_not_found' || code == 'user_not_found') {
       return AppError.authUserNotFound(originalError: error);

@@ -159,6 +159,56 @@ class SupabaseService {
     }
   }
 
+  Future<bool> userExistsByEmail(String email) async {
+    try {
+      if (!_isInitialized) return false;
+
+      // Use a dummy password login to infer existence without relying on RLS‑blocked selects
+      const fakePassword = '___definitely_not_a_real_password___';
+
+      try {
+        final response = await _client.auth.signInWithPassword(
+          email: email,
+          password: fakePassword,
+        );
+
+        // If signInWithPassword somehow succeeds, the user clearly exists
+        if (response.user != null) {
+          debugPrint(
+              'userExistsByEmail: unexpected successful signInWithPassword for $email');
+          return true;
+        }
+      } on AuthApiException catch (e) {
+        final code = (e.code ?? '').toString();
+        final msgLower = (e.message ?? '').toLowerCase();
+
+        // Supabase returns invalid_credentials when email exists but password is wrong
+        if (code == 'invalid_credentials' ||
+            msgLower.contains('invalid login credentials') ||
+            msgLower.contains('invalid email or password')) {
+          return true;
+        }
+
+        // Explicit user_not_found or similar messaging → treat as non‑existent
+        if (code == 'user_not_found' ||
+            msgLower.contains('user not found') ||
+            msgLower.contains('email not found')) {
+          return false;
+        }
+
+        debugPrint(
+            'userExistsByEmail: unknown auth error for $email -> code=$code, message=${e.message}');
+        return false;
+      }
+
+      // If we reached here without a clear signal, assume non‑existent
+      return false;
+    } catch (e) {
+      debugPrint('Error checking user by email: $e');
+      return false;
+    }
+  }
+
   // Switch the current team
   Future<Map<String, dynamic>> switchTeam(String teamId) async {
     try {
