@@ -62,13 +62,14 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       });
     }
   }
+
   void _startResendTimer() {
     _resendTimer?.cancel();
     setState(() {
       _resendseconds = 60;
       _canresend = false;
       _timerStarted = true;
-      _showtimertext = true; 
+      _showtimertext = true;
     });
 
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -140,7 +141,6 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   }
 
   Future<void> _resendCode() async {
-    
     if (!_canresend) {
       setState(() {
         _showtimertext = true;
@@ -152,7 +152,6 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       _isLoading = true;
     });
 
-
     try {
       final result = await _supabaseService.resendVerificationEmail(
         widget.email,
@@ -163,7 +162,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         _startResendTimer();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification code resent successfully. Please check your inbox and spam folder.'),
+            content: Text(
+                'Verification code resent successfully. Please check your inbox and spam folder.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -282,7 +282,6 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
               textAlign: TextAlign.center,
             ),
           ),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(
@@ -310,12 +309,9 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 ),
                 onChanged: (value) {
                   if (value.isNotEmpty) {
-                    if (index < 5) {
-                      _focusNodes[index + 1].requestFocus();
-                    } else {
-                      _focusNodes[index].unfocus();
-                      // _handleVerification();
-                    }
+                    FocusScope.of(context).nextFocus();
+                  } else {
+                    FocusScope.of(context).previousFocus();
                   }
                   _checkotpcomplete();
                 },
@@ -325,33 +321,29 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         ),
         const SizedBox(height: 20),
         DecoratedBox(
-          
           // height:20,
           // padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              
-            color:Color(0xFF1B3043),
-            borderRadius: BorderRadius.circular(10)
-          ),
+              color: Color(0xFF1B3043),
+              borderRadius: BorderRadius.circular(10)),
           child: Center(
-            child:Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Icon(Icons.email, color: Color(0xFF277FBD),),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Check your spam/junk folder if you don't see the email.",
-                    style:TextStyle(
+              child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.email,
+                  color: Color(0xFF277FBD),
+                ),
+                const SizedBox(width: 8),
+                Text("Check your spam/junk folder if you don't see the email.",
+                    style: TextStyle(
                       color: Color(0xFF277FBD),
                       fontWeight: FontWeight.w500,
-                    )
-                  ),
-                ],
-              ),
-            )
-          ),
-
+                    )),
+              ],
+            ),
+          )),
         ),
         const SizedBox(height: 32),
         CustomButton(

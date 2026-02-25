@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_error.dart';
 
@@ -94,7 +95,8 @@ class AppErrorHandler {
     final messageLower = message.toLowerCase();
 
     // Rate Limit
-    if (code == 'over_email_send_rate_limit' || message.contains('45 seconds')) {
+    if (code == 'over_email_send_rate_limit' ||
+        message.contains('45 seconds')) {
       return AppError.authRateLimit(originalError: e);
     }
 
@@ -147,16 +149,56 @@ class AppErrorHandler {
     return '';
   }
 
+  /// Creates a professional floating SnackBar with icon and haptic feedback
+  SnackBar _createFloatingSnackBar(AppError appError) {
+    // Trigger haptic feedback for tactile response
+    HapticFeedback.vibrate();
+
+    // Determine background color based on error category
+    Color backgroundColor;
+    if (appError.category == AppErrorCategory.network) {
+      backgroundColor = Colors.grey[900]!;
+    } else {
+      backgroundColor = Colors.red[900]!;
+    }
+
+    return SnackBar(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.all(16),
+      backgroundColor: backgroundColor,
+      content: Row(
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              appError.userMessage,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+      duration: const Duration(seconds: 4),
+    );
+  }
+
   void show(BuildContext context, AppError appError) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(appError.userMessage),
-          backgroundColor: appError.category == AppErrorCategory.network 
-              ? Colors.orange.shade800 
-              : Colors.red.shade700,
-        ),
-      );
+    // Performance optimization: Hide current snack bar before showing new one
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      _createFloatingSnackBar(appError),
+    );
   }
 }
