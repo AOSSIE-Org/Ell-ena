@@ -1,81 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
-import '../../services/supabase_service.dart';
-import 'verify_otp_screen.dart';
+import 'new_password_screen.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+class VerifyOTPScreen extends StatefulWidget {
+  final String email;
+
+  const VerifyOTPScreen({
+    super.key,
+    required this.email,
+  });
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  State<VerifyOTPScreen> createState() => _VerifyOTPScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _supabaseService = SupabaseService();
+  final _otpController = TextEditingController();
+  final _supabase = Supabase.instance.client;
+
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleResetPassword() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _verifyOtp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await _supabase.auth.verifyOTP(
+        email: widget.email,
+        token: _otpController.text.trim(),
+        type: OtpType.recovery, // IMPORTANT for password reset
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("OTP verified successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      NavigationService().navigateTo(
+        const NewPasswordScreen(),
+      );
+    } on AuthException catch (e) {
       setState(() {
-        _isLoading = true;
-        _errorMessage = null;
+        _errorMessage = e.message;
       });
-      
-      try {
-        // Request password reset email from Supabase
-        await _supabaseService.client.auth.resetPasswordForEmail(
-          _emailController.text,
-        );
-        
-        if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reset code sent to your email'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          // Navigate to verification screen
-          NavigationService().navigateTo(
-            VerifyOTPScreen(
-              email: _emailController.text,
-              verifyType: 'reset_password',
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          // Show user-friendly error message
-          setState(() {
-            String errorMsg = 'An error occurred. Please try again.';
-            
-            // Parse the error message to be more user-friendly
-            if (e.toString().contains('Invalid email')) {
-              errorMsg = 'Invalid email address';
-            } else if (e.toString().contains('Email not found')) {
-              errorMsg = 'Email address not found';
-            } else if (e.toString().contains('Rate limit')) {
-              errorMsg = 'Too many attempts. Please try again later.';
-            }
-            
-            _errorMessage = errorMsg;
-          });
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+    } catch (_) {
+      setState(() {
+        _errorMessage = "Invalid or expired OTP. Please try again.";
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -83,8 +75,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthScreenWrapper(
-      title: 'Reset Password',
-      subtitle: 'Enter your email to receive a reset code',
+      title: "Verify OTP",
+      subtitle: "Enter the 6-digit code sent to ${widget.email}",
       children: [
         if (_errorMessage != null)
           Padding(
@@ -100,31 +92,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Column(
             children: [
               CustomTextField(
-                label: 'Email',
-                icon: Icons.email_outlined,
-                controller: _emailController,
+                label: "OTP Code",
+                icon: Icons.lock_outline,
+                controller: _otpController,
+                keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
+                    return "Please enter the OTP";
                   }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
+                  if (value.length != 6) {
+                    return "OTP must be 6 digits";
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 24),
               CustomButton(
-                text: 'Send Reset Code',
-                onPressed: _isLoading ? null : _handleResetPassword,
+                text: "Verify",
+                onPressed: _isLoading ? null : _verifyOtp,
                 isLoading: _isLoading,
               ),
               const SizedBox(height: 16),
               CustomButton(
-                text: 'Back to Login',
-                onPressed: () {
-                  NavigationService().goBack();
-                },
+                text: "Back",
+                onPressed: () => NavigationService().goBack(),
                 isOutlined: true,
               ),
             ],
