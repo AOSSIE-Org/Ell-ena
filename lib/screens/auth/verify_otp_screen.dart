@@ -109,16 +109,22 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           if (widget.verifyType == 'signup_create') {
             // Show team ID dialog for team creators
             if (result.containsKey('teamId')) {
-              _showTeamIdDialog(result['teamId']);
+              if (mounted) {
+                _showTeamIdDialog(result['teamId']);
+              }
             }
           } else if (widget.verifyType == 'signup_join') {
             // Navigate directly to home for team joiners
-            NavigationService().navigateToReplacement(const HomeScreen());
+            if (mounted) {
+              NavigationService().navigateToReplacement(const HomeScreen());
+            }
           } else if (widget.verifyType == 'reset_password') {
             // Navigate to reset password screen
-            NavigationService().navigateTo(
-              SetNewPasswordScreen(email: widget.email),
-            );
+            if (mounted) {
+              NavigationService().navigateTo(
+                SetNewPasswordScreen(email: widget.email),
+              );
+            }
           }
         } else {
           if (mounted) {
@@ -159,7 +165,9 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       );
 
       if (result['success']) {
-        _startResendTimer();
+        if (mounted) {
+          _startResendTimer();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -287,7 +295,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           children: List.generate(
             6,
             (index) => SizedBox(
-              width: 50,
+              width: 55,
               height: 60,
               child: TextField(
                 controller: _controllers[index],
@@ -309,9 +317,13 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 ),
                 onChanged: (value) {
                   if (value.isNotEmpty) {
-                    FocusScope.of(context).nextFocus();
+                    if (index < 5) {
+                      _focusNodes[index + 1].requestFocus();
+                    }
                   } else {
-                    FocusScope.of(context).previousFocus();
+                    if (index > 0) {
+                      _focusNodes[index - 1].requestFocus();
+                    }
                   }
                   _checkotpcomplete();
                 },
@@ -324,7 +336,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           // height:20,
           // padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: Color(0xFF1B3043),
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(10)),
           child: Center(
               child: Padding(
@@ -333,12 +345,12 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
               children: [
                 Icon(
                   Icons.email,
-                  color: Color(0xFF277FBD),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Text("Check your spam/junk folder if you don't see the email.",
                     style: TextStyle(
-                      color: Color(0xFF277FBD),
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w500,
                     )),
               ],

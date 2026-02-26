@@ -116,10 +116,13 @@ class _SignupScreenState extends State<SignupScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Ensure we don't use a stale authenticated session when checking existence
-      await _supabaseService.signOut();
-
       final email = _emailController.text.trim();
+
+      // Only sign out if there's an existing session with different email
+      if (_supabaseService.client.auth.currentSession != null &&
+          _supabaseService.client.auth.currentSession!.user.email != email) {
+        await _supabaseService.signOut();
+      }
 
       // Check if a user with this email already exists
       final userExists = await _supabaseService.userExistsByEmail(email);
@@ -161,7 +164,7 @@ class _SignupScreenState extends State<SignupScreen>
 
         NavigationService().navigateTo(
           VerifyOTPScreen(
-            email: _emailController.text,
+            email: email,
             verifyType: 'signup_join',
             userData: {
               'teamId': _teamIdController.text,

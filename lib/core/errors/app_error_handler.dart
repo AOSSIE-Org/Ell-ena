@@ -8,9 +8,7 @@ class AppErrorHandler {
   static final AppErrorHandler instance = AppErrorHandler._internal();
 
   void handle(BuildContext context, dynamic error) {
-    // THIS IS THE DATA CAPTURE LINE
-    debugPrint('RAW_ERROR_LOG: $error | TYPE: ${error.runtimeType}');
-
+    debugPrint('Error handled at ${DateTime.now()}: ${error.runtimeType}');
     final appError = mapError(error);
     show(context, appError);
   }
@@ -67,8 +65,8 @@ class AppErrorHandler {
     }
 
     // Team not found (e.g. from join team flow)
-    if (message == 'Team ID not found' ||
-        messageLower.contains('team id not found')) {
+    if (message == 'Team not found' ||
+        messageLower.contains('team not found')) {
       return AppError.database(
         code: 'team_not_found',
         userMessage: 'Team ID not found. Please check and try again.',
