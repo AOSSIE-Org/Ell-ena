@@ -71,15 +71,23 @@ CREATE POLICY "Allow authenticated users to insert teams"
 
 -- Function to check if a team code exists
 CREATE OR REPLACE FUNCTION check_team_code_exists(code TEXT)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   RETURN EXISTS (SELECT 1 FROM teams WHERE team_code = code);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Function to generate a random team code
 CREATE OR REPLACE FUNCTION generate_unique_team_code()
-RETURNS TEXT AS $$
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   result TEXT := '';
@@ -97,9 +105,9 @@ BEGIN
   
   RETURN result;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Create indexes for better performance
 CREATE INDEX idx_teams_team_code ON teams(team_code);
 CREATE INDEX idx_users_team_id ON users(team_id);
-CREATE INDEX idx_users_email ON users(email); 
+CREATE INDEX idx_users_email ON users(email);

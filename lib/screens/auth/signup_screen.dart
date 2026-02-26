@@ -65,8 +65,6 @@ class _SignupScreenState extends State<SignupScreen>
 
       // Check if a user with this email already exists
       final userExists = await _supabaseService.userExistsByEmail(email);
-      debugPrint(
-          'SIGNUP_DEBUG: User exists check result for $email is: $userExists');
       if (userExists) {
         if (mounted) {
           AppErrorHandler.instance.handle(context, 'user_already_exists');
@@ -125,8 +123,6 @@ class _SignupScreenState extends State<SignupScreen>
 
       // Check if a user with this email already exists
       final userExists = await _supabaseService.userExistsByEmail(email);
-      debugPrint(
-          'SIGNUP_DEBUG: User exists check result for $email is: $userExists');
       if (userExists) {
         if (mounted) {
           AppErrorHandler.instance.handle(context, 'user_already_exists');

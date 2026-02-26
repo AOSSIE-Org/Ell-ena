@@ -160,22 +160,22 @@ class SupabaseService {
   }
 
   Future<bool> userExistsByEmail(String email) async {
-    try {
-      if (!_isInitialized) return false;
+    if (!_isInitialized) {
+      throw StateError('Supabase is not initialized');
+    }
 
+    try {
       // Use the server-side RPC function to check if user exists
       final response = await _client
           .rpc('check_user_exists', params: {'email_to_check': email});
 
       final userExists = response == true;
-      debugPrint(
-          'userExistsByEmail: RPC check for $email returned $userExists');
+      debugPrint('userExistsByEmail: RPC check completed.');
 
       return userExists;
     } catch (e) {
       debugPrint('Error checking user by email via RPC: $e');
-      // Fallback to false on RPC error to prevent blocking legitimate signups
-      return false;
+      rethrow;
     }
   }
 
