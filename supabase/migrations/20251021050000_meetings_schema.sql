@@ -101,8 +101,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE EXTENSION IF NOT EXISTS pg_cron;
-DO $$ BEGIN
-    SELECT cron.unschedule('delete_old_meetings');
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;
-SELECT cron.schedule('30 2 * * *', 'SELECT delete_old_meetings();');
+
+-- Remove any existing job with this name to ensure idempotency
+SELECT cron.unschedule(j.jobid)
+FROM cron.job j
+WHERE j.jobname = 'delete-old-meetings';
+
+-- Schedule the job with an explicit name
+SELECT cron.schedule(
+    'delete-old-meetings',
+    '30 2 * * *',
+    'SELECT delete_old_meetings();'
+);

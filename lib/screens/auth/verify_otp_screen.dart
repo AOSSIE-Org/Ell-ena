@@ -165,16 +165,18 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       );
 
       if (result['success']) {
+        if (!mounted) return;
+        _startResendTimer();
+
         if (mounted) {
-          _startResendTimer();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Verification code resent successfully. Please check your inbox and spam folder.'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Verification code resent successfully. Please check your inbox and spam folder.'),
-            backgroundColor: Colors.green,
-          ),
-        );
       } else {
         if (mounted) {
           AppErrorHandler.instance

@@ -74,7 +74,7 @@ CREATE OR REPLACE FUNCTION check_team_code_exists(code TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_catalog
 AS $$
 BEGIN
   RETURN EXISTS (SELECT 1 FROM teams WHERE team_code = code);
@@ -86,7 +86,7 @@ CREATE OR REPLACE FUNCTION generate_unique_team_code()
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_catalog
 AS $$
 DECLARE
   chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
