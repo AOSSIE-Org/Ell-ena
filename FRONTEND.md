@@ -345,11 +345,6 @@ The Ell-ena project is already configured to connect to Supabase. The connection
 5. **Permission Issues**:
    - The app requires certain permissions (e.g., microphone access for speech-to-text). Ensure these permissions are granted in the device settings.
 
-### Getting Help
-
-
-### Improve Troubleshooting Section
-
 6. **Windows Desktop Build Fails**:
    - Ensure Visual Studio 2022 is installed.
    - Make sure "Desktop development with C++" workload is selected.
@@ -358,6 +353,12 @@ The Ell-ena project is already configured to connect to Supabase. The connection
      flutter doctor -v
      ```
    - Resolve any Windows toolchain issues reported.
+
+### Getting Help
+
+
+
+
 
 If you encounter issues not covered in this guide:
 
