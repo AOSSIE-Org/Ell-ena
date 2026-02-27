@@ -388,41 +388,94 @@ class AIService {
         body: jsonEncode(requestBody),
       );
       
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
         
         // Check if the response contains a function call
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          final content = candidates[0]['content'];
-          final parts = content['parts'] as List<dynamic>;
-          
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+
+          if (decoded is! Map<String, dynamic>) {
+            return {
+              'type': 'error',
+              'content': 'Invalid response format from API',
+            };
+          }
+
+          final responseData = decoded;
+          final candidates = responseData['candidates'];
+
+
+          if (candidates is! List || candidates.isEmpty) {
+            return {
+              'type': 'error',
+              'content': 'Invalid or empty response from API',
+            };
+          }
+
+          final firstCandidate = candidates.first;
+
+          if (firstCandidate is! Map ||
+              firstCandidate['content'] is! Map) {
+            return {
+              'type': 'error',
+              'content': 'Invalid response structure',
+            };
+          }
+
+          final content = firstCandidate['content'] as Map<String, dynamic>;
+          final parts = content['parts'];
+
+          if (parts is! List || parts.isEmpty) {
+            return {
+              'type': 'error',
+              'content': 'Invalid response structure',
+            };
+          }
+
+          // Check for function call
           for (var part in parts) {
-            if (part.containsKey('functionCall')) {
+            if (part is Map && part['functionCall'] != null) {
               final functionCall = part['functionCall'];
-              final functionName = functionCall['name'];
-              final arguments = functionCall['args'];
               
-              return {
-                'type': 'function_call',
-                'function_name': functionName,
-                'arguments': arguments,
-                'raw_response': jsonEncode(responseData),
-              };
+              if (functionCall is Map) {
+                final rawName = functionCall['name'];
+                final rawArguments = functionCall['args'];
+
+                // Ensure function name is a valid non-empty String
+                if (rawName is! String || rawName.isEmpty) {
+                  return {
+                    'type': 'error',
+                    'content': 'Invalid function call name from API',
+                  };
+                }
+
+                // Ensure arguments is Map<String, dynamic>
+                final parsedArguments =
+                    rawArguments is Map
+                        ? Map<String, dynamic>.from(rawArguments)
+                        : <String, dynamic>{};
+
+                return {
+                  'type': 'function_call',
+                  'function_name': rawName,
+                  'arguments': parsedArguments,
+                  'raw_response': jsonEncode(responseData),
+                };
+              }
+
             }
           }
+
           
           // If no function call is detected, return as regular message
+          final textPart = parts.firstWhere(
+            (p) => p is Map && p['text'] != null,
+            orElse: () => {'text': ''},
+          );
+
           return {
             'type': 'message',
-            'content': candidates[0]['content']['parts'][0]['text'] ?? '',
+            'content': textPart['text'] ?? '',
           };
-        }
-        
-        return {
-          'type': 'error',
-          'content': 'No response generated',
-        };
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return {
@@ -527,12 +580,39 @@ class AIService {
       );
       
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          return candidates[0]['content']['parts'][0]['text'] ?? 'Function executed successfully.';
+        final decoded = jsonDecode(response.body);
+
+        if (decoded is! Map<String, dynamic>) {
+          return 'Function executed successfully.';
         }
-        return 'Function executed successfully.';
+
+        final responseData = decoded;
+        final candidates = responseData['candidates'];
+
+
+        if (candidates is! List || candidates.isEmpty) {
+          return 'Function executed successfully.';
+        }
+
+        final first = candidates.first;
+        if (first is! Map) return 'Function executed successfully.';
+
+        final content = first['content'];
+        if (content is! Map) return 'Function executed successfully.';
+
+        final parts = content['parts'];
+        if (parts is! List || parts.isEmpty) {
+          return 'Function executed successfully.';
+        }
+
+        final textPart = parts.firstWhere(
+          (p) => p is Map && p['text'] != null,
+          orElse: () => null,
+        );
+
+        return (textPart is Map && textPart['text'] is String)
+            ? textPart['text'] as String
+            : 'Function executed successfully.';
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return 'Function executed successfully.';
@@ -601,19 +681,16 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
   // Helper method to detect if a query is meeting-related
   bool _isMeetingRelatedQuery(String query) {
     final meetingKeywords = [
-      'meeting', 'meetings', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
-      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed','meeting', 'meet', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
-      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed','meeting', 'meet', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
+      'meeting', 'meetings', 'meet',
+      'call', 'last call', 'previous call',
+      'discussion', 'last discussion', 'previous discussion',
+      'talked about', 'last talked about', 'previous talked about',
+      'said in', 'mentioned in', 'last mentioned in', 'previous mentioned in',
+      'spoke about', 'last spoke about', 'previous spoke about',
+      'last discussed', 'previous discussed',
+      'summary', 'minutes', 'transcript', 'recording',
     ];
-    
+
     final queryLower = query.toLowerCase();
     return meetingKeywords.any((keyword) => queryLower.contains(keyword));
   }
