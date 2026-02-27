@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:ell_ena/core/errors/app_error_handler.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -57,9 +58,24 @@ class _SignupScreenState extends State<SignupScreen>
     setState(() => _isLoading = true);
 
     try {
+      // Ensure we don't use a stale authenticated session when checking existence
+      await _supabaseService.signOut();
+
+      final email = _emailController.text.trim();
+
+      // Check if a user with this email already exists
+      final userExists = await _supabaseService.userExistsByEmail(email);
+      if (userExists) {
+        if (mounted) {
+          AppErrorHandler.instance.handle(context, 'user_already_exists');
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
       // Only send signup email without creating user upfront
       await _supabaseService.client.auth.signInWithOtp(
-        email: _emailController.text,
+        email: email,
       );
 
       if (mounted) {
@@ -72,7 +88,7 @@ class _SignupScreenState extends State<SignupScreen>
 
         NavigationService().navigateTo(
           VerifyOTPScreen(
-            email: _emailController.text,
+            email: email,
             verifyType: 'signup_create',
             userData: {
               'teamName': _teamNameController.text,
@@ -84,9 +100,7 @@ class _SignupScreenState extends State<SignupScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {
@@ -102,17 +116,33 @@ class _SignupScreenState extends State<SignupScreen>
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim();
+
+      // Only sign out if there's an existing session with different email
+      if (_supabaseService.client.auth.currentSession != null &&
+          _supabaseService.client.auth.currentSession!.user.email != email) {
+        await _supabaseService.signOut();
+      }
+
+      // Check if a user with this email already exists
+      final userExists = await _supabaseService.userExistsByEmail(email);
+      if (userExists) {
+        if (mounted) {
+          AppErrorHandler.instance.handle(context, 'user_already_exists');
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
       // First check if the team exists
       final teamExists =
           await _supabaseService.teamExists(_teamIdController.text);
 
       if (!teamExists) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Team ID not found. Please check and try again.'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.instance.handle(
+            context,
+            'Team ID not found',
           );
           setState(() => _isLoading = false);
         }
@@ -121,7 +151,7 @@ class _SignupScreenState extends State<SignupScreen>
 
       // Only send signup email without creating user upfront
       await _supabaseService.client.auth.signInWithOtp(
-        email: _emailController.text,
+        email: email,
       );
 
       if (mounted) {
@@ -134,7 +164,7 @@ class _SignupScreenState extends State<SignupScreen>
 
         NavigationService().navigateTo(
           VerifyOTPScreen(
-            email: _emailController.text,
+            email: email,
             verifyType: 'signup_join',
             userData: {
               'teamId': _teamIdController.text,
@@ -146,9 +176,7 @@ class _SignupScreenState extends State<SignupScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {
@@ -180,22 +208,13 @@ class _SignupScreenState extends State<SignupScreen>
             NavigationService().navigateToReplacement(const HomeScreen());
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.instance
+              .handle(context, result['error'] ?? 'Google sign-in failed');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {

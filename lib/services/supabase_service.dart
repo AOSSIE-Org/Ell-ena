@@ -159,6 +159,26 @@ class SupabaseService {
     }
   }
 
+  Future<bool> userExistsByEmail(String email) async {
+    if (!_isInitialized) {
+      throw StateError('Supabase is not initialized');
+    }
+
+    try {
+      // Use the server-side RPC function to check if user exists
+      final response = await _client
+          .rpc('check_user_exists', params: {'email_to_check': email});
+
+      final userExists = response == true;
+      debugPrint('userExistsByEmail: RPC check completed.');
+
+      return userExists;
+    } catch (e) {
+      debugPrint('Error checking user by email via RPC: $e');
+      rethrow;
+    }
+  }
+
   // Switch the current team
   Future<Map<String, dynamic>> switchTeam(String teamId) async {
     try {
