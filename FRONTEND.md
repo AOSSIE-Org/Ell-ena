@@ -347,6 +347,18 @@ The Ell-ena project is already configured to connect to Supabase. The connection
 
 ### Getting Help
 
+
+### Improve Troubleshooting Section
+
+6. **Windows Desktop Build Fails**:
+   - Ensure Visual Studio 2022 is installed.
+   - Make sure "Desktop development with C++" workload is selected.
+   - Run:
+     ```
+     flutter doctor -v
+     ```
+   - Resolve any Windows toolchain issues reported.
+
 If you encounter issues not covered in this guide:
 
 - Check the [Flutter Documentation](https://docs.flutter.dev/)
