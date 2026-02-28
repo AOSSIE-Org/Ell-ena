@@ -71,7 +71,7 @@ g) AI Features:
 
 h) Data Management:
    - Local storage
-   - Cloud sync
+   - Cloud Sync
    - Data backup
    - Export capabilities
    - Data privacy controls
