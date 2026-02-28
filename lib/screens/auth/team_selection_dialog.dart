@@ -24,8 +24,9 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
   final _teamNameController = TextEditingController();
   final _userNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
   bool _isLoading = false;
-  bool _isJoiningTeam = true; // true = join, false = create
+  bool _isJoiningTeam = true;
 
   @override
   void dispose() {
@@ -33,6 +34,19 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
     _teamNameController.dispose();
     _userNameController.dispose();
     super.dispose();
+  }
+
+  void _switchMode(bool join) {
+    setState(() {
+      _isJoiningTeam = join;
+
+      // Clear irrelevant fields
+      if (join) {
+        _teamNameController.clear();
+      } else {
+        _teamCodeController.clear();
+      }
+    });
   }
 
   Future<void> _handleJoinTeam() async {
@@ -48,32 +62,29 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
         googleRefreshToken: widget.googleRefreshToken,
       );
 
-      if (mounted) {
-        if (result['success']) {
-          Navigator.of(context).pop();
-          NavigationService().navigateToReplacement(const HomeScreen());
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Failed to join team'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+
+      if (result != null && result['success'] == true) {
+        Navigator.of(context).pop();
+        NavigationService().navigateToReplacement(const HomeScreen());
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(result?['error'] ?? 'Failed to join team'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -90,32 +101,28 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
         googleRefreshToken: widget.googleRefreshToken,
       );
 
-      if (mounted) {
-        if (result['success']) {
-          // Show team ID dialog
-          _showTeamIdDialog(result['teamId']);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Failed to create team'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+
+      if (result != null && result['success'] == true) {
+        _showTeamIdDialog(result['teamId']);
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(result?['error'] ?? 'Failed to create team'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -123,44 +130,36 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (_) {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(
-            'Team Created Successfully!',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          title: const Text('Team Created Successfully!'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Your Team ID is:',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
+              const Text('Your Team ID is:'),
               const SizedBox(height: 16),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerLow,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   teamId,
-                  style: TextStyle(
-                    fontSize: 24,
+                  style: const TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2,
-                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Share this ID with your team members so they can join your team.',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const Text(
+                'Share this ID with your team members so they can join.',
                 textAlign: TextAlign.center,
               ),
             ],
@@ -168,13 +167,16 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-                NavigationService().navigateToReplacement(const HomeScreen());
+                if (!mounted) return;
+
+                Navigator.of(context).pop(); // close ID dialog
+                Navigator.of(context).pop(); // close main dialog
+                NavigationService()
+                    .navigateToReplacement(const HomeScreen());
               },
-              child: Text(
+              child: const Text(
                 'Continue',
-                style: TextStyle(color: Colors.green.shade400),
+                style: TextStyle(color: Colors.green),
               ),
             ),
           ],
@@ -187,23 +189,17 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
+      onPopInvoked: (didPop) {}, // Prevent back button completely
       child: AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          'Complete Your Setup',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        title: const Text('Complete Your Setup'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Choose how you want to proceed:',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
+              const Text('Choose how you want to proceed:'),
               const SizedBox(height: 24),
-              // Toggle between Join and Create
+
               Row(
                 children: [
                   Expanded(
@@ -211,7 +207,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                       title: 'Join Team',
                       icon: Icons.group_add,
                       isSelected: _isJoiningTeam,
-                      onTap: () => setState(() => _isJoiningTeam = true),
+                      onTap: () => _switchMode(true),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -220,13 +216,14 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                       title: 'Create Team',
                       icon: Icons.add_business,
                       isSelected: !_isJoiningTeam,
-                      onTap: () => setState(() => _isJoiningTeam = false),
+                      onTap: () => _switchMode(false),
                     ),
                   ),
                 ],
               ),
+
               const SizedBox(height: 24),
-              // Form
+
               Form(
                 key: _formKey,
                 child: Column(
@@ -235,38 +232,31 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                       controller: _userNameController,
                       label: 'Your Name',
                       icon: Icons.person_outline,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
-                        return null;
-                      },
+                      validator: (value) =>
+                          value == null || value.isEmpty
+                              ? 'Please enter your name'
+                              : null,
                     ),
                     const SizedBox(height: 16),
-                    if (_isJoiningTeam)
-                      CustomTextField(
-                        controller: _teamCodeController,
-                        label: 'Team Code',
-                        icon: Icons.qr_code,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter team code';
-                          }
-                          return null;
-                        },
-                      )
-                    else
-                      CustomTextField(
-                        controller: _teamNameController,
-                        label: 'Team Name',
-                        icon: Icons.business,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter team name';
-                          }
-                          return null;
-                        },
-                      ),
+                    _isJoiningTeam
+                        ? CustomTextField(
+                            controller: _teamCodeController,
+                            label: 'Team Code',
+                            icon: Icons.qr_code,
+                            validator: (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Please enter team code'
+                                    : null,
+                          )
+                        : CustomTextField(
+                            controller: _teamNameController,
+                            label: 'Team Name',
+                            icon: Icons.business,
+                            validator: (value) =>
+                                value == null || value.isEmpty
+                                    ? 'Please enter team name'
+                                    : null,
+                          ),
                   ],
                 ),
               ),
@@ -277,16 +267,23 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           TextButton(
             onPressed: _isLoading
                 ? null
-                : (_isJoiningTeam ? _handleJoinTeam : _handleCreateTeam),
+                : (_isJoiningTeam
+                    ? _handleJoinTeam
+                    : _handleCreateTeam),
             child: _isLoading
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
                   )
                 : Text(
-                    _isJoiningTeam ? 'Join Team' : 'Create Team',
-                    style: TextStyle(color: Colors.green.shade400),
+                    _isJoiningTeam
+                        ? 'Join Team'
+                        : 'Create Team',
+                    style: const TextStyle(
+                        color: Colors.green),
                   ),
           ),
         ],
@@ -317,39 +314,40 @@ class _OptionCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.green.withOpacity(0.2)
-              : Theme.of(context).colorScheme.surfaceContainerLow,
+              ? Colors.green.withOpacity(0.15)
+              : Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerLow,
           border: Border.all(
             color: isSelected
                 ? Colors.green
-                : Theme.of(context).colorScheme.outline,
+                : Theme.of(context)
+                    .colorScheme
+                    .outline,
             width: 2,
           ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
               color: isSelected
                   ? Colors.green
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 32,
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant,
+              size: 30,
             ),
             const SizedBox(height: 8),
             Text(
               title,
               style: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
+                fontWeight: isSelected
+                    ? FontWeight.bold
+                    : FontWeight.normal,
               ),
               textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
