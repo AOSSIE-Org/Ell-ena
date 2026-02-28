@@ -45,24 +45,24 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       enabled: enabled,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: effectiveHintText,
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        hintStyle: const TextStyle(color: Colors.grey),
+        labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         prefixIcon: effectivePrefixIcon != null
-            ? Icon(effectivePrefixIcon, color: Colors.grey)
+            ? Icon(effectivePrefixIcon, color: Theme.of(context).colorScheme.onSurfaceVariant)
             : null,
         filled: true,
-        fillColor: const Color(0xFF2D2D2D),
+        fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade800),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -205,20 +205,28 @@ class DashboardLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final baseColor = isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final highlightColor = isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final cardColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
+    final textColor = scheme.onSurface;
+    final subTextColor = scheme.onSurfaceVariant;
+
     return Skeletonizer(
       enabled: true,
       effect: ShimmerEffect(
-        baseColor: const Color(0xFF2D2D2D),
-        highlightColor: const Color(0xFF3D3D3D),
+        baseColor: baseColor,
+        highlightColor: highlightColor,
       ),
       child: Column(
         children: [
           // Header with gradient
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
@@ -229,26 +237,26 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Dashboard',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                     ),
                     CircleAvatar(
-                      backgroundColor: Colors.grey.shade800,
+                      backgroundColor: baseColor,
                       radius: 20,
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Welcome back, User!',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.white70,
+                    color: subTextColor,
                   ),
                 ),
               ],
@@ -269,7 +277,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: _buildStatCard(),
+                          child: _buildStatCard(cardColor, textColor, subTextColor),
                         ),
                       ),
                     ),
@@ -277,44 +285,44 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   const SizedBox(height: 24),
                   
                   // Tasks section
-                  const Text(
+                  Text(
                     'Recent Tasks',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...List.generate(3, (index) => _buildTaskItem()),
+                  ...List.generate(3, (index) => _buildTaskItem(cardColor, textColor, subTextColor)),
                   
                   const SizedBox(height: 24),
                   
                   // Calendar section
-                  const Text(
+                  Text(
                     'Upcoming Events',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildCalendarWidget(),
+                  _buildCalendarWidget(cardColor, textColor, subTextColor),
                   
                   const SizedBox(height: 24),
                   
                   // Activity section
-                  const Text(
+                  Text(
                     'Team Activity',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...List.generate(2, (index) => _buildActivityItem()),
+                  ...List.generate(2, (index) => _buildActivityItem(cardColor, textColor, subTextColor, baseColor)),
                 ],
               ),
             ),
@@ -324,33 +332,33 @@ class DashboardLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildStatCard() {
+  Widget _buildStatCard(Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       height: 80,
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
+          Text(
             '12',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Tasks',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white70,
+              color: subTextColor,
             ),
           ),
         ],
@@ -358,12 +366,12 @@ class DashboardLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildTaskItem() {
+  Widget _buildTaskItem(Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -378,7 +386,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
             child: const Icon(Icons.task_alt, color: Colors.green),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -386,15 +394,15 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   'Task Title Goes Here',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Due tomorrow',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: subTextColor,
                   ),
                 ),
               ],
@@ -419,12 +427,12 @@ class DashboardLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildCalendarWidget() {
+  Widget _buildCalendarWidget(Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -433,18 +441,18 @@ class DashboardLoadingSkeleton extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'July 2023',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: textColor,
                 ),
               ),
               Row(
                 children: [
-                  Icon(Icons.arrow_back_ios, size: 14, color: Colors.grey.shade400),
+                  Icon(Icons.arrow_back_ios, size: 14, color: subTextColor),
                   const SizedBox(width: 16),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: subTextColor),
                 ],
               ),
             ],
@@ -453,16 +461,16 @@ class DashboardLoadingSkeleton extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(7, (index) {
-              return const Column(
+              return Column(
                 children: [
                   Text(
                     'M',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white70,
+                      color: subTextColor,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   CircleAvatar(
                     radius: 14,
                     backgroundColor: Colors.transparent,
@@ -470,7 +478,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                       '12',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                     ),
                   ),
@@ -485,23 +493,23 @@ class DashboardLoadingSkeleton extends StatelessWidget {
               color: Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.event, color: Colors.green, size: 16),
-                SizedBox(width: 8),
+                const Icon(Icons.event, color: Colors.green, size: 16),
+                const SizedBox(width: 8),
                 Text(
                   'Team Meeting',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Text(
                   '10:00 AM',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: subTextColor,
                   ),
                 ),
               ],
@@ -512,22 +520,22 @@ class DashboardLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildActivityItem() {
+  Widget _buildActivityItem(Color cardColor, Color textColor, Color subTextColor, Color avatarColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: Colors.grey.shade700,
+            backgroundColor: avatarColor,
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -535,25 +543,25 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   'User Name',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Completed a task: Task Name',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: subTextColor,
                   ),
                 ),
               ],
             ),
           ),
-          const Text(
+          Text(
             '2h ago',
             style: TextStyle(
               fontSize: 10,
-              color: Colors.white54,
+              color: subTextColor,
             ),
           ),
         ],
@@ -568,20 +576,29 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final baseColor = isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final highlightColor = isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final cardColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
+    final headerBgColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
+    final textColor = scheme.onSurface;
+    final subTextColor = scheme.onSurfaceVariant;
+
     return Skeletonizer(
       enabled: true,
       effect: ShimmerEffect(
-        baseColor: const Color(0xFF2D2D2D),
-        highlightColor: const Color(0xFF3D3D3D),
+        baseColor: baseColor,
+        highlightColor: highlightColor,
       ),
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
@@ -592,12 +609,12 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Workspace',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                     ),
                     Container(
@@ -627,17 +644,17 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: headerBgColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search, color: Colors.grey.shade400),
+                      Icon(Icons.search, color: subTextColor),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Search',
                         style: TextStyle(
-                          color: Colors.grey,
+                          color: subTextColor,
                         ),
                       ),
                     ],
@@ -653,9 +670,9 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _buildTab('All', true),
-                _buildTab('Tasks', false),
-                _buildTab('Tickets', false),
+                _buildTab('All', true, cardColor, subTextColor),
+                _buildTab('Tasks', false, cardColor, subTextColor),
+                _buildTab('Tickets', false, cardColor, subTextColor),
               ],
             ),
           ),
@@ -667,7 +684,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: 5,
               itemBuilder: (context, index) {
-                return _buildWorkspaceItem();
+                return _buildWorkspaceItem(cardColor, textColor, subTextColor, baseColor);
               },
             ),
           ),
@@ -676,13 +693,13 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildTab(String title, bool isSelected) {
+  Widget _buildTab(String title, bool isSelected, Color cardColor, Color subTextColor) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withOpacity(0.2) : const Color(0xFF2D2D2D),
+          color: isSelected ? Colors.green.withOpacity(0.2) : cardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,
@@ -690,19 +707,19 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
           title,
           style: TextStyle(
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.green : Colors.white,
+            color: isSelected ? Colors.green : subTextColor,
           ),
         ),
       ),
     );
   }
   
-  Widget _buildWorkspaceItem() {
+  Widget _buildWorkspaceItem(Color cardColor, Color textColor, Color subTextColor, Color avatarColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -742,12 +759,12 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Task Title Goes Here With a Longer Description',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 12),
@@ -755,24 +772,24 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 12,
-                backgroundColor: Colors.grey.shade700,
+                backgroundColor: avatarColor,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Assigned to: User Name',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white70,
+                  color: subTextColor,
                 ),
               ),
               const Spacer(),
-              const Icon(Icons.calendar_today, size: 12, color: Colors.white70),
+              Icon(Icons.calendar_today, size: 12, color: subTextColor),
               const SizedBox(width: 4),
-              const Text(
+              Text(
                 'Due: Jul 15',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white70,
+                  color: subTextColor,
                 ),
               ),
             ],
@@ -789,20 +806,29 @@ class CalendarLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final baseColor = isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final highlightColor = isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final cardColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
+    final navBtnColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFEEEEEE);
+    final textColor = scheme.onSurface;
+    final subTextColor = scheme.onSurfaceVariant;
+
     return Skeletonizer(
       enabled: true,
       effect: ShimmerEffect(
-        baseColor: const Color(0xFF2D2D2D),
-        highlightColor: const Color(0xFF3D3D3D),
+        baseColor: baseColor,
+        highlightColor: highlightColor,
       ),
       child: Column(
         children: [
           // Calendar header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
               ),
@@ -814,12 +840,12 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'July 2023',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                     ),
                     Row(
@@ -827,19 +853,19 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
+                            color: navBtnColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.arrow_back, size: 16, color: Colors.white),
+                          child: Icon(Icons.arrow_back, size: 16, color: textColor),
                         ),
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
+                            color: navBtnColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.arrow_forward, size: 16, color: Colors.white),
+                          child: Icon(Icons.arrow_forward, size: 16, color: textColor),
                         ),
                       ],
                     ),
@@ -850,14 +876,14 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                 // Weekday headers
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: const [
-                    Text('M', style: TextStyle(color: Colors.white70)),
-                    Text('T', style: TextStyle(color: Colors.white70)),
-                    Text('W', style: TextStyle(color: Colors.white70)),
-                    Text('T', style: TextStyle(color: Colors.white70)),
-                    Text('F', style: TextStyle(color: Colors.white70)),
-                    Text('S', style: TextStyle(color: Colors.white70)),
-                    Text('S', style: TextStyle(color: Colors.white70)),
+                  children: [
+                    Text('M', style: TextStyle(color: subTextColor)),
+                    Text('T', style: TextStyle(color: subTextColor)),
+                    Text('W', style: TextStyle(color: subTextColor)),
+                    Text('T', style: TextStyle(color: subTextColor)),
+                    Text('F', style: TextStyle(color: subTextColor)),
+                    Text('S', style: TextStyle(color: subTextColor)),
+                    Text('S', style: TextStyle(color: subTextColor)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -886,7 +912,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                               child: Text(
                                 '${week * 7 + day + 1}',
                                 style: TextStyle(
-                                  color: isSelected ? Colors.green : Colors.white,
+                                  color: isSelected ? Colors.green : textColor,
                                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
@@ -927,7 +953,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                       width: 60,
                       child: Text(
                         '${hour.toString().padLeft(2, '0')}:00',
-                        style: const TextStyle(color: Colors.white70),
+                        style: TextStyle(color: subTextColor),
                       ),
                     ),
                     
@@ -935,7 +961,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                     Expanded(
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16, left: 8),
-                        child: hasEvent ? _buildEventItem() : const SizedBox(height: 40),
+                        child: hasEvent ? _buildEventItem(cardColor, textColor, subTextColor) : const SizedBox(height: 40),
                       ),
                     ),
                   ],
@@ -948,7 +974,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
     );
   }
   
-  Widget _buildEventItem() {
+  Widget _buildEventItem(Color cardColor, Color textColor, Color subTextColor) {
     final eventTypes = ['Meeting', 'Task', 'Ticket'];
     final eventType = eventTypes[Random().nextInt(eventTypes.length)];
     
@@ -972,7 +998,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: cardColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: eventColor.withOpacity(0.3), width: 1),
       ),
@@ -993,17 +1019,17 @@ class CalendarLoadingSkeleton extends StatelessWidget {
               children: [
                 Text(
                   '$eventType Title',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Description for this $eventType',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: subTextColor,
                   ),
                 ),
               ],
