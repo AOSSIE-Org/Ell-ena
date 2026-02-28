@@ -64,6 +64,8 @@ CREATE POLICY "Users can create tasks in their team"
 
 -- Users can update tasks ONLY if they are:
 -- the creator, OR the assignee, OR an admin in the same team
+-- Note: This policy grants UPDATE permission, but sensitive column changes
+-- are further restricted by the guard_task_changes trigger
 DROP POLICY IF EXISTS "Users can update tasks they created or are assigned to" ON tasks;
 CREATE POLICY "Users can update tasks they created or are assigned to"
   ON tasks FOR UPDATE
@@ -102,44 +104,71 @@ CREATE POLICY "Users can delete tasks they created or admins can delete"
     )
   );
 
--- Drop the old admin-only approval RLS policy
--- (Policies are OR-ed in Postgres; this does not restrict approval_status by itself)
-DROP POLICY IF EXISTS "Only admins can approve or reject tasks" ON tasks;
+-- Create function to check if current user is an admin of a specific team
+CREATE OR REPLACE FUNCTION is_user_admin_of_team(team_uuid UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM users
+    WHERE id = auth.uid()
+      AND role = 'admin'
+      AND team_id = team_uuid
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Guard sensitive fields at the database level (column-level)
--- Prevent assignee/member from changing approval_status directly.
--- Only admins in the same team can change approval_status.
-
-CREATE OR REPLACE FUNCTION guard_task_approval_status()
+-- Create comprehensive guard trigger for sensitive task changes
+CREATE OR REPLACE FUNCTION guard_task_changes()
 RETURNS TRIGGER AS $$
 DECLARE
-  is_admin BOOLEAN;
+  is_admin_of_old_team BOOLEAN;
+  is_admin_of_new_team BOOLEAN;
+  is_creator BOOLEAN;
 BEGIN
-  -- Only enforce on actual change
-  IF NEW.approval_status IS DISTINCT FROM OLD.approval_status THEN
-    SELECT EXISTS (
-      SELECT 1
-      FROM users
-      WHERE users.id = auth.uid()
-        AND users.team_id = NEW.team_id
-        AND users.role = 'admin'
-    )
-    INTO is_admin;
+  -- Check if user is creator of the task
+  is_creator := (auth.uid() = OLD.created_by);
+  
+  -- Check admin status for both old and new teams (in case team_id is changing)
+  is_admin_of_old_team := is_user_admin_of_team(OLD.team_id);
+  is_admin_of_new_team := is_user_admin_of_team(NEW.team_id);
 
-    IF NOT is_admin THEN
+  -- Guard 1: Approval status changes (use OLD.team_id for authorization)
+  IF NEW.approval_status IS DISTINCT FROM OLD.approval_status THEN
+    IF NOT is_admin_of_old_team THEN
       RAISE EXCEPTION 'permission denied: only admins can change approval_status';
     END IF;
+  END IF;
+
+  -- Guard 2: Team ID changes (use OLD.team_id for authorization)
+  IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
+    IF NOT is_admin_of_old_team THEN
+      RAISE EXCEPTION 'permission denied: only admins can change team_id';
+    END IF;
+  END IF;
+
+  -- Guard 3: Assigned_to changes
+  IF NEW.assigned_to IS DISTINCT FROM OLD.assigned_to THEN
+    -- Only creator or admin can change assigned_to
+    IF NOT (is_creator OR is_admin_of_old_team) THEN
+      RAISE EXCEPTION 'permission denied: only creator or admin can change assigned_to';
+    END IF;
+  END IF;
+
+  -- Guard 4: Created_by is immutable
+  IF NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+    RAISE EXCEPTION 'permission denied: created_by cannot be changed';
   END IF;
 
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS guard_task_approval_status ON tasks;
-CREATE TRIGGER guard_task_approval_status
+-- Create trigger for task changes
+DROP TRIGGER IF EXISTS guard_task_changes ON tasks;
+CREATE TRIGGER guard_task_changes
 BEFORE UPDATE ON tasks
 FOR EACH ROW
-EXECUTE FUNCTION guard_task_approval_status();
+EXECUTE FUNCTION guard_task_changes();
 
 -- Create policies for task comments
 
@@ -200,7 +229,7 @@ BEFORE UPDATE ON tasks
 FOR EACH ROW
 EXECUTE FUNCTION update_task_timestamp();
 
--- Function to check if a user is an admin of a team
+-- Function to check if a user is an admin of a team (kept for backward compatibility)
 CREATE OR REPLACE FUNCTION is_team_admin(team_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN

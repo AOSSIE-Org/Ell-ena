@@ -58,10 +58,9 @@ FOR EACH ROW
 EXECUTE FUNCTION generate_meeting_number();
 
 -- Enable Row Level Security
-ALTER TABLE meetings ENABLE ROW LEVEL SECURITY
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 
 -- MEETINGS POLICIES (SECURE)
-
 
 -- View policy - all team members can view meetings
 DROP POLICY IF EXISTS meetings_view_policy ON meetings;
@@ -130,22 +129,25 @@ CREATE POLICY meetings_update_policy ON meetings
 -- Guard sensitive fields (column-level) at the database level
 -- Non-admins (including creator) can NOT modify transcription/AI/bot fields.
 -- Admins can modify everything.
+-- Also prevent non-admins from changing team_id
 
 CREATE OR REPLACE FUNCTION guard_meeting_sensitive_fields()
 RETURNS TRIGGER AS $$
 DECLARE
   is_admin BOOLEAN;
 BEGIN
+  -- Check if the current user is an admin of the ORIGINAL team
   SELECT EXISTS (
     SELECT 1
     FROM users
     WHERE users.id = auth.uid()
-      AND users.team_id = NEW.team_id
+      AND users.team_id = OLD.team_id
       AND users.role = 'admin'
   )
   INTO is_admin;
 
   IF NOT is_admin THEN
+    -- Non-admins cannot modify sensitive fields
     IF NEW.transcription IS DISTINCT FROM OLD.transcription
        OR NEW.ai_summary IS DISTINCT FROM OLD.ai_summary
        OR NEW.duration_minutes IS DISTINCT FROM OLD.duration_minutes
@@ -154,6 +156,11 @@ BEGIN
        OR NEW.transcription_error IS DISTINCT FROM OLD.transcription_error
     THEN
       RAISE EXCEPTION 'permission denied: only admins can modify transcription/AI/bot fields';
+    END IF;
+    
+    -- Non-admins cannot change team_id
+    IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
+      RAISE EXCEPTION 'permission denied: only admins can change team_id';
     END IF;
   END IF;
 
