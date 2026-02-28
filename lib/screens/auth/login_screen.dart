@@ -26,6 +26,11 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<Offset> _slideAnimation;
   final _supabaseService = SupabaseService();
 
+  // ✅ Added proper email regex validation
+  final RegExp _emailRegex = RegExp(
+    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+  );
+
   @override
   void initState() {
     super.initState();
@@ -68,10 +73,10 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Login with Supabase
-      final response = await _supabaseService.client.auth.signInWithPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+      final response =
+          await _supabaseService.client.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
       if (response.user != null) {
@@ -79,26 +84,26 @@ class _LoginScreenState extends State<LoginScreen>
           NavigationService().navigateToReplacement(const HomeScreen());
         }
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid email or password'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        _showError('Invalid email or password');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
-      }
+      _showError(e.toString());
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  // ✅ Small improvement: extracted common error snackbar
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -107,40 +112,26 @@ class _LoginScreenState extends State<LoginScreen>
     try {
       final result = await _supabaseService.signInWithGoogle();
 
-      if (mounted) {
-        if (result['success'] == true) {
-          if (result['isNewUser'] == true) {
-            // New user - show team selection dialog
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => TeamSelectionDialog(
-                userEmail: result['email'] ?? '',
-                googleRefreshToken: result['googleRefreshToken'],
-              ),
-            );
-          } else {
-            // Existing user - go to home
-            NavigationService().navigateToReplacement(const HomeScreen());
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
-              backgroundColor: Colors.red,
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        if (result['isNewUser'] == true) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => TeamSelectionDialog(
+              userEmail: result['email'] ?? '',
+              googleRefreshToken: result['googleRefreshToken'],
             ),
           );
+        } else {
+          NavigationService().navigateToReplacement(const HomeScreen());
         }
+      } else {
+        _showError(result['error'] ?? 'Google sign-in failed');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      _showError('Error: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -170,8 +161,8 @@ class _LoginScreenState extends State<LoginScreen>
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
+                      if (!_emailRegex.hasMatch(value.trim())) {
+                        return 'Please enter a valid email address';
                       }
                       return null;
                     },
@@ -217,30 +208,26 @@ class _LoginScreenState extends State<LoginScreen>
                     isLoading: _isLoading,
                   ),
                   const SizedBox(height: 24),
-                  // OR divider
                   Row(
                     children: [
                       Expanded(
-                          child:
-                              Divider(color: Theme.of(context).dividerColor)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Divider(
+                            color: Theme.of(context).dividerColor),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR',
-                          style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                       Expanded(
-                          child:
-                              Divider(color: Theme.of(context).dividerColor)),
+                        child: Divider(
+                            color: Theme.of(context).dividerColor),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  // Google Sign-In Button
                   OutlinedButton.icon(
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
                     icon: const FaIcon(
@@ -254,17 +241,6 @@ class _LoginScreenState extends State<LoginScreen>
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onSurface,
-                      side: BorderSide(color: Colors.green.shade400, width: 2),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 24,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -273,12 +249,15 @@ class _LoginScreenState extends State<LoginScreen>
                       Text(
                         'Don\'t have an account? ',
                         style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant,
+                        ),
                       ),
                       TextButton(
                         onPressed: () {
-                          NavigationService().navigateTo(const SignupScreen());
+                          NavigationService()
+                              .navigateTo(const SignupScreen());
                         },
                         child: Text(
                           'Sign Up',
