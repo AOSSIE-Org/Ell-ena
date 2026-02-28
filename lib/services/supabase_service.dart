@@ -27,23 +27,32 @@ class SupabaseService {
   late final TicketService _tickets;
   late final MeetingService _meetings;
 
+  // ── Initialization guard ─────────────────────────────────────────────────
+  void _ensureInitialized() {
+    if (!_isInitialized) {
+      throw StateError(
+        'SupabaseService must be initialized before use. Call initialize() first.',
+      );
+    }
+  }
+
   // Public accessors so callers can use the services directly if they wish.
-  AuthService    get auth     => _auth;
-  TeamService    get team     => _team;
-  TaskService    get tasks    => _tasks;
-  TicketService  get tickets  => _tickets;
-  MeetingService get meetings => _meetings;
+  AuthService    get auth     { _ensureInitialized(); return _auth; }
+  TeamService    get team     { _ensureInitialized(); return _team; }
+  TaskService    get tasks    { _ensureInitialized(); return _tasks; }
+  TicketService  get tickets  { _ensureInitialized(); return _tickets; }
+  MeetingService get meetings { _ensureInitialized(); return _meetings; }
 
   // ── Basic state getters ───────────────────────────────────────────────────
   bool                         get isInitialized    => _isInitialized;
-  SupabaseClient               get client           => _client;
+  SupabaseClient               get client           { _ensureInitialized(); return _client; }
   User?                        get currentUser      => _isInitialized ? _client.auth.currentUser : null;
   List<Map<String, dynamic>>   get teamMembersCache => _isInitialized ? _team.membersCache : [];
 
   // Stream pass-throughs
-  Stream<List<Map<String, dynamic>>> get tasksStream    => _tasks.tasksStream;
-  Stream<List<Map<String, dynamic>>> get ticketsStream  => _tickets.ticketsStream;
-  Stream<List<Map<String, dynamic>>> get meetingsStream => _meetings.meetingsStream;
+  Stream<List<Map<String, dynamic>>> get tasksStream    { _ensureInitialized(); return _tasks.tasksStream; }
+  Stream<List<Map<String, dynamic>>> get ticketsStream  { _ensureInitialized(); return _tickets.ticketsStream; }
+  Stream<List<Map<String, dynamic>>> get meetingsStream { _ensureInitialized(); return _meetings.meetingsStream; }
 
   // ── Initialisation ────────────────────────────────────────────────────────
   Future<void> initialize() async {
