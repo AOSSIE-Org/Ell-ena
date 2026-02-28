@@ -13,13 +13,13 @@ CREATE TABLE meetings (
     meeting_url TEXT,
     transcription TEXT DEFAULT NULL,
     ai_summary TEXT DEFAULT NULL,
-    
+
     -- New columns for transcription bot functionality
     duration_minutes INT DEFAULT 60,
     bot_started_at TIMESTAMP WITH TIME ZONE,
     transcription_attempted_at TIMESTAMP WITH TIME ZONE,
-    transcription_error TEXT DEFAULT NULL,  -- Stores error messages when transcription processing fails
-    
+    transcription_error TEXT DEFAULT NULL,
+
     created_by UUID REFERENCES auth.users(id),
     team_id UUID REFERENCES teams(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -28,6 +28,7 @@ CREATE TABLE meetings (
 
 COMMENT ON COLUMN meetings.transcription_error IS 'Stores error messages when transcription processing fails';
 
+-- Generate meeting number trigger
 CREATE OR REPLACE FUNCTION generate_meeting_number()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -50,6 +51,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_meeting_number ON meetings;
 CREATE TRIGGER set_meeting_number
 BEFORE INSERT ON meetings
 FOR EACH ROW
@@ -58,56 +60,146 @@ EXECUTE FUNCTION generate_meeting_number();
 -- Enable Row Level Security
 ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 
+-- MEETINGS POLICIES (SECURE)
+
 -- View policy - all team members can view meetings
+DROP POLICY IF EXISTS meetings_view_policy ON meetings;
 CREATE POLICY meetings_view_policy ON meetings
     FOR SELECT
     USING (
         EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
         )
     );
 
 -- Insert policy - any authenticated user can create a meeting for their team
+-- Enforce created_by = auth.uid()
+DROP POLICY IF EXISTS meetings_insert_policy ON meetings;
 CREATE POLICY meetings_insert_policy ON meetings
     FOR INSERT
     WITH CHECK (
-        auth.uid() = created_by AND
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id
+        auth.uid() = created_by
+        AND EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
         )
     );
 
--- Delete policy - only admins or the creator can delete meetings
+-- Delete policy - only admins or the creator (who is still on the team) can delete meetings
+DROP POLICY IF EXISTS meetings_delete_policy ON meetings;
 CREATE POLICY meetings_delete_policy ON meetings
     FOR DELETE
     USING (
-        auth.uid() = created_by OR
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id 
-            AND users.role = 'admin'
+        -- Creator can delete only if they are still on the team
+        (
+            auth.uid() = created_by
+            AND EXISTS (
+                SELECT 1 FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = meetings.team_id
+            )
+        )
+        OR EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
+              AND users.role = 'admin'
         )
     );
 
--- Update policy - only the creator or admins can update meetings
+-- Update policy - creator (who is still on the team) OR admin can update meetings
+DROP POLICY IF EXISTS meetings_update_policy ON meetings;
 CREATE POLICY meetings_update_policy ON meetings
     FOR UPDATE
     USING (
-        auth.uid() = created_by OR
-        EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.team_id = meetings.team_id 
-            AND users.role = 'admin'
+        -- Creator can update only if they are still on the team
+        (
+            auth.uid() = created_by
+            AND EXISTS (
+                SELECT 1 FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = meetings.team_id
+            )
+        )
+        OR EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
+              AND users.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        -- Same conditions apply to the new row
+        (
+            auth.uid() = created_by
+            AND EXISTS (
+                SELECT 1 FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = meetings.team_id
+            )
+        )
+        OR EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+              AND users.team_id = meetings.team_id
+              AND users.role = 'admin'
         )
     );
 
+-- Guard sensitive fields (column-level) at the database level
+-- Non-admins (including creator) can NOT modify transcription/AI/bot fields.
+-- Admins can modify everything.
+-- Also prevent non-admins from changing team_id
+
+CREATE OR REPLACE FUNCTION guard_meeting_sensitive_fields()
+RETURNS TRIGGER AS $$
+DECLARE
+  is_admin BOOLEAN;
+BEGIN
+  -- Check if the current user is an admin of the ORIGINAL team
+  SELECT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE users.id = auth.uid()
+      AND users.team_id = OLD.team_id
+      AND users.role = 'admin'
+  )
+  INTO is_admin;
+
+  IF NOT is_admin THEN
+    -- Non-admins cannot modify sensitive fields
+    IF NEW.transcription IS DISTINCT FROM OLD.transcription
+       OR NEW.ai_summary IS DISTINCT FROM OLD.ai_summary
+       OR NEW.duration_minutes IS DISTINCT FROM OLD.duration_minutes
+       OR NEW.bot_started_at IS DISTINCT FROM OLD.bot_started_at
+       OR NEW.transcription_attempted_at IS DISTINCT FROM OLD.transcription_attempted_at
+       OR NEW.transcription_error IS DISTINCT FROM OLD.transcription_error
+    THEN
+      RAISE EXCEPTION 'permission denied: only admins can modify transcription/AI/bot fields';
+    END IF;
+    
+    -- Non-admins cannot change team_id
+    IF NEW.team_id IS DISTINCT FROM OLD.team_id THEN
+      RAISE EXCEPTION 'permission denied: only admins can change team_id';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS guard_meeting_sensitive_fields ON meetings;
+CREATE TRIGGER guard_meeting_sensitive_fields
+BEFORE UPDATE ON meetings
+FOR EACH ROW
+EXECUTE FUNCTION guard_meeting_sensitive_fields();
+
 -- Update the updated_at timestamp automatically
+-- NOTE: update_updated_at_column() is defined in sqls/04_tickets_schema.sql
+DROP TRIGGER IF EXISTS update_meetings_updated_at ON meetings;
 CREATE TRIGGER update_meetings_updated_at
 BEFORE UPDATE ON meetings
 FOR EACH ROW
@@ -122,7 +214,7 @@ BEGIN
   FOR meeting_record IN
     SELECT id, meeting_url
     FROM meetings
-    WHERE 
+    WHERE
       meeting_url LIKE '%meet.google.com%' AND
       meeting_date <= NOW() + INTERVAL '5 minutes' AND
       meeting_date > NOW() - INTERVAL '5 minutes' AND
@@ -149,7 +241,7 @@ BEGIN
   FOR meeting_record IN
     SELECT id, meeting_url
     FROM meetings
-    WHERE 
+    WHERE
       meeting_url LIKE '%meet.google.com%' AND
       meeting_date + ((COALESCE(duration_minutes, 60)) * INTERVAL '1 minute') <= NOW() AND
       bot_started_at IS NOT NULL AND
@@ -168,14 +260,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Scheduled jobs for bot automation
--- Note: IF EXISTS checks allow safe re-running during development/debugging
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'start-bot') THEN
     PERFORM cron.unschedule('start-bot');
   END IF;
   PERFORM cron.schedule('start-bot', '* * * * *', 'SELECT start_meeting_bot()');
-  
+
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'fetch-transcript') THEN
     PERFORM cron.unschedule('fetch-transcript');
   END IF;
@@ -192,7 +283,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Cleanup cron job
--- Note: IF EXISTS check allows safe re-running during development/debugging
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'delete-old-meetings') THEN
