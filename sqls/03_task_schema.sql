@@ -63,15 +63,25 @@ CREATE POLICY "Users can create tasks in their team"
   );
 
 -- Users can update tasks ONLY if they are:
--- the creator, OR the assignee, OR an admin in the same team
+-- the creator (and still in same team), OR the assignee, OR an admin in the same team
 -- Note: This policy grants UPDATE permission, but sensitive column changes
 -- are further restricted by the guard_task_changes trigger
 DROP POLICY IF EXISTS "Users can update tasks they created or are assigned to" ON tasks;
 CREATE POLICY "Users can update tasks they created or are assigned to"
   ON tasks FOR UPDATE
   USING (
-    created_by = auth.uid()
+    -- Creator branch: must be creator AND still be in the same team
+    (
+      created_by = auth.uid() 
+      AND EXISTS (
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+          AND users.team_id = tasks.team_id
+      )
+    )
+    -- Assignee branch: must be assigned_to
     OR assigned_to = auth.uid()
+    -- Admin branch: must be admin in the same team
     OR EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
@@ -80,8 +90,18 @@ CREATE POLICY "Users can update tasks they created or are assigned to"
     )
   )
   WITH CHECK (
-    created_by = auth.uid()
+    -- Creator branch: must be creator AND still be in the same team
+    (
+      created_by = auth.uid() 
+      AND EXISTS (
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+          AND users.team_id = tasks.team_id
+      )
+    )
+    -- Assignee branch: must be assigned_to
     OR assigned_to = auth.uid()
+    -- Admin branch: must be admin in the same team
     OR EXISTS (
       SELECT 1 FROM users
       WHERE users.id = auth.uid()
@@ -95,7 +115,16 @@ DROP POLICY IF EXISTS "Users can delete tasks they created or admins can delete"
 CREATE POLICY "Users can delete tasks they created or admins can delete"
   ON tasks FOR DELETE
   USING (
-    created_by = auth.uid()
+    -- Creator branch: must be creator AND still be in the same team
+    (
+      created_by = auth.uid() 
+      AND EXISTS (
+        SELECT 1 FROM users
+        WHERE users.id = auth.uid()
+          AND users.team_id = tasks.team_id
+      )
+    )
+    -- Admin branch: must be admin in the same team
     OR EXISTS (
       SELECT 1 FROM users
       WHERE id = auth.uid()
@@ -105,17 +134,21 @@ CREATE POLICY "Users can delete tasks they created or admins can delete"
   );
 
 -- Create function to check if current user is an admin of a specific team
+-- SECURITY DEFINER with explicit search_path and schema-qualified table references
 CREATE OR REPLACE FUNCTION is_user_admin_of_team(team_uuid UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM users
+    SELECT 1 FROM public.users
     WHERE id = auth.uid()
       AND role = 'admin'
       AND team_id = team_uuid
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 -- Create comprehensive guard trigger for sensitive task changes
 CREATE OR REPLACE FUNCTION guard_task_changes()
@@ -200,18 +233,45 @@ CREATE POLICY "Users can add comments to tasks in their team"
     )
   );
 
--- Users can only update their own comments
+-- Users can only update their own comments (team-scoped)
 DROP POLICY IF EXISTS "Users can only update their own comments" ON task_comments;
 CREATE POLICY "Users can only update their own comments"
   ON task_comments FOR UPDATE
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+  USING (
+    -- User must own the comment AND be in the same team as the task
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM tasks
+      JOIN users ON users.team_id = tasks.team_id
+      WHERE tasks.id = task_comments.task_id
+        AND users.id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    -- Ensure the update doesn't change ownership and still maintains team scope
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM tasks
+      JOIN users ON users.team_id = tasks.team_id
+      WHERE tasks.id = task_comments.task_id
+        AND users.id = auth.uid()
+    )
+  );
 
--- Users can only delete their own comments
+-- Users can only delete their own comments (team-scoped)
 DROP POLICY IF EXISTS "Users can only delete their own comments" ON task_comments;
 CREATE POLICY "Users can only delete their own comments"
   ON task_comments FOR DELETE
-  USING (user_id = auth.uid());
+  USING (
+    -- User must own the comment AND be in the same team as the task
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM tasks
+      JOIN users ON users.team_id = tasks.team_id
+      WHERE tasks.id = task_comments.task_id
+        AND users.id = auth.uid()
+    )
+  );
 
 -- Create function to update task timestamps
 CREATE OR REPLACE FUNCTION update_task_timestamp()
@@ -230,14 +290,18 @@ FOR EACH ROW
 EXECUTE FUNCTION update_task_timestamp();
 
 -- Function to check if a user is an admin of a team (kept for backward compatibility)
+-- SECURITY DEFINER with explicit search_path and schema-qualified table references
 CREATE OR REPLACE FUNCTION is_team_admin(team_uuid UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM users
+    SELECT 1 FROM public.users
     WHERE id = auth.uid()
       AND role = 'admin'
       AND team_id = team_uuid
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;

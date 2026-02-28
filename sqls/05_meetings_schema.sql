@@ -88,12 +88,20 @@ CREATE POLICY meetings_insert_policy ON meetings
         )
     );
 
--- Delete policy - only admins or the creator can delete meetings
+-- Delete policy - only admins or the creator (who is still on the team) can delete meetings
 DROP POLICY IF EXISTS meetings_delete_policy ON meetings;
 CREATE POLICY meetings_delete_policy ON meetings
     FOR DELETE
     USING (
-        auth.uid() = created_by
+        -- Creator can delete only if they are still on the team
+        (
+            auth.uid() = created_by
+            AND EXISTS (
+                SELECT 1 FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = meetings.team_id
+            )
+        )
         OR EXISTS (
             SELECT 1 FROM users
             WHERE users.id = auth.uid()
@@ -102,13 +110,20 @@ CREATE POLICY meetings_delete_policy ON meetings
         )
     );
 
--- Update policy - creator OR admin can update meetings (consistent with delete)
--- Sensitive columns are protected by a trigger (below).
+-- Update policy - creator (who is still on the team) OR admin can update meetings
 DROP POLICY IF EXISTS meetings_update_policy ON meetings;
 CREATE POLICY meetings_update_policy ON meetings
     FOR UPDATE
     USING (
-        auth.uid() = created_by
+        -- Creator can update only if they are still on the team
+        (
+            auth.uid() = created_by
+            AND EXISTS (
+                SELECT 1 FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = meetings.team_id
+            )
+        )
         OR EXISTS (
             SELECT 1 FROM users
             WHERE users.id = auth.uid()
@@ -117,7 +132,15 @@ CREATE POLICY meetings_update_policy ON meetings
         )
     )
     WITH CHECK (
-        auth.uid() = created_by
+        -- Same conditions apply to the new row
+        (
+            auth.uid() = created_by
+            AND EXISTS (
+                SELECT 1 FROM users
+                WHERE users.id = auth.uid()
+                  AND users.team_id = meetings.team_id
+            )
+        )
         OR EXISTS (
             SELECT 1 FROM users
             WHERE users.id = auth.uid()
