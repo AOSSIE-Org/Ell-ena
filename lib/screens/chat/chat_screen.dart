@@ -143,8 +143,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       final tasks = await _supabaseService.getTasks(filterByAssignment: true);
 
-      final tickets =
-          await _supabaseService.getTickets(filterByAssignment: true);
+      final tickets = await _supabaseService.getTickets(
+        filterByAssignment: true,
+      );
 
       if (mounted) {
         setState(() {
@@ -217,7 +218,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.green.withOpacity(
-                                  0.2 * (1 - _waveformController.value)),
+                                0.2 * (1 - _waveformController.value),
+                              ),
                             ),
                           ),
                           // Middle ripple
@@ -227,7 +229,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.green.withOpacity(
-                                  0.3 * (1 - _waveformController.value)),
+                                0.3 * (1 - _waveformController.value),
+                              ),
                             ),
                           ),
                           // Inner circle with mic icon
@@ -369,7 +372,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       Map<String, dynamic> result = {
         'success': false,
-        'error': 'Function not implemented'
+        'error': 'Function not implemented',
       };
 
       // Execute the appropriate function based on the function name
@@ -458,7 +461,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Create a task using the Supabase service
   Future<Map<String, dynamic>> _createTask(
-      Map<String, dynamic> arguments) async {
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       if (!_supabaseService.isInitialized) {
         return {'success': false, 'error': 'Service not initialized'};
@@ -484,8 +488,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (assignedTo != null && assignedTo.isNotEmpty) {
         // Check if the value is already a valid UUID
         final uuidPattern = RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-            caseSensitive: false);
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        );
 
         if (uuidPattern.hasMatch(assignedTo)) {
           // It's already a UUID
@@ -522,7 +527,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Create a ticket using the Supabase service
   Future<Map<String, dynamic>> _createTicket(
-      Map<String, dynamic> arguments) async {
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       if (!_supabaseService.isInitialized) {
         return {'success': false, 'error': 'Service not initialized'};
@@ -540,8 +546,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (assignedTo != null && assignedTo.isNotEmpty) {
         // Check if the value is already a valid UUID
         final uuidPattern = RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-            caseSensitive: false);
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        );
 
         if (uuidPattern.hasMatch(assignedTo)) {
           // It's already a UUID
@@ -579,7 +586,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Create a meeting using the Supabase service
   Future<Map<String, dynamic>> _createMeeting(
-      Map<String, dynamic> arguments) async {
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       if (!_supabaseService.isInitialized) {
         return {'success': false, 'error': 'Service not initialized'};
@@ -616,7 +624,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Query tasks based on filters
   Future<Map<String, dynamic>> _queryTasks(
-      Map<String, dynamic> arguments) async {
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       if (!_supabaseService.isInitialized) {
         return {'success': false, 'error': 'Service not initialized'};
@@ -633,8 +642,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (assignedToTeamMember != null && assignedToTeamMember.isNotEmpty) {
         // Check if it's already a UUID
         final uuidPattern = RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-            caseSensitive: false);
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        );
 
         if (uuidPattern.hasMatch(assignedToTeamMember)) {
           teamMemberId = assignedToTeamMember;
@@ -651,10 +661,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           // If no exact match, try partial match
           if (matchingMember.isEmpty) {
             matchingMember = _teamMembers.firstWhere(
-              (member) => member['full_name']
-                  .toString()
-                  .toLowerCase()
-                  .contains(assignedToTeamMember.toLowerCase()),
+              (member) => member['full_name'].toString().toLowerCase().contains(
+                    assignedToTeamMember.toLowerCase(),
+                  ),
               orElse: () => {},
             );
           }
@@ -674,12 +683,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           if (matchingMember.isNotEmpty && matchingMember['id'] != null) {
             teamMemberId = matchingMember['id'];
             debugPrint(
-                'Found team member: ${matchingMember['full_name']} with ID: $teamMemberId');
+              'Found team member: ${matchingMember['full_name']} with ID: $teamMemberId',
+            );
           } else {
             debugPrint(
-                'Could not find team member with name: $assignedToTeamMember');
+              'Could not find team member with name: $assignedToTeamMember',
+            );
             debugPrint(
-                'Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}');
+              'Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}',
+            );
           }
         }
       }
@@ -713,11 +725,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         });
       }
 
-      return {
-        'success': true,
-        'tasks': tasks,
-        'count': tasks.length,
-      };
+      return {'success': true, 'tasks': tasks, 'count': tasks.length};
     } catch (e) {
       debugPrint('Error querying tasks: $e');
       return {'success': false, 'error': e.toString()};
@@ -726,7 +734,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Query tickets based on filters
   Future<Map<String, dynamic>> _queryTickets(
-      Map<String, dynamic> arguments) async {
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       if (!_supabaseService.isInitialized) {
         return {'success': false, 'error': 'Service not initialized'};
@@ -743,8 +752,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (assignedToTeamMember != null && assignedToTeamMember.isNotEmpty) {
         // Check if it's already a UUID
         final uuidPattern = RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-            caseSensitive: false);
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        );
 
         if (uuidPattern.hasMatch(assignedToTeamMember)) {
           teamMemberId = assignedToTeamMember;
@@ -761,10 +771,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           // If no exact match, try partial match
           if (matchingMember.isEmpty) {
             matchingMember = _teamMembers.firstWhere(
-              (member) => member['full_name']
-                  .toString()
-                  .toLowerCase()
-                  .contains(assignedToTeamMember.toLowerCase()),
+              (member) => member['full_name'].toString().toLowerCase().contains(
+                    assignedToTeamMember.toLowerCase(),
+                  ),
               orElse: () => {},
             );
           }
@@ -784,12 +793,15 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           if (matchingMember.isNotEmpty && matchingMember['id'] != null) {
             teamMemberId = matchingMember['id'];
             debugPrint(
-                'Found team member: ${matchingMember['full_name']} with ID: $teamMemberId');
+              'Found team member: ${matchingMember['full_name']} with ID: $teamMemberId',
+            );
           } else {
             debugPrint(
-                'Could not find team member with name: $assignedToTeamMember');
+              'Could not find team member with name: $assignedToTeamMember',
+            );
             debugPrint(
-                'Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}');
+              'Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}',
+            );
           }
         }
       }
@@ -826,11 +838,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         });
       }
 
-      return {
-        'success': true,
-        'tickets': tickets,
-        'count': tickets.length,
-      };
+      return {'success': true, 'tickets': tickets, 'count': tickets.length};
     } catch (e) {
       debugPrint('Error querying tickets: $e');
       return {'success': false, 'error': e.toString()};
@@ -839,7 +847,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   // Modify an existing task, ticket, or meeting
   Future<Map<String, dynamic>> _modifyItem(
-      Map<String, dynamic> arguments) async {
+    Map<String, dynamic> arguments,
+  ) async {
     try {
       if (!_supabaseService.isInitialized) {
         return {'success': false, 'error': 'Service not initialized'};
@@ -860,8 +869,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       if (assignedTo != null && assignedTo.isNotEmpty) {
         // Check if the value is already a valid UUID
         final uuidPattern = RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-            caseSensitive: false);
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        );
 
         if (uuidPattern.hasMatch(assignedTo)) {
           // It's already a UUID
@@ -879,10 +889,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           // If no exact match, try partial match
           if (matchingMember.isEmpty) {
             matchingMember = _teamMembers.firstWhere(
-              (member) => member['full_name']
-                  .toString()
-                  .toLowerCase()
-                  .contains(assignedTo.toLowerCase()),
+              (member) => member['full_name'].toString().toLowerCase().contains(
+                    assignedTo.toLowerCase(),
+                  ),
               orElse: () => {},
             );
           }
@@ -902,11 +911,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           if (matchingMember.isNotEmpty && matchingMember['id'] != null) {
             assignedToUserId = matchingMember['id'];
             debugPrint(
-                'Found team member: ${matchingMember['full_name']} with ID: $assignedToUserId');
+              'Found team member: ${matchingMember['full_name']} with ID: $assignedToUserId',
+            );
           } else {
             debugPrint('Could not find team member with name: $assignedTo');
             debugPrint(
-                'Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}');
+              'Available team members: ${_teamMembers.map((m) => m['full_name']).join(', ')}',
+            );
           }
         }
       }
@@ -959,7 +970,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       // Update the item in the database
       Map<String, dynamic> result = {
         'success': false,
-        'error': 'No changes made'
+        'error': 'No changes made',
       };
 
       switch (itemType) {
@@ -998,8 +1009,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
         case 'meeting':
           // For meetings, we need to get the current meeting details first
-          final meetingDetails =
-              await _supabaseService.getMeetingDetails(itemId);
+          final meetingDetails = await _supabaseService.getMeetingDetails(
+            itemId,
+          );
           if (meetingDetails != null) {
             // Update with new values, keeping existing ones if not provided
             final updatedMeeting = await _supabaseService.updateMeeting(
@@ -1045,8 +1057,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   }
 
   // Get card text based on function name and arguments
-  String _getCardText(String functionName, Map<String, dynamic> arguments,
-      Map<String, dynamic> result) {
+  String _getCardText(
+    String functionName,
+    Map<String, dynamic> arguments,
+    Map<String, dynamic> result,
+  ) {
     switch (functionName) {
       case 'create_task':
         return arguments['title'] ?? 'New Task';
@@ -1103,7 +1118,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           context,
           MaterialPageRoute(
             builder: (context) => MeetingDetailScreen(
-                meetingId: message.cardData!['meeting']['id']),
+              meetingId: message.cardData!['meeting']['id'],
+            ),
           ),
         );
       } else {
@@ -1130,7 +1146,8 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     if (!_speechAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Speech recognition not available on this device')),
+          content: Text('Speech recognition not available on this device'),
+        ),
       );
       return;
     }
@@ -1219,7 +1236,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       Text(
                         'Your AI Assistant',
                         style: TextStyle(
-                            color: colorScheme.onSurfaceVariant, fontSize: 14),
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -1274,7 +1293,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                           child: Container(
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: colorScheme.surfaceVariant,
                               borderRadius: BorderRadius.circular(20),
@@ -1321,8 +1342,9 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
                       style: TextStyle(color: colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Type your message...',
-                        hintStyle:
-                            TextStyle(color: colorScheme.onSurfaceVariant),
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                         border: InputBorder.none,
                       ),
                       onSubmitted: (_) => _sendMessage(),
@@ -1384,167 +1406,49 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bubbleTextColor =
-        message.isUser ? Colors.white : colorScheme.onSurface;
-    final bubbleColor =
-        message.isUser ? Colors.green : colorScheme.surfaceVariant;
+    final bool isUser = message.isUser;
+    final Color bubbleColor =
+        isUser ? Colors.green : colorScheme.surfaceVariant;
+    final Color textColor = isUser ? Colors.white : colorScheme.onSurface;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: Row(
         mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!message.isUser) _buildAvatar(context, isUser: false),
-          const SizedBox(width: 8),
+          if (!isUser) ...[
+            _buildAvatar(context, isUser: false),
+            const SizedBox(width: 8),
+          ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: bubbleColor,
-                borderRadius: BorderRadius.circular(20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-              child:
-                  _buildFormattedText(context, message.text, bubbleTextColor),
-            ),
-          ),
-          const SizedBox(width: 8),
-          if (message.isUser) _buildAvatar(context, isUser: true),
-        ],
-      ),
-    );
-  }
-
-  // Build formatted text that handles markdown-like formatting
-  Widget _buildFormattedText(
-      BuildContext context, String text, Color textColor) {
-    // Check if text contains formatting indicators
-    final containsFormatting = text.contains('*') ||
-        text.contains('•') ||
-        text.contains('📅') ||
-        text.contains('🕒');
-
-    if (!containsFormatting) {
-      // Simple text without formatting
-      return Text(text, style: TextStyle(color: textColor));
-    }
-
-    // Split the text by lines to handle each line separately
-    final lines = text.split('\n');
-    final widgets = <Widget>[];
-
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
-
-      // Handle empty lines
-      if (line.isEmpty) {
-        widgets.add(const SizedBox(height: 8));
-        continue;
-      }
-
-      // Handle headers (lines with asterisks)
-      if (line.startsWith('*') && line.endsWith('*')) {
-        final content = line.substring(1, line.length - 1).trim();
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              content,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        );
-      }
-      // Handle bullet points
-      else if (line.startsWith('•')) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4, left: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('•',
-                    style: TextStyle(
-                        color: textColor, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    line.substring(1).trim(),
-                    style: TextStyle(color: textColor),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(20),
+                    topRight: const Radius.circular(20),
+                    bottomLeft: Radius.circular(isUser ? 20 : 0),
+                    bottomRight: Radius.circular(isUser ? 0 : 20),
                   ),
                 ),
-              ],
-            ),
-          ),
-        );
-      }
-      // Handle emoji indicators (like meeting date/time)
-      else if (line.startsWith('📅') || line.startsWith('🕒')) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              line,
-              style: TextStyle(
-                color: textColor,
-                fontWeight:
-                    line.startsWith('📅') ? FontWeight.bold : FontWeight.normal,
-                fontSize: line.startsWith('📅') ? 16 : 14,
+                child: _buildFormattedText(context, message.text, textColor),
               ),
             ),
           ),
-        );
-      }
-      // Handle section headers (lines with asterisks like *Key Points:*)
-      else if (line.contains('*')) {
-        // Replace asterisks with empty string and make bold
-        final content = line.replaceAll('*', '');
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 4),
-            child: Text(
-              content,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        );
-      }
-      // Handle separator lines
-      else if (line.startsWith('---')) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Container(
-              height: 1,
-              color: Theme.of(context).dividerColor,
-            ),
-          ),
-        );
-      }
-      // Regular text
-      else {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              line,
-              style: TextStyle(color: textColor),
-            ),
-          ),
-        );
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: widgets,
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            _buildAvatar(context, isUser: true),
+          ],
+        ],
+      ),
     );
   }
 
@@ -1568,6 +1472,22 @@ class _ChatBubble extends StatelessWidget {
           size: 20,
         ),
       ),
+    );
+  }
+
+  Widget _buildFormattedText(
+      BuildContext context, String text, Color textColor) {
+    final containsFormatting = text.contains('*') || text.contains('•');
+    if (!containsFormatting) {
+      return Text(text, style: TextStyle(color: textColor));
+    }
+
+    final lines = text.split('\n');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines
+          .map((line) => Text(line, style: TextStyle(color: textColor)))
+          .toList(),
     );
   }
 }
@@ -1638,7 +1558,9 @@ class _ItemCard extends StatelessWidget {
                   Text(
                     'Created just now',
                     style: TextStyle(
-                        color: colorScheme.onSurfaceVariant, fontSize: 12),
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
                   ),
                 if (message.cardType == 'meeting' &&
                     message.cardData != null &&
@@ -1646,7 +1568,9 @@ class _ItemCard extends StatelessWidget {
                   Text(
                     _formatDate(message.cardData!['meeting']['meeting_date']),
                     style: TextStyle(
-                        color: colorScheme.onSurfaceVariant, fontSize: 12),
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
                   ),
               ],
             ),
