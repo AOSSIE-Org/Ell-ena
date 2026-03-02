@@ -44,10 +44,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Ensure _focusedDay is within bounds on initialization
+    _clampFocusedDay();
+    
     _selectedDay = _focusedDay;
     _loadCurrentUserInfo();
   }
-
+  
+  // Clamp _focusedDay to be within valid range
+  void _clampFocusedDay() {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year - 1, 1, 1);
+    final lastDay = DateTime(now.year + 1, 12, 31);
+    
+    if (_focusedDay.isBefore(firstDay)) {
+      _focusedDay = firstDay;
+    } else if (_focusedDay.isAfter(lastDay)) {
+      _focusedDay = lastDay;
+    }
+  }
+  
   Future<void> _loadCurrentUserInfo() async {
     setState(() {
       _isLoading = true;
@@ -343,7 +360,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFF1A1A1A),
       body: _isLoading
           ? const CalendarLoadingSkeleton()
           : SafeArea(
@@ -360,18 +377,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildCalendar() {
-    final colorScheme = Theme.of(context).colorScheme;
+    final now = DateTime.now();
+    
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8), 
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: const Color(0xFF2D2D2D),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
-          firstDay: DateTime.utc(2024, 1, 1),
-          lastDay: DateTime.utc(2025, 12, 31),
+          // FIX: Use dynamic dates that always include the current year
+          firstDay: DateTime(now.year - 1, 1, 1),
+          lastDay: DateTime(now.year + 1, 12, 31),
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
@@ -387,25 +406,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
               _calendarFormat = format;
             });
           },
+          // FIX: Always update _focusedDay on page change
+          onPageChanged: (focusedDay) {
+            // Ensure focusedDay is within bounds
+            final now = DateTime.now();
+            final firstDay = DateTime(now.year - 1, 1, 1);
+            final lastDay = DateTime(now.year + 1, 12, 31);
+            
+            // Clamp focusedDay to be within bounds
+            DateTime clampedFocusedDay = focusedDay;
+            if (focusedDay.isBefore(firstDay)) {
+              clampedFocusedDay = firstDay;
+            } else if (focusedDay.isAfter(lastDay)) {
+              clampedFocusedDay = lastDay;
+            }
+            
+            setState(() {
+              _focusedDay = clampedFocusedDay;
+            });
+          },
           calendarBuilders: CalendarBuilders(
             markerBuilder: (context, date, events) {
               if (events.isEmpty) return const SizedBox.shrink();
-              final isLight = Theme.of(context).brightness == Brightness.light;
-              final markerOpacity = isLight ? 0.55 : 0.3;
+              
               return Positioned(
                 bottom: 1,
                 child: Container(
                   height: 16,
                   width: events.length > 3 ? 35 : (events.length * 8 + 10),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(markerOpacity),
+                    color: Colors.green.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Text(
                       '${events.length}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -415,43 +452,40 @@ class _CalendarScreenState extends State<CalendarScreen> {
               );
             },
           ),
-          calendarStyle: CalendarStyle(
-            defaultTextStyle: TextStyle(color: colorScheme.onSurface),
-            weekendTextStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-            selectedTextStyle: TextStyle(color: colorScheme.onPrimary),
-            todayTextStyle: TextStyle(color: colorScheme.onSurface),
-            outsideTextStyle:
-                TextStyle(color: colorScheme.onSurface.withOpacity(0.38)),
-            selectedDecoration: const BoxDecoration(
+          calendarStyle: const CalendarStyle(
+            defaultTextStyle: TextStyle(color: Colors.white),
+            weekendTextStyle: TextStyle(color: Colors.white70),
+            selectedTextStyle: TextStyle(color: Colors.black),
+            todayTextStyle: TextStyle(color: Colors.black),
+            outsideTextStyle: TextStyle(color: Colors.white38),
+            selectedDecoration: BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.8),
+              color: Colors.greenAccent,
               shape: BoxShape.circle,
             ),
             markersMaxCount: 0,
-            markerDecoration: const BoxDecoration(
+            markerDecoration: BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
             ),
           ),
-          headerStyle: HeaderStyle(
+          headerStyle: const HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
             titleTextStyle: TextStyle(
-              color: colorScheme.onSurface,
+              color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
-            leftChevronIcon:
-                Icon(Icons.chevron_left, color: colorScheme.onSurface),
-            rightChevronIcon:
-                Icon(Icons.chevron_right, color: colorScheme.onSurface),
+            leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),
+            rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),
           ),
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(color: colorScheme.onSurface),
-            weekendStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+          daysOfWeekStyle: const DaysOfWeekStyle(
+            weekdayStyle: TextStyle(color: Colors.white),
+            weekendStyle: TextStyle(color: Colors.white70),
           ),
         ),
       ),
