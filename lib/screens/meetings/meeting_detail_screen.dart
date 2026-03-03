@@ -74,7 +74,8 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         final isCreator = meetingDetails['created_by'] == userId;
 
         // Parse meeting date and time
-        final meetingDateTime = DateTime.parse(meetingDetails['meeting_date']);
+        final meetingDateTime =
+            DateTime.parse(meetingDetails['meeting_date']).toLocal();
 
         setState(() {
           _meeting = meetingDetails;
@@ -407,7 +408,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       );
     }
 
-    final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
+    final meetingDateTime = DateTime.parse(_meeting!['meeting_date']).toLocal();
     final isUpcoming = meetingDateTime.isAfter(DateTime.now());
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
@@ -447,7 +448,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
 
   Widget _buildMeetingDetails(
       DateFormat dateFormat, DateFormat timeFormat, bool isUpcoming) {
-    final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
+    final meetingDateTime = DateTime.parse(_meeting!['meeting_date']).toLocal();
 
     // Determine transcription status
     String transcriptionStatus = 'Not started';

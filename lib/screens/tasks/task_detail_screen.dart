@@ -341,7 +341,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     // Format due date if available
     String dueDate = 'No due date';
     if (_taskDetails!['due_date'] != null) {
-      final DateTime date = DateTime.parse(_taskDetails!['due_date']);
+      final DateTime date = DateTime.parse(_taskDetails!['due_date']).toLocal();
       dueDate = '${date.day}/${date.month}/${date.year}';
     }
 

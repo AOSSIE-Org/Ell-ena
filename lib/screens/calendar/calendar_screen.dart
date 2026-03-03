@@ -225,7 +225,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _processTasksData(List<Map<String, dynamic>> tasks) {
     for (var task in tasks) {
       if (task['due_date'] != null) {
-        final dueDate = DateTime.parse(task['due_date']);
+        final dueDate = DateTime.parse(task['due_date']).toLocal();
         final dateOnly = DateTime(dueDate.year, dueDate.month, dueDate.day);
 
         if (!_events.containsKey(dateOnly)) {
@@ -313,7 +313,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _processMeetingsData(List<Map<String, dynamic>> meetings) {
     for (var meeting in meetings) {
       if (meeting['meeting_date'] != null) {
-        final meetingDate = DateTime.parse(meeting['meeting_date']);
+        final meetingDate = DateTime.parse(meeting['meeting_date']).toLocal();
         final dateOnly =
             DateTime(meetingDate.year, meetingDate.month, meetingDate.day);
 

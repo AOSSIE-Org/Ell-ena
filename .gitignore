@@ -41,10 +41,20 @@ migrate_working_dir/
 
 # Environment / credentials
 .env
+.env.local
+.env.production
+.env.development
 firebase*.json
 *.keystore
 *.jks
 fastlane/.env*
+google-services.json
+GoogleService-Info.plist
+
+# API keys and secrets
+**/secrets/
+**/config/secrets.dart
+api_keys.txt
 
 # Symbolication related
 app.*.symbols
@@ -56,6 +66,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.gradle/
+/android/captures/
+/android/local.properties
 
 # iOS build artifacts
 ios/Pods/
@@ -65,3 +78,50 @@ ios/Flutter/Flutter.podspec
 ios/Flutter/App.framework
 ios/Flutter/Generated.xcconfig
 ios/Flutter/ephemeral/
+ios/Podfile.lock
+*.xcworkspace
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+
+# macOS build artifacts
+macos/Pods/
+macos/.symlinks/
+macos/Flutter/ephemeral/
+
+# FVM Version Cache
+.fvm/
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Test artifacts
+test_coverage/
+integration_test/coverage/
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# OS specific
+Thumbs.db
+Desktop.ini
+
+# Local history
+.history/

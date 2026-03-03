@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_theme_mode.dart';
 import '../../theme/theme_controller.dart';
 import '../auth/login_screen.dart';
+import '../notifications/notification_settings_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
 
@@ -20,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _userProfile;
   List<Map<String, dynamic>> _userTeams = [];
+  bool _notificationsEnabled = true;
 
   @override
   void initState() {
@@ -55,6 +59,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _userProfile = profile;
           _isLoading = false;
         });
+      }
+
+      // Load notification preference
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (mounted) {
+          setState(() {
+            _notificationsEnabled = prefs.getBool('notif_master_enabled') ?? true;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading notification prefs: $e');
       }
     } catch (e) {
       if (mounted) {
@@ -678,6 +694,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Notifications',
                 subtitle: 'Manage your notification preferences',
                 iconColor: Colors.orange.shade400,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationSettingsScreen(),
+                    ),
+                  );
+                },
               ),
               const Divider(color: Colors.grey),
               _buildSettingItem(
@@ -802,6 +826,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Push Notifications',
                     isSwitch: true,
                     iconColor: Colors.red.shade400,
+                    switchValue: _notificationsEnabled,
+                    onSwitchChanged: (value) async {
+                      setState(() => _notificationsEnabled = value);
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('notif_master_enabled', value);
+                      if (!value) {
+                        await NotificationService().cancelAll();
+                      } else {
+                        try {
+                          final tasks = await SupabaseService().getTasks();
+                          final meetings = await SupabaseService().getMeetings();
+                          await NotificationService().rescheduleAll(
+                            tasks: List<Map<String, dynamic>>.from(tasks),
+                            meetings: List<Map<String, dynamic>>.from(meetings),
+                          );
+                        } catch (e) {
+                          debugPrint('Error rescheduling notifications: $e');
+                        }
+                      }
+                    },
                   ),
                   Divider(color: Theme.of(context).colorScheme.outlineVariant),
                   _buildPreferenceItem(
@@ -891,6 +935,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? subtitle,
     required Color iconColor,
     bool isSwitch = false,
+    bool? switchValue,
+    ValueChanged<bool>? onSwitchChanged,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
@@ -915,14 +961,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : null,
       trailing: isSwitch
           ? Switch(
-              value: true,
-              onChanged: (value) {
-                // TODO: Implement preference toggle
-              },
+              value: switchValue ?? true,
+              onChanged: onSwitchChanged ?? (value) {},
               activeColor: Colors.green.shade400,
             )
           : Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
-      onTap: isSwitch ? null : () {/* TODO: Implement preference navigation */},
+      onTap: isSwitch ? null : () {},
     );
   }
 }
