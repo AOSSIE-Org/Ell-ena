@@ -415,7 +415,14 @@ class AIService {
           // If no function call is detected, return as regular message
           return {
             'type': 'message',
-            'content': candidates[0]['content']['parts'][0]['text'] ?? '',
+            'content': (() {
+              final candidatesList = candidates as List? ?? [];
+              if (candidatesList.isEmpty) return '';
+              final content = candidatesList[0]['content'];
+              final parts = content?['parts'] as List? ?? [];
+              if (parts.isEmpty) return '';
+              return parts[0]?['text'] ?? '';
+            })(),
           };
         }
         
@@ -530,7 +537,11 @@ class AIService {
         final responseData = jsonDecode(response.body);
         final candidates = responseData['candidates'] as List<dynamic>;
         if (candidates.isNotEmpty) {
-          return candidates[0]['content']['parts'][0]['text'] ?? 'Function executed successfully.';
+          final content = candidates[0]['content'];
+          final parts = content?['parts'] as List? ?? [];
+          if (parts.isNotEmpty) {
+            return parts[0]?['text'] ?? 'Function executed successfully.';
+          }
         }
         return 'Function executed successfully.';
       } else {
@@ -600,19 +611,35 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
 
   // Helper method to detect if a query is meeting-related
   bool _isMeetingRelatedQuery(String query) {
-    final meetingKeywords = [
-      'meeting', 'meetings', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
-      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed','meeting', 'meet', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
-      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed','meeting', 'meet', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-    ];
+    final Set<String> meetingKeywords = {
+      'meeting',
+      'meet',
+      'call',
+      'discussion',
+      'talked about',
+      'said in',
+      'mentioned in',
+      'last meeting',
+      'previous meeting',
+      'summary',
+      'minutes',
+      'transcript',
+      'recording',
+      'spoke about',
+      'last meet',
+      'last call',
+      'previous call',
+      'last discussion',
+      'previous discussion',
+      'last talked about',
+      'previous talked about',
+      'last mentioned in',
+      'previous mentioned in',
+      'last spoke about',
+      'previous spoke about',
+      'last discussed',
+      'previous discussed',
+    };
     
     final queryLower = query.toLowerCase();
     return meetingKeywords.any((keyword) => queryLower.contains(keyword));
