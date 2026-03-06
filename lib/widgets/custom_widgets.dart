@@ -34,10 +34,11 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final String effectiveHintText = hintText;
     final IconData? effectivePrefixIcon = icon ?? prefixIcon;
     final bool effectiveObscureText = isPassword ?? obscureText;
-    
+
     return TextFormField(
       controller: controller,
       obscureText: effectiveObscureText,
@@ -45,24 +46,24 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       enabled: enabled,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: effectiveHintText,
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        hintStyle: const TextStyle(color: Colors.grey),
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
         prefixIcon: effectivePrefixIcon != null
-            ? Icon(effectivePrefixIcon, color: Colors.grey)
+            ? Icon(effectivePrefixIcon, color: colorScheme.onSurfaceVariant)
             : null,
         filled: true,
-        fillColor: const Color(0xFF2D2D2D),
+        fillColor: colorScheme.surfaceContainerHighest,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade800),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -146,8 +147,9 @@ class AuthScreenWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -157,16 +159,23 @@ class AuthScreenWrapper extends StatelessWidget {
               const SizedBox(height: 40),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 32,
+                style: theme.textTheme.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                  color: theme.textTheme.displayLarge?.color ??
+                      theme.colorScheme.onSurface,
+                ) ??
+                    TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
+                style: TextStyle(
+                    fontSize: 16,
+                    color: theme.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 30),
               ...children,
