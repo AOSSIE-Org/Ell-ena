@@ -3,9 +3,12 @@ import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../services/notification_service.dart';
+import '../../services/notification_store.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
+import '../notifications/notification_panel.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -360,6 +363,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           .sort((a, b) => (a['at'] as DateTime).compareTo(b['at'] as DateTime));
       _upcomingItems = items.take(8).toList();
 
+      NotificationService().rescheduleAll(tasks: tasks, meetings: meetings);
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -396,6 +401,42 @@ class _DashboardScreenState extends State<DashboardScreen>
               elevation: 0,
               expandedHeight: 140,
               pinned: true,
+              actions: [
+                ListenableBuilder(
+                  listenable: NotificationStore(),
+                  builder: (context, _) {
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.notifications_outlined,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationPanel(),
+                            ),
+                          ),
+                        ),
+                        if (NotificationStore().unreadCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
                   children: [
