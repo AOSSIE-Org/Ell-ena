@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/notification_service.dart';
-import '../../services/supabase_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -20,6 +19,7 @@ class _NotificationSettingsScreenState
   bool _tasksDayBefore = true;
   bool _meetings15min = true;
   bool _loaded = false;
+  bool _isRescheduling = false;
 
   @override
   void initState() {
@@ -66,15 +66,26 @@ class _NotificationSettingsScreenState
   }
 
   Future<void> _reschedule() async {
+    if (_isRescheduling) return;
+    setState(() => _isRescheduling = true);
     try {
-      final tasks = await SupabaseService().getTasks();
-      final meetings = await SupabaseService().getMeetings();
-      await NotificationService().rescheduleAll(
-        tasks: List<Map<String, dynamic>>.from(tasks),
-        meetings: List<Map<String, dynamic>>.from(meetings),
-      );
+      await NotificationService().rescheduleFromSupabase();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifications rescheduled'),
+          backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('NotificationSettings: Error rescheduling: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error rescheduling: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRescheduling = false);
     }
   }
 
@@ -124,11 +135,14 @@ class _NotificationSettingsScreenState
                   child: Column(
                     children: [
                       _buildToggle(
-                        icon: Icons.notifications_active_outlined,
+                        icon: _isRescheduling
+                            ? Icons.sync
+                            : Icons.notifications_active_outlined,
                         color: Colors.red.shade400,
                         title: 'Enable Notifications',
+                        subtitle: _isRescheduling ? 'Rescheduling...' : null,
                         value: _masterEnabled,
-                        onChanged: _onMasterToggled,
+                        onChanged: _isRescheduling ? (_) {} : _onMasterToggled,
                       ),
                       _divider(),
                       _buildToggle(
@@ -286,6 +300,7 @@ class _NotificationSettingsScreenState
     required IconData icon,
     required Color color,
     required String title,
+    String? subtitle,
     required bool value,
     bool enabled = true,
     required ValueChanged<bool> onChanged,
@@ -311,6 +326,10 @@ class _NotificationSettingsScreenState
             fontWeight: FontWeight.bold,
           ),
         ),
+        subtitle: subtitle != null
+            ? Text(subtitle,
+                style: TextStyle(color: colorScheme.onSurfaceVariant))
+            : null,
         value: value,
         onChanged: enabled ? onChanged : null,
         activeColor: Colors.green.shade400,

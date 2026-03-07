@@ -35,16 +35,17 @@ class AppNotification {
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      body: json['body'] as String,
+      id: (json['id'] as String?) ?? '',
+      title: (json['title'] as String?) ?? '',
+      body: (json['body'] as String?) ?? '',
       type: AppNotificationType.values.firstWhere(
         (e) => e.name == json['type'],
         orElse: () => AppNotificationType.system,
       ),
       referenceId: json['referenceId'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      isRead: json['isRead'] as bool? ?? false,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
+      isRead: json['isRead'] is bool ? json['isRead'] : false,
     );
   }
 
@@ -55,9 +56,21 @@ class AppNotification {
 
   
   static List<AppNotification> decodeList(String jsonString) {
-    final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
-    return list
-        .map((e) => AppNotification.fromJson(e as Map<String, dynamic>))
-        .toList();
+    try {
+      final List<dynamic> list = jsonDecode(jsonString) as List<dynamic>;
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map((e) {
+            try {
+              return AppNotification.fromJson(e);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<AppNotification>()
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 }

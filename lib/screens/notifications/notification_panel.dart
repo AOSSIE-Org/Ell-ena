@@ -94,20 +94,19 @@ class NotificationPanel extends StatelessWidget {
 
   Widget _buildNotificationItem(
       BuildContext context, AppNotification notif) {
-    final iconAndColor = _iconForType(notif.type);
-    final IconData icon = iconAndColor[0] as IconData;
-    final Color color = iconAndColor[1] as Color;
+    final IconData icon = _iconDataForType(notif.type);
+    final Color color = _colorForType(notif.type);
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
       tileColor: notif.isRead
           ? null
-          : colorScheme.primaryContainer.withOpacity(0.15),
+          : colorScheme.primaryContainer.withValues(alpha: 0.15),
       leading: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: color, size: 22),
@@ -147,8 +146,8 @@ class NotificationPanel extends StatelessWidget {
           : Container(
               width: 8,
               height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E7D32),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32),
                 shape: BoxShape.circle,
               ),
             ),
@@ -177,14 +176,25 @@ class NotificationPanel extends StatelessWidget {
     );
   }
 
-  List<dynamic> _iconForType(AppNotificationType type) {
+  IconData _iconDataForType(AppNotificationType type) {
     switch (type) {
       case AppNotificationType.task:
-        return [Icons.task_alt, Colors.green.shade600];
+        return Icons.task_alt;
       case AppNotificationType.meeting:
-        return [Icons.people, Colors.blue.shade600];
+        return Icons.people;
       case AppNotificationType.system:
-        return [Icons.info_outline, Colors.grey.shade600];
+        return Icons.info_outline;
+    }
+  }
+
+  Color _colorForType(AppNotificationType type) {
+    switch (type) {
+      case AppNotificationType.task:
+        return Colors.green.shade600;
+      case AppNotificationType.meeting:
+        return Colors.blue.shade600;
+      case AppNotificationType.system:
+        return Colors.grey.shade600;
     }
   }
 

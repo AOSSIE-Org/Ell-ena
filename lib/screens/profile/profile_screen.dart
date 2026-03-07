@@ -835,12 +835,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         await NotificationService().cancelAll();
                       } else {
                         try {
-                          final tasks = await SupabaseService().getTasks();
-                          final meetings = await SupabaseService().getMeetings();
-                          await NotificationService().rescheduleAll(
-                            tasks: List<Map<String, dynamic>>.from(tasks),
-                            meetings: List<Map<String, dynamic>>.from(meetings),
-                          );
+                          await NotificationService().rescheduleFromSupabase();
                         } catch (e) {
                           debugPrint('Error rescheduling notifications: $e');
                         }

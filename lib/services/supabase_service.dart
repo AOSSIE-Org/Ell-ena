@@ -2341,7 +2341,7 @@ class SupabaseService {
         'description': description,
         'meeting_date': meetingDate.toUtc().toIso8601String(),
         'meeting_url': meetingUrl,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
       // Only add these fields if they are provided

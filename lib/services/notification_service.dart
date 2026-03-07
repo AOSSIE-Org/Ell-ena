@@ -10,6 +10,7 @@ import '../screens/tasks/task_detail_screen.dart';
 import '../screens/meetings/meeting_detail_screen.dart';
 import 'notification_store.dart';
 import 'navigation_service.dart';
+import 'supabase_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -21,10 +22,10 @@ class NotificationService {
 
   bool _initialized = false;
 
-  int _taskNotifId(String taskId) => taskId.hashCode.abs() % 499999;
+  int _taskNotifId(String taskId) => taskId.hashCode.abs() % 100000000;
   int _meetingNotifId(String meetingId) =>
-      500000 + (meetingId.hashCode.abs() % 499999);
-  static const int _digestId = 1000000;
+      500000000 + (meetingId.hashCode.abs() % 100000000);
+  static const int _digestId = 1000000000;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -159,7 +160,7 @@ class NotificationService {
         await NotificationStore().addNotification(
           AppNotification(
             id: '${taskId}_day_before',
-            title: 'Task Due Tomorrow',
+            title: 'Scheduled: Task Due Tomorrow',
             body: '$taskTitle is due tomorrow',
             type: AppNotificationType.task,
             referenceId: taskId,
@@ -253,7 +254,7 @@ class NotificationService {
         await NotificationStore().addNotification(
           AppNotification(
             id: '${meetingId}_15min',
-            title: 'Meeting Starting Soon',
+            title: 'Scheduled: Meeting Starting Soon',
             body: '$meetingTitle starts in 15 minutes',
             type: AppNotificationType.meeting,
             referenceId: meetingId,
@@ -379,7 +380,7 @@ class NotificationService {
 
         final dueStr = task['due_date']?.toString();
         if (dueStr == null) continue;
-        final dueDate = DateTime.tryParse(dueStr);
+        final dueDate = DateTime.tryParse(dueStr)?.toLocal();
         if (dueDate == null || dueDate.isBefore(now)) continue;
 
         pendingTaskCount++;
@@ -394,7 +395,7 @@ class NotificationService {
       for (final meeting in meetings) {
         final dateStr = meeting['meeting_date']?.toString();
         if (dateStr == null) continue;
-        final meetingDate = DateTime.tryParse(dateStr);
+        final meetingDate = DateTime.tryParse(dateStr)?.toLocal();
         if (meetingDate == null || meetingDate.isBefore(now)) continue;
 
         upcomingMeetingCount++;
@@ -413,6 +414,20 @@ class NotificationService {
     } catch (e) {
       debugPrint(
           'NotificationService: Error rescheduling all notifications: $e');
+    }
+  }
+
+  /// Fetches tasks and meetings from Supabase and reschedules all notifications.
+  Future<void> rescheduleFromSupabase() async {
+    try {
+      final tasks = await SupabaseService().getTasks();
+      final meetings = await SupabaseService().getMeetings();
+      await rescheduleAll(
+        tasks: List<Map<String, dynamic>>.from(tasks),
+        meetings: List<Map<String, dynamic>>.from(meetings),
+      );
+    } catch (e) {
+      debugPrint('NotificationService: Error in rescheduleFromSupabase: $e');
     }
   }
 }

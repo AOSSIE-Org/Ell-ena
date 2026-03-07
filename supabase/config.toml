@@ -149,7 +149,7 @@ enabled = true
 # in emails.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["https://127.0.0.1:3000", "io.supabase.ellena://login-callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -361,8 +361,11 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+[edge_runtime.secrets]
+VEXA_API_KEY = "env(VEXA_API_KEY)"
+GEMINI_API_KEY = "env(GEMINI_API_KEY)"
+SUPABASE_URL = "env(SUPABASE_URL)"
+SUPABASE_SERVICE_ROLE_KEY = "env(SUPABASE_SERVICE_ROLE_KEY)"
 
 [analytics]
 enabled = true
