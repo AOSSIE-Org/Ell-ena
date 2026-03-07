@@ -22,9 +22,9 @@ class NotificationService {
 
   bool _initialized = false;
 
-  int _taskNotifId(String taskId) => taskId.hashCode.abs() % 100000000;
+  int _taskNotifId(String taskId) => taskId.hashCode & 0x1FFFFFFF;
   int _meetingNotifId(String meetingId) =>
-      500000000 + (meetingId.hashCode.abs() % 100000000);
+      0x20000000 + (meetingId.hashCode & 0x1FFFFFFF);
   static const int _digestId = 1000000000;
 
   Future<void> initialize() async {
@@ -35,7 +35,7 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation(timeZoneName));
 
       const androidSettings =
-          AndroidInitializationSettings('@drawable/ic_launcher_foreground');
+          AndroidInitializationSettings('@drawable/ic_notification');
 
       const darwinSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
@@ -116,6 +116,8 @@ class NotificationService {
     }
   }
 
+  /// Schedules task reminders. [dueDate] should already be in local time
+  /// (conversion from UTC is handled by rescheduleAll).
   Future<void> scheduleTaskReminder({
     required String taskId,
     required String taskTitle,
@@ -139,7 +141,7 @@ class NotificationService {
           id,
           '📋 Task Due Tomorrow',
           '$taskTitle is due tomorrow',
-          tz.TZDateTime.from(dayBefore.toLocal(), tz.local),
+          tz.TZDateTime.from(dayBefore, tz.local),
           NotificationDetails(
             android: AndroidNotificationDetails(
               'ellena_tasks',
@@ -147,11 +149,11 @@ class NotificationService {
               channelDescription: 'Reminders for upcoming task deadlines',
               importance: Importance.high,
               priority: Priority.high,
-              icon: '@drawable/ic_launcher_foreground',
+              icon: '@drawable/ic_notification',
             ),
             iOS: const DarwinNotificationDetails(),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           payload: 'task:$taskId',
@@ -173,7 +175,7 @@ class NotificationService {
         id + 1,
         '⏰ Task Due Now',
         '$taskTitle is due now',
-        tz.TZDateTime.from(dueDate.toLocal(), tz.local),
+        tz.TZDateTime.from(dueDate, tz.local),
         NotificationDetails(
           android: AndroidNotificationDetails(
             'ellena_tasks',
@@ -181,11 +183,11 @@ class NotificationService {
             channelDescription: 'Reminders for upcoming task deadlines',
             importance: Importance.high,
             priority: Priority.high,
-            icon: '@drawable/ic_launcher_foreground',
+            icon: '@drawable/ic_notification',
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'task:$taskId',
@@ -205,6 +207,8 @@ class NotificationService {
     }
   }
 
+  /// Schedules meeting reminders. [meetingDate] should already be in local time
+  /// (conversion from UTC is handled by rescheduleAll).
   Future<void> scheduleMeetingReminder({
     required String meetingId,
     required String meetingTitle,
@@ -232,7 +236,7 @@ class NotificationService {
           id,
           '📅 Meeting Starting Soon',
           body,
-          tz.TZDateTime.from(fifteenBefore.toLocal(), tz.local),
+          tz.TZDateTime.from(fifteenBefore, tz.local),
           NotificationDetails(
             android: AndroidNotificationDetails(
               'ellena_meetings',
@@ -241,11 +245,11 @@ class NotificationService {
               importance: Importance.max,
               priority: Priority.max,
               fullScreenIntent: true,
-              icon: '@drawable/ic_launcher_foreground',
+              icon: '@drawable/ic_notification',
             ),
             iOS: const DarwinNotificationDetails(),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           payload: 'meeting:$meetingId',
@@ -267,7 +271,7 @@ class NotificationService {
         id + 1,
         '🎯 Meeting Starting Now',
         '$meetingTitle is starting now',
-        tz.TZDateTime.from(meetingDate.toLocal(), tz.local),
+        tz.TZDateTime.from(meetingDate, tz.local),
         NotificationDetails(
           android: AndroidNotificationDetails(
             'ellena_meetings',
@@ -276,11 +280,11 @@ class NotificationService {
             importance: Importance.max,
             priority: Priority.max,
             fullScreenIntent: true,
-            icon: '@drawable/ic_launcher_foreground',
+            icon: '@drawable/ic_notification',
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'meeting:$meetingId',
@@ -341,11 +345,11 @@ class NotificationService {
             channelDescription: 'Daily summary of pending tasks and meetings',
             importance: Importance.defaultImportance,
             priority: Priority.defaultPriority,
-            icon: '@drawable/ic_launcher_foreground',
+            icon: '@drawable/ic_notification',
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -418,7 +422,8 @@ class NotificationService {
   }
 
   /// Fetches tasks and meetings from Supabase and reschedules all notifications.
-  Future<void> rescheduleFromSupabase() async {
+  /// Returns true on success, false on failure.
+  Future<bool> rescheduleFromSupabase() async {
     try {
       final tasks = await SupabaseService().getTasks();
       final meetings = await SupabaseService().getMeetings();
@@ -426,8 +431,10 @@ class NotificationService {
         tasks: List<Map<String, dynamic>>.from(tasks),
         meetings: List<Map<String, dynamic>>.from(meetings),
       );
+      return true;
     } catch (e) {
       debugPrint('NotificationService: Error in rescheduleFromSupabase: $e');
+      return false;
     }
   }
 }

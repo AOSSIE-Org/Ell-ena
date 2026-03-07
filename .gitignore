@@ -35,9 +35,6 @@ migrate_working_dir/
 **/GeneratedPluginRegistrant.*
 **/generated_plugin_registrant.*
 **/generated_plugins.cmake
-**/windows/flutter/generated_plugins.cmake
-**/linux/flutter/generated_plugins.cmake
-**/macos/Flutter/GeneratedPluginRegistrant.swift
 
 # Environment / credentials
 .env

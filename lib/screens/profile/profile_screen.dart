@@ -71,6 +71,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (e) {
         debugPrint('Error loading notification prefs: $e');
+        if (mounted) {
+          setState(() {
+            _notificationsEnabled = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -829,8 +834,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     switchValue: _notificationsEnabled,
                     onSwitchChanged: (value) async {
                       setState(() => _notificationsEnabled = value);
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('notif_master_enabled', value);
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('notif_master_enabled', value);
+                      } catch (e) {
+                        debugPrint('Error saving notification pref: $e');
+                        if (mounted) {
+                          setState(() => _notificationsEnabled = !value);
+                        }
+                        return;
+                      }
                       if (!value) {
                         await NotificationService().cancelAll();
                       } else {

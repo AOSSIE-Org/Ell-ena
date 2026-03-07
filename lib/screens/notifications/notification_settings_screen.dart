@@ -43,6 +43,11 @@ class _NotificationSettingsScreenState
       });
     } catch (e) {
       debugPrint('NotificationSettings: Error loading prefs: $e');
+      if (mounted) {
+        setState(() {
+          _loaded = true;
+        });
+      }
     }
   }
 
@@ -142,7 +147,7 @@ class _NotificationSettingsScreenState
                         title: 'Enable Notifications',
                         subtitle: _isRescheduling ? 'Rescheduling...' : null,
                         value: _masterEnabled,
-                        onChanged: _isRescheduling ? (_) {} : _onMasterToggled,
+                        onChanged: _isRescheduling ? null : _onMasterToggled,
                       ),
                       _divider(),
                       _buildToggle(
@@ -303,7 +308,7 @@ class _NotificationSettingsScreenState
     String? subtitle,
     required bool value,
     bool enabled = true,
-    required ValueChanged<bool> onChanged,
+    ValueChanged<bool>? onChanged,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final effectiveOpacity = enabled ? 1.0 : 0.4;
