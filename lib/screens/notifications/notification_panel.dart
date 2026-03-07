@@ -92,16 +92,14 @@ class NotificationPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationItem(
-      BuildContext context, AppNotification notif) {
+  Widget _buildNotificationItem(BuildContext context, AppNotification notif) {
     final IconData icon = _iconDataForType(notif.type);
     final Color color = _colorForType(notif.type);
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
-      tileColor: notif.isRead
-          ? null
-          : colorScheme.primaryContainer.withOpacity(0.15),
+      tileColor:
+          notif.isRead ? null : colorScheme.primaryContainer.withOpacity(0.15),
       leading: Container(
         width: 42,
         height: 42,
@@ -158,8 +156,7 @@ class NotificationPanel extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    TaskDetailScreen(taskId: notif.referenceId!),
+                builder: (_) => TaskDetailScreen(taskId: notif.referenceId!),
               ),
             );
           } else if (notif.type == AppNotificationType.meeting) {
@@ -213,8 +210,8 @@ class NotificationPanel extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Clear all notifications?'),
-        content:
-            const Text('This will remove all notifications. This cannot be undone.'),
+        content: const Text(
+            'This will remove all notifications. This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

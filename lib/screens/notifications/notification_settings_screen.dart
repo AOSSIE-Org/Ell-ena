@@ -77,8 +77,9 @@ class _NotificationSettingsScreenState
       await NotificationService().rescheduleFromSupabase();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notifications rescheduled'),
-          backgroundColor: Colors.green,
+          const SnackBar(
+            content: Text('Notifications rescheduled'),
+            backgroundColor: Colors.green,
           ),
         );
       }
@@ -191,9 +192,7 @@ class _NotificationSettingsScreenState
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 _sectionTitle('Reminder Timing'),
                 const SizedBox(height: 8),
                 Container(
@@ -238,9 +237,7 @@ class _NotificationSettingsScreenState
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 _sectionTitle('About'),
                 const SizedBox(height: 8),
                 Container(

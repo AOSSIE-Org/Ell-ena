@@ -66,7 +66,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final prefs = await SharedPreferences.getInstance();
         if (mounted) {
           setState(() {
-            _notificationsEnabled = prefs.getBool('notif_master_enabled') ?? true;
+            _notificationsEnabled =
+                prefs.getBool('notif_master_enabled') ?? true;
           });
         }
       } catch (e) {

@@ -54,9 +54,8 @@ class NotificationService {
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
 
-      final androidPlugin =
-          _plugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(
@@ -290,8 +289,7 @@ class NotificationService {
         payload: 'meeting:$meetingId',
       );
     } catch (e) {
-      debugPrint(
-          'NotificationService: Error scheduling meeting reminder: $e');
+      debugPrint('NotificationService: Error scheduling meeting reminder: $e');
     }
   }
 
