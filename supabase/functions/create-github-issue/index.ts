@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "jsr:@std/http@1.0.8/server";
 
 serve(async (req: Request) => {
   try {
@@ -6,6 +6,13 @@ serve(async (req: Request) => {
     const title = body.title;
     const description = body.description;
     const ticketNumber = body.ticketNumber;
+
+    if (!title || typeof title !== "string") {
+        return new Response(
+            JSON.stringify({ error: "Title is required" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+    }
 
     const githubToken = Deno.env.get("GITHUB_TOKEN");
     const githubRepo = Deno.env.get("GITHUB_REPO");
@@ -41,12 +48,22 @@ ${description}`
 
     const data = await githubResponse.json();
 
+    if (!githubResponse.ok) {
     return new Response(
-      JSON.stringify({
+        JSON.stringify({
+        error: "GitHub API error",
+        details: data
+        }),
+        { status: githubResponse.status }
+    );
+    }
+
+    return new Response(
+    JSON.stringify({
         issue_number: data.number,
         issue_url: data.html_url
-      }),
-      { headers: { "Content-Type": "application/json" } }
+    }),
+    { headers: { "Content-Type": "application/json" } }
     );
 
   } catch (error) {
