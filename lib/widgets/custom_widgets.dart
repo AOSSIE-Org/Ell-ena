@@ -34,7 +34,7 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String effectiveHintText = label ?? hintText;
+    final String effectiveHintText = hintText;
     final IconData? effectivePrefixIcon = icon ?? prefixIcon;
     final bool effectiveObscureText = isPassword ?? obscureText;
     
@@ -168,7 +168,7 @@ class AuthScreenWrapper extends StatelessWidget {
                 subtitle,
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               ...children,
             ],
           ),

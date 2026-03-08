@@ -93,14 +93,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A2A),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
             'Delete Ticket',
-            style: TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-          content: const Text(
+          content: Text(
             'Are you sure you want to delete this ticket? This action cannot be undone.',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           actions: [
             TextButton(
@@ -332,10 +333,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2D2D2D),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
             'Assign Ticket',
-            style: TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -355,9 +356,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
                 final teamMembers = snapshot.data ?? [];
                 if (teamMembers.isEmpty) {
-                  return const Text(
+                  return Text(
                     'No team members found',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   );
                 }
 
@@ -384,14 +386,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                       title: Text(
                         fullName,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       subtitle: Text(
                         isAdmin ? 'Admin' : 'Team Member',
                         style: TextStyle(
                           color: isAdmin
                               ? Colors.orange.shade400
-                              : Colors.grey.shade400,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       onTap: () {
@@ -407,9 +410,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],
@@ -435,9 +438,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2D2D2D),
+          backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Ticket Details'),
         ),
         body: const Center(child: CustomLoading()),
@@ -446,9 +449,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
     if (_ticket == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2D2D2D),
+          backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Ticket Details'),
         ),
         body: Center(
@@ -461,12 +464,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 color: Colors.red.shade400,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Ticket not found',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -474,7 +477,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 'The ticket may have been deleted or you do not have access to it.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade400,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -536,9 +539,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(_ticket!['ticket_number'] ?? 'Ticket Details'),
         actions: [
           if (_isAdmin ||
@@ -630,7 +633,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               children: [
                 // Ticket header
                 Card(
-                  color: const Color(0xFF2D2D2D),
+                  color: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -735,8 +738,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         const SizedBox(height: 16),
                         Text(
                           _ticket!['title'] ?? 'Untitled Ticket',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -745,12 +748,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         Text(
                           _ticket!['description'] ?? 'No description provided.',
                           style: TextStyle(
-                            color: Colors.grey.shade300,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Divider(color: Colors.grey),
+                        Divider(color: Theme.of(context).dividerColor),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -779,15 +783,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   Text(
                                     'Created by',
                                     style: TextStyle(
-                                      color: Colors.grey.shade500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
                                     _ticket!['creator']['full_name'] ??
                                         'Unknown',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -803,15 +811,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   Text(
                                     'Assigned to',
                                     style: TextStyle(
-                                      color: Colors.grey.shade500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
                                     _ticket!['assignee']['full_name'] ??
                                         'Unknown',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -905,7 +917,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   final comment = _comments[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
-                    color: const Color(0xFF2D2D2D),
+                    color: Theme.of(context).colorScheme.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -977,9 +989,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           // Comment input
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
@@ -991,19 +1003,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     controller: _commentController,
                     decoration: InputDecoration(
                       hintText: 'Add a comment...',
-                      hintStyle: TextStyle(color: Colors.grey.shade500),
                       filled: true,
-                      fillColor: const Color(0xFF1A1A1A),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 3,
                     minLines: 1,
                   ),
