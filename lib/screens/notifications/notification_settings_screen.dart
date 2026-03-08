@@ -138,7 +138,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withValues(alpha: 0.08),
+                        color: colorScheme.shadow.withOpacity(0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -223,7 +223,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withValues(alpha: 0.08),
+                        color: colorScheme.shadow.withOpacity(0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -278,7 +278,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withValues(alpha: 0.08),
+                        color: colorScheme.shadow.withOpacity(0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -288,7 +288,7 @@ class _NotificationSettingsScreenState
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.1),
+                        color: Colors.grey.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.info_outline,
@@ -348,7 +348,7 @@ class _NotificationSettingsScreenState
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color),

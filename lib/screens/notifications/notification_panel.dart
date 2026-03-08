@@ -114,12 +114,12 @@ class NotificationPanel extends StatelessWidget {
     return ListTile(
       tileColor: notif.isRead
           ? null
-          : colorScheme.primaryContainer.withValues(alpha: 0.15),
+          : colorScheme.primaryContainer.withOpacity(0.15),
       leading: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withOpacity(0.12),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: color, size: 22),
