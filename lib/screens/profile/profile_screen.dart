@@ -700,13 +700,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Notifications',
                 subtitle: 'Manage your notification preferences',
                 iconColor: Colors.orange.shade400,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const NotificationSettingsScreen(),
                     ),
                   );
+                  try {
+                    final prefs = await SharedPreferences.getInstance();
+                    if (mounted) {
+                      setState(() {
+                        _notificationsEnabled =
+                            prefs.getBool('notif_master_enabled') ?? true;
+                      });
+                    }
+                  } catch (e) {
+                    debugPrint('Error refreshing notification pref: $e');
+                  }
                 },
               ),
               const Divider(color: Colors.grey),

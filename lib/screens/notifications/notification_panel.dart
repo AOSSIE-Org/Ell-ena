@@ -51,8 +51,21 @@ class NotificationPanel extends StatelessWidget {
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: notifications.length,
-            itemBuilder: (context, index) =>
-                _buildNotificationItem(context, notifications[index]),
+            itemBuilder: (context, index) {
+              final notif = notifications[index];
+              return Dismissible(
+                key: Key(notif.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  color: Colors.red,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                onDismissed: (_) => NotificationStore().removeNotification(notif.id),
+                child: _buildNotificationItem(context, notif),
+              );
+            },
           );
         },
       ),
@@ -99,12 +112,12 @@ class NotificationPanel extends StatelessWidget {
 
     return ListTile(
       tileColor:
-          notif.isRead ? null : colorScheme.primaryContainer.withOpacity(0.15),
+          notif.isRead ? null : colorScheme.primaryContainer.withValues(alpha: 0.15),
       leading: Container(
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: color, size: 22),

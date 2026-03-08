@@ -79,6 +79,30 @@ class NotificationStore extends ChangeNotifier {
     }
   }
 
+  Future<void> removeNotification(String id) async {
+    try {
+      _notifications.removeWhere((n) => n.id == id);
+      await _persist();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('NotificationStore: Error removing notification: $e');
+    }
+  }
+
+  Future<void> removeByReferenceId(String refId) async {
+    try {
+      _notifications.removeWhere((n) => n.referenceId == refId);
+      await _persist();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('NotificationStore: Error removing by reference: $e');
+    }
+  }
+
+  Future<void> removeNotificationsForReference(String referenceId) async {
+    await removeByReferenceId(referenceId);
+  }
+
   Future<void> clearAll() async {
     try {
       _notifications.clear();

@@ -51,18 +51,24 @@ class _NotificationSettingsScreenState
     }
   }
 
-  Future<void> _saveBool(String key, bool value) async {
+  Future<bool> _saveBool(String key, bool value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(key, value);
+      return true;
     } catch (e) {
       debugPrint('NotificationSettings: Error saving pref $key: $e');
+      return false;
     }
   }
 
   Future<void> _onMasterToggled(bool value) async {
     setState(() => _masterEnabled = value);
-    await _saveBool('notif_master_enabled', value);
+    final saved = await _saveBool('notif_master_enabled', value);
+    if (!saved) {
+      if (mounted) setState(() => _masterEnabled = !value);
+      return;
+    }
     if (!value) {
       await NotificationService().cancelAll();
     } else {
@@ -132,7 +138,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withOpacity(0.08),
+                        color: colorScheme.shadow.withValues(alpha: 0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -156,10 +162,14 @@ class _NotificationSettingsScreenState
                         color: Colors.green.shade600,
                         title: 'Task Reminders',
                         value: _tasksEnabled,
-                        enabled: _masterEnabled,
+                        enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _tasksEnabled = v);
-                          await _saveBool('notif_tasks_enabled', v);
+                          final saved = await _saveBool('notif_tasks_enabled', v);
+                          if (!saved) {
+                            if (mounted) setState(() => _tasksEnabled = !v);
+                            return;
+                          }
                           await _reschedule();
                         },
                       ),
@@ -169,10 +179,14 @@ class _NotificationSettingsScreenState
                         color: Colors.blue.shade600,
                         title: 'Meeting Alerts',
                         value: _meetingsEnabled,
-                        enabled: _masterEnabled,
+                        enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _meetingsEnabled = v);
-                          await _saveBool('notif_meetings_enabled', v);
+                          final saved = await _saveBool('notif_meetings_enabled', v);
+                          if (!saved) {
+                            if (mounted) setState(() => _meetingsEnabled = !v);
+                            return;
+                          }
                           await _reschedule();
                         },
                       ),
@@ -182,10 +196,14 @@ class _NotificationSettingsScreenState
                         color: Colors.orange.shade600,
                         title: 'Daily Digest (8:00 AM)',
                         value: _dailyDigestEnabled,
-                        enabled: _masterEnabled,
+                        enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _dailyDigestEnabled = v);
-                          await _saveBool('notif_daily_digest_enabled', v);
+                          final saved = await _saveBool('notif_daily_digest_enabled', v);
+                          if (!saved) {
+                            if (mounted) setState(() => _dailyDigestEnabled = !v);
+                            return;
+                          }
                           await _reschedule();
                         },
                       ),
@@ -201,7 +219,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withOpacity(0.08),
+                        color: colorScheme.shadow.withValues(alpha: 0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -214,10 +232,14 @@ class _NotificationSettingsScreenState
                         color: Colors.purple.shade400,
                         title: 'Day Before Task Deadline',
                         value: _tasksDayBefore,
-                        enabled: _masterEnabled,
+                        enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _tasksDayBefore = v);
-                          await _saveBool('notif_tasks_day_before', v);
+                          final saved = await _saveBool('notif_tasks_day_before', v);
+                          if (!saved) {
+                            if (mounted) setState(() => _tasksDayBefore = !v);
+                            return;
+                          }
                           await _reschedule();
                         },
                       ),
@@ -227,10 +249,14 @@ class _NotificationSettingsScreenState
                         color: Colors.teal,
                         title: '15 Min Before Meeting',
                         value: _meetings15min,
-                        enabled: _masterEnabled,
+                        enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _meetings15min = v);
-                          await _saveBool('notif_meetings_15min', v);
+                          final saved = await _saveBool('notif_meetings_15min', v);
+                          if (!saved) {
+                            if (mounted) setState(() => _meetings15min = !v);
+                            return;
+                          }
                           await _reschedule();
                         },
                       ),
@@ -246,7 +272,7 @@ class _NotificationSettingsScreenState
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.shadow.withOpacity(0.08),
+                        color: colorScheme.shadow.withValues(alpha: 0.08),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -256,7 +282,7 @@ class _NotificationSettingsScreenState
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.info_outline,
@@ -316,7 +342,7 @@ class _NotificationSettingsScreenState
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color),

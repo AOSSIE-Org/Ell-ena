@@ -201,6 +201,7 @@ class NotificationService {
       final id = _taskNotifId(taskId);
       await _plugin.cancel(id);
       await _plugin.cancel(id + 1);
+      await NotificationStore().removeByReferenceId(taskId);
     } catch (e) {
       debugPrint('NotificationService: Error cancelling task notification: $e');
     }
@@ -298,6 +299,7 @@ class NotificationService {
       final id = _meetingNotifId(meetingId);
       await _plugin.cancel(id);
       await _plugin.cancel(id + 1);
+      await NotificationStore().removeByReferenceId(meetingId);
     } catch (e) {
       debugPrint(
           'NotificationService: Error cancelling meeting notification: $e');
@@ -331,6 +333,16 @@ class NotificationService {
       final body = '$pendingTaskCount pending tasks, '
           '$upcomingMeetingCount upcoming meetings';
 
+      await NotificationStore().addNotification(
+        AppNotification(
+          id: 'digest_${DateTime.now().toIso8601String()}',
+          title: 'Scheduled: Daily Digest',
+          body: body,
+          type: AppNotificationType.system,
+          createdAt: DateTime.now(),
+        ),
+      );
+
       await _plugin.zonedSchedule(
         _digestId,
         '📊 Daily Digest',
@@ -360,6 +372,7 @@ class NotificationService {
   Future<void> cancelAll() async {
     try {
       await _plugin.cancelAll();
+      await NotificationStore().clearAll();
     } catch (e) {
       debugPrint('NotificationService: Error cancelling all notifications: $e');
     }
@@ -432,7 +445,7 @@ class NotificationService {
       return true;
     } catch (e) {
       debugPrint('NotificationService: Error in rescheduleFromSupabase: $e');
-      return false;
+      rethrow;
     }
   }
 }
