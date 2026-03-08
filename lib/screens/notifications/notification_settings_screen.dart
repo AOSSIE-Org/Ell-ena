@@ -165,7 +165,8 @@ class _NotificationSettingsScreenState
                         enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _tasksEnabled = v);
-                          final saved = await _saveBool('notif_tasks_enabled', v);
+                          final saved =
+                              await _saveBool('notif_tasks_enabled', v);
                           if (!saved) {
                             if (mounted) setState(() => _tasksEnabled = !v);
                             return;
@@ -182,7 +183,8 @@ class _NotificationSettingsScreenState
                         enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _meetingsEnabled = v);
-                          final saved = await _saveBool('notif_meetings_enabled', v);
+                          final saved =
+                              await _saveBool('notif_meetings_enabled', v);
                           if (!saved) {
                             if (mounted) setState(() => _meetingsEnabled = !v);
                             return;
@@ -199,9 +201,11 @@ class _NotificationSettingsScreenState
                         enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _dailyDigestEnabled = v);
-                          final saved = await _saveBool('notif_daily_digest_enabled', v);
+                          final saved =
+                              await _saveBool('notif_daily_digest_enabled', v);
                           if (!saved) {
-                            if (mounted) setState(() => _dailyDigestEnabled = !v);
+                            if (mounted)
+                              setState(() => _dailyDigestEnabled = !v);
                             return;
                           }
                           await _reschedule();
@@ -235,7 +239,8 @@ class _NotificationSettingsScreenState
                         enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _tasksDayBefore = v);
-                          final saved = await _saveBool('notif_tasks_day_before', v);
+                          final saved =
+                              await _saveBool('notif_tasks_day_before', v);
                           if (!saved) {
                             if (mounted) setState(() => _tasksDayBefore = !v);
                             return;
@@ -252,7 +257,8 @@ class _NotificationSettingsScreenState
                         enabled: _masterEnabled && !_isRescheduling,
                         onChanged: (v) async {
                           setState(() => _meetings15min = v);
-                          final saved = await _saveBool('notif_meetings_15min', v);
+                          final saved =
+                              await _saveBool('notif_meetings_15min', v);
                           if (!saved) {
                             if (mounted) setState(() => _meetings15min = !v);
                             return;

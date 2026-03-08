@@ -62,7 +62,8 @@ class NotificationPanel extends StatelessWidget {
                   color: Colors.red,
                   child: const Icon(Icons.delete, color: Colors.white),
                 ),
-                onDismissed: (_) => NotificationStore().removeNotification(notif.id),
+                onDismissed: (_) =>
+                    NotificationStore().removeNotification(notif.id),
                 child: _buildNotificationItem(context, notif),
               );
             },
@@ -111,8 +112,9 @@ class NotificationPanel extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListTile(
-      tileColor:
-          notif.isRead ? null : colorScheme.primaryContainer.withValues(alpha: 0.15),
+      tileColor: notif.isRead
+          ? null
+          : colorScheme.primaryContainer.withValues(alpha: 0.15),
       leading: Container(
         width: 42,
         height: 42,

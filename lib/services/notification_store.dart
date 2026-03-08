@@ -13,7 +13,6 @@ class NotificationStore extends ChangeNotifier {
   List<AppNotification> _notifications = [];
   bool _initialized = false;
 
-
   Future<void> initialize() async {
     if (_initialized) return;
     try {
@@ -29,21 +28,18 @@ class NotificationStore extends ChangeNotifier {
     }
   }
 
-
   List<AppNotification> getAll() {
     final list = List<AppNotification>.from(_notifications);
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
   }
 
-  int get unreadCount =>
-      _notifications.where((n) => !n.isRead).length;
+  int get unreadCount => _notifications.where((n) => !n.isRead).length;
 
- 
   Future<void> addNotification(AppNotification notif) async {
     try {
       _notifications.insert(0, notif);
-      
+
       if (_notifications.length > _maxNotifications) {
         _notifications = _notifications.sublist(0, _maxNotifications);
       }
@@ -113,7 +109,6 @@ class NotificationStore extends ChangeNotifier {
     }
   }
 
-  
   Future<void> _persist() async {
     try {
       final prefs = await SharedPreferences.getInstance();
