@@ -1818,12 +1818,50 @@ class SupabaseService {
         };
       }
 
+      final createdTicket = Map<String, dynamic>.from(response[0]);
+      final ticketId = createdTicket['id'];
+
+      try {
+        final functionsResponse = await _client.functions.invoke(
+          'create-github-issue',
+          body: {
+            'title': title,
+            'description': description,
+            'category': category,
+            'priority': priority,
+            'ticketId': ticketId,
+          },
+        );
+
+        if (functionsResponse.status == 200) {
+          final responseData = functionsResponse.data;
+          if (responseData != null && responseData['success'] == true) {
+            final String? issueNumber = responseData['issueNumber'];
+            final String? issueUrl = responseData['issueUrl'];
+
+            if (issueNumber != null && issueUrl != null) {
+              await _client.from('tickets').update({
+                'github_issue_number': issueNumber,
+                'github_issue_url': issueUrl,
+              }).eq('id', ticketId);
+              
+              createdTicket['github_issue_number'] = issueNumber;
+              createdTicket['github_issue_url'] = issueUrl;
+            }
+          }
+        } else {
+          debugPrint('GitHub Edge Function returned status ${functionsResponse.status}');
+        }
+      } catch (e) {
+        debugPrint('Failed to sync ticket to GitHub: $e');
+      }
+
       // Refresh tickets
       await getTickets();
 
       return {
         'success': true,
-        'ticket': response[0],
+        'ticket': createdTicket,
       };
     } catch (e) {
       debugPrint('Error creating ticket: $e');
