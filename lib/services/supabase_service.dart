@@ -1236,6 +1236,7 @@ class SupabaseService {
   Future<Map<String, dynamic>> createTask({
     required String title,
     String? description,
+    String priority = 'medium',
     DateTime? dueDate,
     String? assignedToUserId,
   }) async {
@@ -1266,25 +1267,24 @@ class SupabaseService {
 
       final teamId = userProfile['team_id'];
 
-      // Create the task
+      // Create the task payload
       final Map<String, dynamic> taskData = {
         'title': title,
         'description': description,
-        'status': 'todo',
+        'priority': priority,
+        'status': 'open',
         'approval_status': 'pending',
         'team_id': teamId,
         'created_by': user.id,
+        'due_date': dueDate?.toIso8601String(),
       };
 
       if (assignedToUserId != null && assignedToUserId.isNotEmpty) {
         taskData['assigned_to'] = assignedToUserId;
       }
 
-      if (dueDate != null) {
-        taskData['due_date'] = dueDate.toIso8601String();
-      }
-
-      final response = await _client.from('tasks').insert(taskData).select();
+      final response =
+          await _client.from('tasks').insert(taskData).select();
 
       if (response.isEmpty) {
         return {
@@ -1292,6 +1292,9 @@ class SupabaseService {
           'error': 'Failed to create task',
         };
       }
+
+      // Refresh tasks
+      await getTasks();
 
       return {
         'success': true,
@@ -1684,6 +1687,121 @@ class SupabaseService {
     }
   }
 
+  // Create a new ticket
+  Future<Map<String, dynamic>> createTicket({
+    required String title,
+    String? description,
+    required String priority,
+    required String category,
+    String? assignedToUserId,
+    bool createGithubIssue = false,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      final userProfile = await getCurrentUserProfile();
+      if (userProfile == null || userProfile['team_id'] == null) {
+        return {
+          'success': false,
+          'error': 'User not associated with a team',
+        };
+      }
+
+      final teamId = userProfile['team_id'];
+
+      final Map<String, dynamic> ticketData = {
+        'title': title,
+        'description': description,
+        'priority': priority,
+        'category': category,
+        'status': 'open',
+        'approval_status': 'pending',
+        'team_id': teamId,
+        'created_by': user.id,
+      };
+
+      if (assignedToUserId != null && assignedToUserId.isNotEmpty) {
+        ticketData['assigned_to'] = assignedToUserId;
+      }
+
+      final response =
+          await _client.from('tickets').insert(ticketData).select();
+
+      if (response.isEmpty) {
+        return {
+          'success': false,
+          'error': 'Failed to create ticket',
+        };
+      }
+
+      final createdTicket = response[0];
+      final ticketId = createdTicket['id'];
+
+      if (createGithubIssue) {
+        try {
+          final ticketNumber =
+              createdTicket['ticket_number'] ?? ticketId.toString();
+
+          final safeDescription =
+              (description != null && description.trim().isNotEmpty)
+                  ? description.trim()
+                  : 'No description provided.';
+
+          final githubResponse = await _client.functions.invoke(
+            'create-github-issue',
+            body: {
+              'title': title,
+              'description': safeDescription,
+              'ticketNumber': ticketNumber,
+            },
+          );
+
+          final data = githubResponse.data;
+
+          if (data is Map &&
+              data['issue_number'] != null &&
+              data['issue_url'] != null) {
+            await _client
+                .from('tickets')
+                .update({
+                  'github_issue_number': data['issue_number'],
+                  'github_issue_url': data['issue_url'],
+                })
+                .eq('id', ticketId);
+          }
+        } catch (e) {
+          debugPrint('GitHub issue creation failed: $e');
+        }
+      }
+
+      await getTickets();
+
+      return {
+        'success': true,
+        'ticket': createdTicket,
+      };
+    } catch (e) {
+      debugPrint('Error creating ticket: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
   // Helper method to get user info
   Future<Map<String, dynamic>?> _getUserInfo(String userId) async {
     try {
@@ -1720,124 +1838,6 @@ class SupabaseService {
     } catch (e) {
       debugPrint('Error getting user info: $e');
       return null;
-    }
-  }
-
-  
-  // Create a new ticket
-  Future<Map<String, dynamic>> createTicket({
-    required String title,
-    String? description,
-    required String priority,
-    required String category,
-    String? assignedToUserId,
-  }) async {
-    try {
-      if (!_isInitialized) {
-        return {
-          'success': false,
-          'error': 'Supabase is not initialized',
-        };
-      }
-
-      final user = _client.auth.currentUser;
-      if (user == null) {
-        return {
-          'success': false,
-          'error': 'User not authenticated',
-        };
-      }
-
-      // Get the user's team ID
-      final userProfile = await getCurrentUserProfile();
-      if (userProfile == null || userProfile['team_id'] == null) {
-        return {
-          'success': false,
-          'error': 'User not associated with a team',
-        };
-      }
-
-      final teamId = userProfile['team_id'];
-
-      // Create the ticket payload
-      final Map<String, dynamic> ticketData = {
-        'title': title,
-        'description': description,
-        'priority': priority,
-        'category': category,
-        'status': 'open',
-        'approval_status': 'pending',
-        'team_id': teamId,
-        'created_by': user.id,
-      };
-
-      if (assignedToUserId != null && assignedToUserId.isNotEmpty) {
-        ticketData['assigned_to'] = assignedToUserId;
-      }
-
-      final response =
-          await _client.from('tickets').insert(ticketData).select();
-
-      if (response.isEmpty) {
-        return {
-          'success': false,
-          'error': 'Failed to create ticket',
-        };
-      }
-
-      final createdTicket = response[0];
-      final ticketId = createdTicket['id'];
-
-      // Try creating GitHub issue (non-blocking)
-      try {
-        if (ticketId != null) {
-          final ticketNumber = createdTicket['ticket_number'] ?? 'UNKNOWN';
-
-          final safeDescription =
-              (description != null && description.trim().isNotEmpty)
-                  ? description.trim()
-                  : 'No description provided.';
-
-          final githubResponse = await _client.functions.invoke(
-            'create-github-issue',
-            body: {
-              'title': title,
-              'description': safeDescription,
-              'ticketNumber': ticketNumber,
-            },
-          );
-
-          final data = githubResponse.data;
-
-          if (data is Map &&
-              data['issue_number'] != null &&
-              data['issue_url'] != null) {
-            await _client
-                .from('tickets')
-                .update({
-                  'github_issue_number': data['issue_number'],
-                  'github_issue_url': data['issue_url'],
-                })
-                .eq('id', ticketId);
-          }
-        }
-      } catch (e) {
-        debugPrint('GitHub issue creation failed: $e');
-      }
-
-      // Refresh tickets
-      await getTickets();
-
-      return {
-        'success': true,
-        'ticket': createdTicket,
-      };
-    } catch (e) {
-      debugPrint('Error creating ticket: $e');
-      return {
-        'success': false,
-        'error': e.toString(),
-      };
     }
   }
 
