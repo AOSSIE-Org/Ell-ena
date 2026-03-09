@@ -1236,7 +1236,6 @@ class SupabaseService {
   Future<Map<String, dynamic>> createTask({
     required String title,
     String? description,
-    String priority = 'medium',
     DateTime? dueDate,
     String? assignedToUserId,
   }) async {
@@ -1271,8 +1270,7 @@ class SupabaseService {
       final Map<String, dynamic> taskData = {
         'title': title,
         'description': description,
-        'priority': priority,
-        'status': 'open',
+        'status': 'todo',
         'approval_status': 'pending',
         'team_id': teamId,
         'created_by': user.id,

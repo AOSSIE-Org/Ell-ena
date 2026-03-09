@@ -3,9 +3,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 serve(async (req: Request) => {
   try {
     const body = await req.json();
-    const title = body.title;
-    const description = body.description;
-    const ticketNumber = body.ticketNumber;
+    const title = body?.title;
+    const description = body?.description;
+    const ticketNumber = body?.ticketNumber;
+
+    if (!title || !ticketNumber) {
+    return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        { status: 400 }
+    );
+    }
 
     if (!title || typeof title !== "string") {
         return new Response(
@@ -41,7 +48,7 @@ serve(async (req: Request) => {
 Ticket: ${ticketNumber}
 
 Description:
-${description}`
+${description ?? "No description provided"}`
         })
       }
     );
