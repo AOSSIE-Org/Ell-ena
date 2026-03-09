@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ell_ena/core/errors/app_error_handler.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -16,7 +17,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -28,7 +28,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
       });
       
       try {
@@ -56,21 +55,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         }
       } catch (e) {
         if (mounted) {
-          // Show user-friendly error message
-          setState(() {
-            String errorMsg = 'An error occurred. Please try again.';
-            
-            // Parse the error message to be more user-friendly
-            if (e.toString().contains('Invalid email')) {
-              errorMsg = 'Invalid email address';
-            } else if (e.toString().contains('Email not found')) {
-              errorMsg = 'Email address not found';
-            } else if (e.toString().contains('Rate limit')) {
-              errorMsg = 'Too many attempts. Please try again later.';
-            }
-            
-            _errorMessage = errorMsg;
-          });
+          AppErrorHandler.instance.handle(context, e);
         }
       } finally {
         if (mounted) {
@@ -86,15 +71,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       title: 'Reset Password',
       subtitle: 'Enter your email to receive a reset code',
       children: [
-        if (_errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-          ),
         Form(
           key: _formKey,
           child: Column(

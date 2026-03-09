@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:ell_ena/core/errors/app_error_handler.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -80,19 +81,13 @@ class _LoginScreenState extends State<LoginScreen>
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid email or password'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.instance
+              .handle(context, Exception('Invalid email or password'));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {
@@ -124,22 +119,15 @@ class _LoginScreenState extends State<LoginScreen>
             NavigationService().navigateToReplacement(const HomeScreen());
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          if (mounted) {
+            AppErrorHandler.instance.handle(
+                context, Exception(result['error'] ?? 'Google sign-in failed'));
+          }
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.instance.handle(context, e);
       }
     } finally {
       if (mounted) {

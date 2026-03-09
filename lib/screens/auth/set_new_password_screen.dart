@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:ell_ena/core/errors/app_error_handler.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -23,7 +24,6 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
   final _confirmPasswordController = TextEditingController();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -36,7 +36,6 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
-        _errorMessage = null;
       });
 
       try {
@@ -61,14 +60,15 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
             NavigationService().navigateToReplacement(const LoginScreen());
           }
         } else {
-          setState(() {
-            _errorMessage = 'Failed to update password';
-          });
+          if (mounted) {
+            AppErrorHandler.instance
+                .handle(context, 'Failed to update password');
+          }
         }
       } catch (e) {
-        setState(() {
-          _errorMessage = e.toString();
-        });
+        if (mounted) {
+          AppErrorHandler.instance.handle(context, e);
+        }
       } finally {
         if (mounted) {
           setState(() {
@@ -85,15 +85,6 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
       title: 'Set New Password',
       subtitle: 'Create a new password for your account',
       children: [
-        if (_errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
-          ),
         Form(
           key: _formKey,
           child: Column(

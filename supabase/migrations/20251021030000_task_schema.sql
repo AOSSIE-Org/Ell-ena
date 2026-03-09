@@ -150,4 +150,4 @@ BEGIN
     AND team_id = team_uuid
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog; 
