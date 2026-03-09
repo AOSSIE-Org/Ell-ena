@@ -8,17 +8,17 @@ serve(async (req: Request) => {
     const ticketNumber = body?.ticketNumber;
 
     if (!title || !ticketNumber) {
-    return new Response(
+      return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400 }
-    );
+      );
     }
 
     if (!title || typeof title !== "string") {
-        return new Response(
-            JSON.stringify({ error: "Title is required" }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-        );
+      return new Response(
+        JSON.stringify({ error: "Title is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     const githubToken = Deno.env.get("GITHUB_TOKEN");
@@ -32,45 +32,55 @@ serve(async (req: Request) => {
       );
     }
 
-    const githubResponse = await fetch(
-      `https://api.github.com/repos/${githubOwner}/${githubRepo}/issues`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${githubToken}`,
-          "Content-Type": "application/json",
-          "Accept": "application/vnd.github+json"
-        },
-        body: JSON.stringify({
-          title: title,
-          body: `Created from Ell-ena
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    let githubResponse: Response;
+
+    try {
+      githubResponse = await fetch(
+        `https://api.github.com/repos/${githubOwner}/${githubRepo}/issues`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${githubToken}`,
+            "Content-Type": "application/json",
+            "Accept": "application/vnd.github+json"
+          },
+          body: JSON.stringify({
+            title: title,
+            body: `Created from Ell-ena
 
 Ticket: ${ticketNumber}
 
 Description:
 ${description ?? "No description provided"}`
-        })
-      }
-    );
+          }),
+          signal: controller.signal
+        }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const data = await githubResponse.json();
 
     if (!githubResponse.ok) {
-    return new Response(
+      return new Response(
         JSON.stringify({
-        error: "GitHub API error",
-        details: data
+          error: "GitHub API error",
+          details: data
         }),
         { status: githubResponse.status }
-    );
+      );
     }
 
     return new Response(
-    JSON.stringify({
+      JSON.stringify({
         issue_number: data.number,
         issue_url: data.html_url
-    }),
-    { headers: { "Content-Type": "application/json" } }
+      }),
+      { headers: { "Content-Type": "application/json" } }
     );
 
   } catch (error) {

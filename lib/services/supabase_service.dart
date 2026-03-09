@@ -1747,6 +1747,13 @@ class SupabaseService {
 
       final createdTicket = response[0];
       final ticketId = createdTicket['id'];
+      // Prevent duplicate GitHub issue creation
+      if (createGithubIssue && createdTicket['github_issue_number'] != null) {
+        return {
+          'success': true,
+          'ticket': createdTicket,
+        };
+      }
 
       if (createGithubIssue) {
         try {
@@ -1779,6 +1786,8 @@ class SupabaseService {
                   'github_issue_url': data['issue_url'],
                 })
                 .eq('id', ticketId);
+            createdTicket['github_issue_number'] = data['issue_number'];
+            createdTicket['github_issue_url'] = data['issue_url'];
           }
         } catch (e) {
           debugPrint('GitHub issue creation failed: $e');
