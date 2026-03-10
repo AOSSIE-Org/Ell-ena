@@ -60,15 +60,20 @@ serve(async (req: Request) => {
     const secret = Deno.env.get("GITHUB_WEBHOOK_SECRET");
     const rawBody = await req.text();
 
-    // Verify webhook signature if secret is configured
-    if (secret) {
-      const valid = await verifySignature(req, secret, rawBody);
-      if (!valid) {
-        return new Response(
-          JSON.stringify({ error: "Invalid webhook signature" }),
-          { status: 401 }
-        );
-      }
+    if (!secret) {
+    return new Response(
+        JSON.stringify({ error: "Webhook secret not configured" }),
+        { status: 500 }
+    );
+    }
+
+    const valid = await verifySignature(req, secret, rawBody);
+
+    if (!valid) {
+    return new Response(
+        JSON.stringify({ error: "Invalid webhook signature" }),
+        { status: 401 }
+    );
     }
 
     const payload = JSON.parse(rawBody);
