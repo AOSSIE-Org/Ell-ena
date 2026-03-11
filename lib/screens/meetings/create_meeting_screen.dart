@@ -4,7 +4,9 @@ import '../../services/supabase_service.dart';
 import '../../services/google_meet_service.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
-  const CreateMeetingScreen({super.key});
+  const CreateMeetingScreen({super.key, this.initialDateTime});
+
+  final DateTime? initialDateTime;
 
   @override
   State<CreateMeetingScreen> createState() => _CreateMeetingScreenState();
@@ -25,6 +27,22 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   bool _isLoading = false;
   bool _isCreatingMeetLink = false;
   bool _isGoogleMeetUrl = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDateTime != null) {
+      _selectedDate = DateTime(
+        widget.initialDateTime!.year,
+        widget.initialDateTime!.month,
+        widget.initialDateTime!.day,
+      );
+      _selectedTime = TimeOfDay(
+        hour: widget.initialDateTime!.hour,
+        minute: widget.initialDateTime!.minute,
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -233,7 +251,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
+      initialDate: (_selectedDate != null && !_selectedDate!.isBefore(DateTime.now())) ? _selectedDate! : DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => child!,
