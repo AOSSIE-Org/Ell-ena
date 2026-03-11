@@ -61,7 +61,7 @@ cd Ell-ena
 
 3. **Create a new branch**
 
-```
+```bash
 git checkout -b feature/your-feature-name
 ```
 
@@ -69,13 +69,13 @@ git checkout -b feature/your-feature-name
 
 5. **Commit your changes**
 
-```
+```bash
 git commit -m "Short description of the change"
 ```
 
 6. **Push to your fork**
 
-```
+```bash
 git push origin feature/your-feature-name
 ```
 
@@ -112,8 +112,8 @@ If you find a bug or want to suggest a feature:
 If you need help or want to discuss ideas, you can:
 
 - Open a GitHub issue
-- Join the **AOSSIE Ell-ena Discord community**
+- Join the **AOSSIE Ell-ena Discord community** for discussions: https://discord.gg/aossie
 
 ---
 
-Thank you for contributing to **Ell-ena**! 
+Thank you for contributing to **Ell-ena**!
