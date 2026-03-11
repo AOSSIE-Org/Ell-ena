@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
-import '../../theme/app_theme_mode.dart';
-import '../../theme/theme_controller.dart';
+import '../../widgets/user_avatar.dart';
 import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
@@ -20,6 +19,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _userProfile;
   List<Map<String, dynamic>> _userTeams = [];
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -34,7 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final profile = await _supabaseService.getCurrentUserProfile();
-
+      
+      // Load avatar URL from profile
+      if (profile != null) {
+      _avatarUrl = profile['avatar_url']; // will correctly set to null if removed
+      }
+      
       // Also load all teams associated with the user's email
       if (profile != null && profile['email'] != null) {
         try {
@@ -197,31 +202,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Stack(
                               alignment: Alignment.bottomRight,
                               children: [
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white,
-                                    border: Border.all(
-                                        color: Colors.white, width: 3),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .shadow
-                                            .withOpacity(0.2),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 5),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
+                                // Replace Container with UserAvatar widget
+                                UserAvatar(
+                                  avatarUrl: _avatarUrl,
+                                  fullName: fullName,
+                                  size: 100,
+                                  showBorder: true,
+                                  borderColor: Colors.white,
+                                  borderWidth: 3,
                                 ),
                                 // Role badge
                                 Container(
@@ -658,18 +646,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Edit Profile',
                 subtitle: 'Update your personal information',
                 iconColor: Colors.blue.shade400,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  // Navigate to EditProfileScreen and wait for result
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => EditProfileScreen(
                         userProfile: _userProfile!,
                         onProfileUpdated: () {
-                          _loadUserProfile();
+                          // This callback will be called when profile is updated
+                          _loadUserProfile(); // Refresh the profile
                         },
                       ),
                     ),
                   );
+                  
+                  // If there's a result (profile was updated), refresh
+                  if (result == true) {
+                    await _loadUserProfile();
+                  }
                 },
               ),
               const Divider(color: Colors.grey),

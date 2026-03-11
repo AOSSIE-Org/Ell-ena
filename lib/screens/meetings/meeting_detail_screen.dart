@@ -7,7 +7,7 @@ import '../../widgets/custom_widgets.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
   final String meetingId;
-
+  
   const MeetingDetailScreen({
     super.key,
     required this.meetingId,
@@ -24,7 +24,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   bool _isEditing = false;
   bool _isAdmin = false;
   bool _isCreator = false;
-
+  
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _urlController = TextEditingController();
@@ -33,13 +33,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   final _durationController = TextEditingController(text: '60');
   DateTime? _meetingDate;
   TimeOfDay? _meetingTime;
-
+  
   @override
   void initState() {
     super.initState();
     _loadMeetingDetails();
   }
-
+  
   @override
   void dispose() {
     _titleController.dispose();
@@ -50,12 +50,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     _durationController.dispose();
     super.dispose();
   }
-
+  
   Future<void> _loadMeetingDetails() async {
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       // Check if user is admin
       final userProfile = await _supabaseService.getCurrentUserProfile();
@@ -64,33 +64,31 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           _isAdmin = userProfile?['role'] == 'admin';
         });
       }
-
+      
       // Get meeting details
-      final meetingDetails =
-          await _supabaseService.getMeetingDetails(widget.meetingId);
-
+      final meetingDetails = await _supabaseService.getMeetingDetails(widget.meetingId);
+      
       if (mounted && meetingDetails != null) {
         final userId = _supabaseService.client.auth.currentUser?.id;
         final isCreator = meetingDetails['created_by'] == userId;
-
+        
         // Parse meeting date and time
         final meetingDateTime = DateTime.parse(meetingDetails['meeting_date']);
-
+        
         setState(() {
           _meeting = meetingDetails;
           _isCreator = isCreator;
           _meetingDate = meetingDateTime;
           _meetingTime = TimeOfDay.fromDateTime(meetingDateTime);
-
+          
           // Set initial values for editing
           _titleController.text = meetingDetails['title'] ?? '';
           _descriptionController.text = meetingDetails['description'] ?? '';
           _urlController.text = meetingDetails['meeting_url'] ?? '';
           _transcriptionController.text = meetingDetails['transcription'] ?? '';
           _aiSummaryController.text = meetingDetails['ai_summary'] ?? '';
-          _durationController.text =
-              meetingDetails['duration_minutes']?.toString() ?? '60';
-
+          _durationController.text = meetingDetails['duration_minutes']?.toString() ?? '60';
+          
           _isLoading = false;
         });
       } else {
@@ -110,7 +108,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading meeting details: $e'),
@@ -120,11 +118,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       }
     }
   }
-
+  
   Future<void> _deleteMeeting() async {
     try {
       final result = await _supabaseService.deleteMeeting(widget.meetingId);
-
+      
       if (mounted) {
         if (result['success']) {
           Navigator.pop(context, true);
@@ -149,7 +147,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       }
     }
   }
-
+  
   Future<void> _updateMeeting() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,7 +158,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       );
       return;
     }
-
+    
     if (_meetingDate == null || _meetingTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -170,11 +168,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       );
       return;
     }
-
+    
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       // Combine date and time
       final meetingDateTime = DateTime(
@@ -184,7 +182,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         _meetingTime!.hour,
         _meetingTime!.minute,
       );
-
+      
       // Parse duration
       int? duration;
       if (_durationController.text.trim().isNotEmpty) {
@@ -196,38 +194,32 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           duration = 60;
         }
       }
-
+      
       final result = await _supabaseService.updateMeeting(
         meetingId: widget.meetingId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         meetingDate: meetingDateTime,
-        meetingUrl: _urlController.text.trim().isNotEmpty
-            ? _urlController.text.trim()
-            : null,
-        transcription: _transcriptionController.text.trim().isNotEmpty
-            ? _transcriptionController.text.trim()
-            : null,
-        ai_summary: _aiSummaryController.text.trim().isNotEmpty
-            ? _aiSummaryController.text.trim()
-            : null,
+        meetingUrl: _urlController.text.trim().isNotEmpty ? _urlController.text.trim() : null,
+        transcription: _transcriptionController.text.trim().isNotEmpty ? _transcriptionController.text.trim() : null,
+        ai_summary: _aiSummaryController.text.trim().isNotEmpty ? _aiSummaryController.text.trim() : null,
         durationMinutes: duration,
       );
-
+      
       if (mounted) {
         if (result['success']) {
           setState(() {
             _isEditing = false;
             _isLoading = false;
           });
-
+          
           // Reload meeting details
           _loadMeetingDetails();
         } else {
           setState(() {
             _isLoading = false;
           });
-
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error updating meeting: ${result['error']}'),
@@ -242,7 +234,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating meeting: $e'),
@@ -252,10 +244,10 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       }
     }
   }
-
+  
   Future<void> _launchMeetingUrl() async {
     if (_meeting == null || _meeting!['meeting_url'] == null) return;
-
+    
     final url = Uri.parse(_meeting!['meeting_url']);
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
@@ -274,8 +266,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   Future<void> _createTicketFromAction(Map<String, dynamic> action) async {
     try {
       final title = (action['item']?.toString() ?? 'Action Item');
-      final description =
-          'Created from meeting action item. Owner: ${action['owner'] ?? 'N/A'} • Deadline: ${action['deadline'] ?? 'N/A'}';
+      final description = 'Created from meeting action item. Owner: ${action['owner'] ?? 'N/A'} • Deadline: ${action['deadline'] ?? 'N/A'}';
       const category = 'Meeting Discussion';
       const priority = 'medium';
       final result = await _supabaseService.createTicket(
@@ -287,14 +278,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (!mounted) return;
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Ticket created'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Ticket created'), backgroundColor: Colors.green),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to create ticket: ${result['error']}'),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to create ticket: ${result['error']}'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -328,14 +316,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (!mounted) return;
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Task created'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Task created'), backgroundColor: Colors.green),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to create task: ${result['error']}'),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to create task: ${result['error']}'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -345,12 +330,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       );
     }
   }
-
+  
   Future<void> _copyMeetingUrl() async {
     if (_meeting == null || _meeting!['meeting_url'] == null) return;
-
+    
     await Clipboard.setData(ClipboardData(text: _meeting!['meeting_url']));
-
+    
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -360,30 +345,56 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       );
     }
   }
-
+  
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _meetingDate ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) => child!,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.green,
+              onPrimary: Colors.white,
+              surface: Color(0xFF2D2D2D),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF1A1A1A),
+          ),
+          child: child!,
+        );
+      },
     );
-
+    
     if (picked != null) {
       setState(() {
         _meetingDate = picked;
       });
     }
   }
-
+  
   Future<void> _selectTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _meetingTime ?? TimeOfDay.now(),
-      builder: (context, child) => child!,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Colors.green,
+              onPrimary: Colors.white,
+              surface: Color(0xFF2D2D2D),
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: const Color(0xFF1A1A1A),
+          ),
+          child: child!,
+        );
+      },
     );
-
+    
     if (picked != null) {
       setState(() {
         _meetingTime = picked;
@@ -394,29 +405,29 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: CustomLoading()),
+      return const Scaffold(
+        backgroundColor: Color(0xFF1A1A1A),
+        body: Center(child: CustomLoading()),
       );
     }
-
+    
     if (_meeting == null) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(child: Text('Meeting not found')),
+      return const Scaffold(
+        backgroundColor: Color(0xFF1A1A1A),
+        body: Center(child: Text('Meeting not found')),
       );
     }
-
+    
     final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
     final isUpcoming = meetingDateTime.isAfter(DateTime.now());
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
     final canEdit = (_isAdmin || _isCreator) && isUpcoming;
-
+    
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: const Color(0xFF2D2D2D),
         title: Text(_isEditing ? 'Edit Meeting' : 'Meeting Details'),
         actions: [
           if (_isEditing)
@@ -439,22 +450,18 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             ),
         ],
       ),
-      body: _isEditing
-          ? _buildEditForm()
-          : _buildMeetingDetails(dateFormat, timeFormat, isUpcoming),
+      body: _isEditing ? _buildEditForm() : _buildMeetingDetails(dateFormat, timeFormat, isUpcoming),
     );
   }
-
-  Widget _buildMeetingDetails(
-      DateFormat dateFormat, DateFormat timeFormat, bool isUpcoming) {
+  
+  Widget _buildMeetingDetails(DateFormat dateFormat, DateFormat timeFormat, bool isUpcoming) {
     final meetingDateTime = DateTime.parse(_meeting!['meeting_date']);
-
+    
     // Determine transcription status
     String transcriptionStatus = 'Not started';
     Color transcriptionStatusColor = Colors.grey.shade600;
-
-    if (_meeting!['transcription'] != null &&
-        _meeting!['transcription'].toString().isNotEmpty) {
+    
+    if (_meeting!['transcription'] != null && _meeting!['transcription'].toString().isNotEmpty) {
       transcriptionStatus = 'Completed';
       transcriptionStatusColor = Colors.green.shade400;
     } else if (_meeting!['transcription_attempted_at'] != null) {
@@ -463,18 +470,15 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     } else if (_meeting!['bot_started_at'] != null) {
       transcriptionStatus = 'In progress';
       transcriptionStatusColor = Colors.blue.shade400;
-    } else if (!isUpcoming &&
-        _meeting!['meeting_url'] != null &&
-        _meeting!['meeting_url'].toString().contains('meet.google.com')) {
+    } else if (!isUpcoming && _meeting!['meeting_url'] != null && 
+              _meeting!['meeting_url'].toString().contains('meet.google.com')) {
       transcriptionStatus = 'Pending';
       transcriptionStatusColor = Colors.yellow.shade700;
-    } else if (!_meeting!['meeting_url']
-        .toString()
-        .contains('meet.google.com')) {
+    } else if (!_meeting!['meeting_url'].toString().contains('meet.google.com')) {
       transcriptionStatus = 'Not available';
       transcriptionStatusColor = Colors.red.shade400;
     }
-
+    
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -493,9 +497,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isUpcoming
-                    ? Colors.green.shade400.withOpacity(0.2)
-                    : Colors.grey.shade600.withOpacity(0.2),
+                color: isUpcoming 
+                  ? Colors.green.shade400.withOpacity(0.2)
+                  : Colors.grey.shade600.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -503,18 +507,14 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 children: [
                   Icon(
                     isUpcoming ? Icons.event_available : Icons.event_busy,
-                    color: isUpcoming
-                        ? Colors.green.shade400
-                        : Colors.grey.shade600,
+                    color: isUpcoming ? Colors.green.shade400 : Colors.grey.shade600,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     isUpcoming ? 'UPCOMING' : 'PAST',
                     style: TextStyle(
-                      color: isUpcoming
-                          ? Colors.green.shade400
-                          : Colors.grey.shade600,
+                      color: isUpcoming ? Colors.green.shade400 : Colors.grey.shade600,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -525,123 +525,139 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ],
         ),
         const SizedBox(height: 24),
-
+        
         // Title
         Text(
           _meeting!['title'] ?? 'Untitled Meeting',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
+          style: const TextStyle(
+            color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 16),
-
+        
         // Date and time
-        Builder(
-          builder: (context) {
-            final cs = Theme.of(context).colorScheme;
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: cs.shadow.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2D2D2D),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_month,
-                          color: Colors.blue.shade400, size: 24),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Date',
-                                style: TextStyle(
-                                    color: cs.onSurfaceVariant, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(dateFormat.format(meetingDateTime),
-                                style: TextStyle(
-                                    color: cs.onSurface,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.calendar_month,
+                    color: Colors.blue.shade400,
+                    size: 24,
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time,
-                          color: Colors.orange.shade400, size: 24),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Time',
-                                style: TextStyle(
-                                    color: cs.onSurfaceVariant, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(timeFormat.format(meetingDateTime),
-                                style: TextStyle(
-                                    color: cs.onSurface,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold)),
-                          ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Date',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(Icons.timer,
-                          color: Colors.purple.shade400, size: 24),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Duration',
-                                style: TextStyle(
-                                    color: cs.onSurfaceVariant, fontSize: 12)),
-                            const SizedBox(height: 4),
-                            Text(
-                                '${_meeting!['duration_minutes'] ?? 60} minutes',
-                                style: TextStyle(
-                                    color: cs.onSurface,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold)),
-                          ],
+                        const SizedBox(height: 4),
+                        Text(
+                          dateFormat.format(meetingDateTime),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-            );
-          },
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    color: Colors.orange.shade400,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Time',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          timeFormat.format(meetingDateTime),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(
+                    Icons.timer,
+                    color: Colors.purple.shade400,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Duration',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_meeting!['duration_minutes'] ?? 60} minutes',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
-
+        
         // Description
-        if (_meeting!['description'] != null &&
-            _meeting!['description'].toString().isNotEmpty)
+        if (_meeting!['description'] != null && _meeting!['description'].toString().isNotEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: const Color(0xFF2D2D2D),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -650,31 +666,30 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 Text(
                   'Description',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: Colors.grey.shade400,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _meeting!['description'],
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 14,
                   ),
                 ),
               ],
             ),
           ),
-
+        
         const SizedBox(height: 16),
-
+        
         // Meeting URL
-        if (_meeting!['meeting_url'] != null &&
-            _meeting!['meeting_url'].toString().isNotEmpty)
+        if (_meeting!['meeting_url'] != null && _meeting!['meeting_url'].toString().isNotEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: const Color(0xFF2D2D2D),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -683,7 +698,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 Text(
                   'Meeting URL',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: Colors.grey.shade400,
                     fontSize: 12,
                   ),
                 ),
@@ -703,23 +718,19 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _copyMeetingUrl,
-                      icon: Icon(Icons.copy,
-                          color: Theme.of(context).colorScheme.onSurface),
+                      icon: const Icon(Icons.copy, color: Colors.white),
                       tooltip: 'Copy URL',
                     ),
                     IconButton(
                       onPressed: _launchMeetingUrl,
-                      icon: Icon(Icons.open_in_new,
-                          color: Theme.of(context).colorScheme.onSurface),
+                      icon: const Icon(Icons.open_in_new, color: Colors.white),
                       tooltip: 'Open URL',
                     ),
                   ],
                 ),
-
+                
                 // Show transcription status for Google Meet URLs
-                if (_meeting!['meeting_url']
-                    .toString()
-                    .contains('meet.google.com'))
+                if (_meeting!['meeting_url'].toString().contains('meet.google.com'))
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Row(
@@ -744,18 +755,16 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               ],
             ),
           ),
-
+        
         const SizedBox(height: 16),
-
+        
         // Manage from AI summary (action items and follow-ups). Hide raw transcription/summary here.
         if (!isUpcoming) _buildManageSections(),
-
+        
         const SizedBox(height: 24),
-
+        
         // Join meeting button
-        if (isUpcoming &&
-            _meeting!['meeting_url'] != null &&
-            _meeting!['meeting_url'].toString().isNotEmpty)
+        if (isUpcoming && _meeting!['meeting_url'] != null && _meeting!['meeting_url'].toString().isNotEmpty)
           ElevatedButton(
             onPressed: _launchMeetingUrl,
             style: ElevatedButton.styleFrom(
@@ -784,47 +793,46 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ],
     );
   }
-
+  
   Widget _buildEditForm() {
-    final colorScheme = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         // Title
         TextFormField(
           controller: _titleController,
-          style: TextStyle(color: colorScheme.onSurface),
-          decoration: InputDecoration(
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
             labelText: 'Title',
-            labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+            labelStyle: TextStyle(color: Colors.grey),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: colorScheme.outline),
+              borderSide: BorderSide(color: Colors.grey),
             ),
-            focusedBorder: const OutlineInputBorder(
+            focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: Colors.green),
             ),
           ),
         ),
         const SizedBox(height: 16),
-
+        
         // Description
         TextFormField(
           controller: _descriptionController,
-          style: TextStyle(color: colorScheme.onSurface),
-          decoration: InputDecoration(
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
             labelText: 'Description',
-            labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+            labelStyle: TextStyle(color: Colors.grey),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: colorScheme.outline),
+              borderSide: BorderSide(color: Colors.grey),
             ),
-            focusedBorder: const OutlineInputBorder(
+            focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: Colors.green),
             ),
           ),
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-
+        
         // Date and Time
         Row(
           children: [
@@ -834,22 +842,19 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border.all(color: colorScheme.outline),
+                    border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.calendar_today,
-                          color: colorScheme.onSurfaceVariant),
+                      const Icon(Icons.calendar_today, color: Colors.grey),
                       const SizedBox(width: 8),
                       Text(
                         _meetingDate == null
                             ? 'Select Date'
                             : DateFormat('MMM dd, yyyy').format(_meetingDate!),
                         style: TextStyle(
-                          color: _meetingDate == null
-                              ? colorScheme.onSurfaceVariant
-                              : colorScheme.onSurface,
+                          color: _meetingDate == null ? Colors.grey : Colors.white,
                         ),
                       ),
                     ],
@@ -864,22 +869,19 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border.all(color: colorScheme.outline),
+                    border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.access_time,
-                          color: colorScheme.onSurfaceVariant),
+                      const Icon(Icons.access_time, color: Colors.grey),
                       const SizedBox(width: 8),
                       Text(
                         _meetingTime == null
                             ? 'Select Time'
                             : _meetingTime!.format(context),
                         style: TextStyle(
-                          color: _meetingTime == null
-                              ? colorScheme.onSurfaceVariant
-                              : colorScheme.onSurface,
+                          color: _meetingTime == null ? Colors.grey : Colors.white,
                         ),
                       ),
                     ],
@@ -890,47 +892,46 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
+        
         // Duration
         TextFormField(
           controller: _durationController,
-          style: TextStyle(color: colorScheme.onSurface),
+          style: const TextStyle(color: Colors.white),
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'Duration (minutes)',
-            labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+            labelStyle: TextStyle(color: Colors.grey),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: colorScheme.outline),
+              borderSide: BorderSide(color: Colors.grey),
             ),
-            focusedBorder: const OutlineInputBorder(
+            focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: Colors.green),
             ),
           ),
         ),
         const SizedBox(height: 16),
-
+        
         // Meeting URL
         TextFormField(
           controller: _urlController,
-          style: TextStyle(color: colorScheme.onSurface),
+          style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             labelText: 'Meeting URL',
-            labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: colorScheme.outline),
+            labelStyle: const TextStyle(color: Colors.grey),
+            enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(color: Colors.green),
             ),
-            helperText: !_urlController.text.contains('meet.google.com') &&
-                    _urlController.text.isNotEmpty
+            helperText: !_urlController.text.contains('meet.google.com') && _urlController.text.isNotEmpty
                 ? 'Ellena AI transcription only works with Google Meet URLs'
                 : null,
             helperStyle: TextStyle(color: Colors.red.shade300),
           ),
         ),
         const SizedBox(height: 16),
-
+        
         // Save button
         SizedBox(
           width: double.infinity,
@@ -955,23 +956,15 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
     if (summary == null || summary is! Map || summary.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16)),
-        child: Text('AI summary not available yet.',
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        decoration: BoxDecoration(color: const Color(0xFF2D2D2D), borderRadius: BorderRadius.circular(16)),
+        child: Text('AI summary not available yet.', style: TextStyle(color: Colors.grey.shade400)),
       );
     }
 
     final actionItems = (summary['action_items'] as List?) ?? [];
     final followUps = (summary['follow_up_tasks'] as List?) ?? [];
 
-    Widget pill(
-        {required Color color,
-        required String title,
-        required String subtitle,
-        required VoidCallback onTap}) {
+    Widget pill({required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
       return InkWell(
         onTap: onTap,
         child: Container(
@@ -990,21 +983,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontWeight: FontWeight.bold)),
+                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 12)),
+                    Text(subtitle, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const Icon(Icons.chevron_right, color: Colors.white54),
             ],
           ),
         ),
@@ -1016,9 +1001,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: const Color(0xFF2D2D2D), borderRadius: BorderRadius.circular(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1026,24 +1009,17 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 children: [
                   Icon(Icons.topic, color: Colors.amber.shade400, size: 18),
                   const SizedBox(width: 8),
-                  Text('Manage Important Discussion',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const Text('Manage Important Discussion', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 12),
               if (actionItems.isEmpty)
-                Text('No action items detected',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant))
+                Text('No action items detected', style: TextStyle(color: Colors.grey.shade400))
               else
                 ...actionItems.map<Widget>((it) {
                   final map = Map<String, dynamic>.from(it as Map);
                   final title = map['item']?.toString() ?? 'Action Item';
-                  final subtitle =
-                      'Owner: ${map['owner'] ?? '—'}   •   Deadline: ${map['deadline'] ?? 'N/A'}';
+                  final subtitle = 'Owner: ${map['owner'] ?? '—'}   •   Deadline: ${map['deadline'] ?? 'N/A'}';
                   return pill(
                     color: Colors.amber.shade400,
                     title: title,
@@ -1057,9 +1033,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16)),
+          decoration: BoxDecoration(color: const Color(0xFF2D2D2D), borderRadius: BorderRadius.circular(16)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1067,18 +1041,12 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
                 children: [
                   Icon(Icons.task_alt, color: Colors.green.shade400, size: 18),
                   const SizedBox(width: 8),
-                  Text('Manage Tasks',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const Text('Manage Tasks', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 12),
               if (followUps.isEmpty)
-                Text('No follow-up tasks detected',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant))
+                Text('No follow-up tasks detected', style: TextStyle(color: Colors.grey.shade400))
               else
                 ...followUps.map<Widget>((it) {
                   final map = Map<String, dynamic>.from(it as Map);
@@ -1097,15 +1065,15 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ],
     );
   }
-
+  
   void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
+        backgroundColor: const Color(0xFF2D2D2D),
+        title: const Text(
           'Delete Meeting',
-          style: Theme.of(context).textTheme.titleLarge,
+          style: TextStyle(color: Colors.white),
         ),
         content: const Text(
           'Are you sure you want to delete this meeting? This action cannot be undone.',
@@ -1130,4 +1098,4 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       ),
     );
   }
-}
+} 
