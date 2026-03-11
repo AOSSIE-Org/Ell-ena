@@ -281,6 +281,7 @@ class TicketService {
               : 'Ticket not found or permission denied',
         };
       }
+      await getTickets();
       return {'success': true};
     } catch (e) {
       debugPrint('Error deleting ticket: $e');

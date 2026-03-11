@@ -107,7 +107,7 @@ class TeamService {
 
       final res = await _client
           .from('users')
-          .select('*')
+          .select('id, full_name, email, role')
           .eq('team_id', teamUuid)
           .order('role', ascending: false);
 
