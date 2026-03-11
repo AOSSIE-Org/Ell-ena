@@ -233,12 +233,14 @@ class TeamService {
         throw Exception('Failed to create team after multiple attempts');
       }
 
-      await _client.from('users').insert({
-        'id': userId,
-        'full_name': adminName,
-        'email': adminEmail,
-        'team_id': teamResponse['id'],
-        'role': 'admin',
+      // Atomically insert the user profile together with the team using an RPC
+      // so that if the user insert fails, the team creation is rolled back.
+      await _client.rpc('create_team_with_admin', params: {
+        'p_user_id': userId,
+        'p_team_name': teamName,
+        'p_team_code': code,
+        'p_admin_name': adminName,
+        'p_admin_email': adminEmail,
       });
 
       return {'success': true, 'teamId': code, 'teamData': teamResponse};

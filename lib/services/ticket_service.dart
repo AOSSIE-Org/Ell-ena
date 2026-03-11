@@ -42,14 +42,14 @@ class TicketService {
       final profile = await _authService.getCurrentUserProfile();
       if (profile == null || profile['team_id'] == null) return [];
 
-      final query = _client
+      var query = _client
           .from('tickets')
           .select('*')
           .eq('team_id', profile['team_id']);
 
-      if (filterByAssignment) query.eq('assigned_to', user.id);
-      if (filterByStatus != null) query.eq('status', filterByStatus);
-      if (filterByPriority != null) query.eq('priority', filterByPriority);
+      if (filterByAssignment) query = query.eq('assigned_to', user.id);
+      if (filterByStatus != null) query = query.eq('status', filterByStatus);
+      if (filterByPriority != null) query = query.eq('priority', filterByPriority);
 
       final response = await query.order('created_at', ascending: false);
 

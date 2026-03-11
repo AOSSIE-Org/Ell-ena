@@ -29,6 +29,7 @@ runApp(
     ),
   ),
 );
+}
 
 
 class MyApp extends StatelessWidget {
