@@ -681,16 +681,20 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
   // Helper method to detect if a query is meeting-related
   bool _isMeetingRelatedQuery(String query) {
     final meetingKeywords = [
-      'meeting', 'meetings', 'meet',
-      'call', 'last call', 'previous call',
-      'discussion', 'last discussion', 'previous discussion',
-      'talked about', 'last talked about', 'previous talked about',
-      'said in', 'mentioned in', 'last mentioned in', 'previous mentioned in',
-      'spoke about', 'last spoke about', 'previous spoke about',
-      'last discussed', 'previous discussed',
-      'summary', 'minutes', 'transcript', 'recording',
+      'meeting', 'meetings', 'call', 'discussion', 'talked about',
+      'said in', 'mentioned in', 'last meeting', 'previous meeting',
+      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
+      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
+      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed',
+      'meeting', 'meet', 'call', 'discussion', 'talked about',
+      'said in', 'mentioned in', 'last meeting', 'previous meeting',
+      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
+      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
+      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed',
+      'meeting', 'meet', 'call', 'discussion', 'talked about',
+      'said in', 'mentioned in', 'last meeting', 'previous meeting',
+      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
     ];
-
     final queryLower = query.toLowerCase();
     return meetingKeywords.any((keyword) => queryLower.contains(keyword));
   }
