@@ -1666,7 +1666,14 @@ class SupabaseService {
       final isAdmin = userProfile['role'] == 'admin';
 
       // Create base query
-      final query = _client.from('tickets').select('*').eq('team_id', teamId);
+      // Using Supabase relational joins here completely eliminates the N+1 query problem.
+      // Instead of looping and querying `_getUserInfo` for each ticket individually,
+      // we fetch the creator and assignee info in a single optimized database request.
+      final query = _client.from('tickets').select('''
+        *,
+        creator:users!tickets_created_by_fkey(id, full_name, role),
+        assignee:users!tickets_assigned_to_fkey(id, full_name, role)
+      ''').eq('team_id', teamId);
 
       // Filter by assignment if requested and user is not admin
       if (filterByAssignment && !isAdmin) {
@@ -1686,30 +1693,15 @@ class SupabaseService {
         query.eq('priority', filterByPriority);
       }
 
+      // Execute the optimized query and order the results
       final response = await query.order('created_at', ascending: false);
 
-      // Process the response to add creator and assignee info
+      // Process the response into the format expected by the app
       final List<Map<String, dynamic>> processedTickets = [];
       for (var ticket in response) {
-        final Map<String, dynamic> processedTicket = {...ticket};
-
-        // Add creator info
-        if (ticket['created_by'] != null) {
-          final creatorInfo = await _getUserInfo(ticket['created_by']);
-          if (creatorInfo != null) {
-            processedTicket['creator'] = creatorInfo;
-          }
-        }
-
-        // Add assignee info
-        if (ticket['assigned_to'] != null) {
-          final assigneeInfo = await _getUserInfo(ticket['assigned_to']);
-          if (assigneeInfo != null) {
-            processedTicket['assignee'] = assigneeInfo;
-          }
-        }
-
-        processedTickets.add(processedTicket);
+        // The relational join already handles embedding the creator and assignee data.
+        // We ensure we retain compatibility with the original returned data structure.
+        processedTickets.add({...ticket});
       }
 
       return processedTickets;
@@ -1819,12 +1811,50 @@ class SupabaseService {
         };
       }
 
+      final createdTicket = Map<String, dynamic>.from(response[0]);
+      final ticketId = createdTicket['id'];
+
+      try {
+        final functionsResponse = await _client.functions.invoke(
+          'create-github-issue',
+          body: {
+            'title': title,
+            'description': description,
+            'category': category,
+            'priority': priority,
+            'ticketId': ticketId,
+          },
+        );
+
+        if (functionsResponse.status == 200) {
+          final responseData = functionsResponse.data;
+          if (responseData != null && responseData['success'] == true) {
+            final String? issueNumber = responseData['issueNumber'];
+            final String? issueUrl = responseData['issueUrl'];
+
+            if (issueNumber != null && issueUrl != null) {
+              await _client.from('tickets').update({
+                'github_issue_number': issueNumber,
+                'github_issue_url': issueUrl,
+              }).eq('id', ticketId);
+              
+              createdTicket['github_issue_number'] = issueNumber;
+              createdTicket['github_issue_url'] = issueUrl;
+            }
+          }
+        } else {
+          debugPrint('GitHub Edge Function returned status ${functionsResponse.status}');
+        }
+      } catch (e) {
+        debugPrint('Failed to sync ticket to GitHub: $e');
+      }
+
       // Refresh tickets
       await getTickets();
 
       return {
         'success': true,
-        'ticket': response[0],
+        'ticket': createdTicket,
       };
     } catch (e) {
       debugPrint('Error creating ticket: $e');
