@@ -321,13 +321,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
           _events[dateOnly] = [];
         }
 
-        // For meetings, assume 1 hour duration
+        // Get duration from meeting data, default to 60 minutes
+        final durationMinutes = meeting['duration_minutes'] as int? ?? 60;
+        final endDateTime = meetingDate.add(Duration(minutes: durationMinutes));
         _events[dateOnly]!.add(CalendarEvent(
           title: meeting['title'] ?? 'Untitled Meeting',
           startTime:
               TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
           endTime:
-              TimeOfDay(hour: meetingDate.hour + 1, minute: meetingDate.minute),
+              TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
           type: EventType.meeting,
           id: meeting['id'],
         ));
