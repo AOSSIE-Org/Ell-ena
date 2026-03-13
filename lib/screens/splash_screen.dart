@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'onboarding/onboarding_screen.dart';
-import '../services/navigation_service.dart';
 import '../services/supabase_service.dart';
 import 'home/home_screen.dart';
 import 'auth/login_screen.dart';

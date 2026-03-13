@@ -4,7 +4,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter/foundation.dart';
 
 class MeetingInsightsScreen extends StatefulWidget {
   final String meetingId;

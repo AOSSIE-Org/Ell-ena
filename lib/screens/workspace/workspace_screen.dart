@@ -5,7 +5,6 @@ import '../tickets/ticket_screen.dart';
 import '../tickets/create_ticket_screen.dart';
 import '../meetings/meeting_screen.dart';
 import '../meetings/create_meeting_screen.dart';
-import '../chat/chat_screen.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
 
