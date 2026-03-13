@@ -13,7 +13,29 @@ serve(async (req) => {
 
   try {
     const { title, description, category, priority, ticketId } = await req.json()
-    
+
+    // Strict Input Validation
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return new Response(
+        JSON.stringify({ success: false, error: "Validation failed: 'title' must be a non-empty string." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      )
+    }
+
+    if (!description || typeof description !== 'string' || description.trim() === '') {
+      return new Response(
+        JSON.stringify({ success: false, error: "Validation failed: 'description' must be a non-empty string." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      )
+    }
+
+    if (!ticketId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Validation failed: 'ticketId' is required." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      )
+    }
+
     const githubToken = Deno.env.get('GITHUB_ACCESS_TOKEN')
     const repoOwner = Deno.env.get('GITHUB_REPO_OWNER')
     const repoName = Deno.env.get('GITHUB_REPO_NAME')

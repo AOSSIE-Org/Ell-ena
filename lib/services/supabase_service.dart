@@ -1783,10 +1783,12 @@ class SupabaseService {
             }
           }
         } else {
-          debugPrint('GitHub Edge Function returned status ${functionsResponse.status}');
+          debugPrint(
+              'GitHub Edge Function failed:\nStatus: ${functionsResponse.status}\nPayload: ${functionsResponse.data}\nTicketID: $ticketId');
         }
-      } catch (e) {
-        debugPrint('Failed to sync ticket to GitHub: $e');
+      } catch (e, stackTrace) {
+        debugPrint(
+            'Failed to sync ticket to GitHub:\nException: ${e.toString()}\nStackTrace: $stackTrace');
       }
 
       // Refresh tickets
