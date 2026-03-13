@@ -111,6 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (shouldLogout != true) return;
 
     // modal loading dialog
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
