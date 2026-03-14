@@ -554,6 +554,7 @@ class SupabaseService {
         };
       }
 
+      _teamMembersCache.clear();
       await loadTeamMembers(currentUserProfile['team_id'] as String);
 
       debugPrint('Successfully updated role to $newRole for user $userId');

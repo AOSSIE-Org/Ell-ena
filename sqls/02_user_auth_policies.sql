@@ -28,26 +28,34 @@ SELECT id, team_id FROM users;
 
 -- Helper function to check if current user is admin in same team (bypasses RLS)
 CREATE OR REPLACE FUNCTION is_admin_in_same_team(target_team_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1
-    FROM users
+    FROM public.users
     WHERE id = auth.uid()
       AND role = 'admin'
       AND team_id = target_team_id
       AND team_id IS NOT NULL
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$;
 
 -- Helper function to get current user's role (bypasses RLS)
 CREATE OR REPLACE FUNCTION get_current_user_role()
-RETURNS TEXT AS $$
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
-  RETURN (SELECT role FROM users WHERE id = auth.uid());
+  RETURN (SELECT role FROM public.users WHERE id = auth.uid());
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$;
 
 -- Re-enable RLS
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
