@@ -156,7 +156,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _titleController,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Enter task title',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -191,7 +192,8 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _descriptionController,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
                         hintText: 'Enter task description',
                         hintStyle: TextStyle(color: Colors.grey.shade400),
