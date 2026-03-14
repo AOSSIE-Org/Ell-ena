@@ -10,11 +10,14 @@ class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
   late final SupabaseClient _client;
   bool _isInitialized = false;
+  bool _disposed = false;
 
   List<Map<String, dynamic>> _teamMembersCache = [];
   String? _currentTeamId;
 
   Map<String, dynamic>? _userProfileCache;
+
+  final Map<String, Future<List<Map<String, dynamic>>>> _pendingGetTasks = {};
 
   final _tasksStreamController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
@@ -1236,8 +1239,44 @@ class SupabaseService {
 
   // Task-related methods
 
-  // Get tasks for the current user's team
   Future<List<Map<String, dynamic>>> getTasks({
+    bool filterByAssignment = false,
+    String? filterByStatus,
+    String? filterByDueDate,
+  }) async {
+    if (!_isInitialized) return [];
+
+    final user = _client.auth.currentUser;
+    if (user == null) return [];
+
+    final requestKey =
+        '${filterByAssignment}_${filterByStatus}_${filterByDueDate}';
+
+    // Reuse in-flight request if present
+    final existing = _pendingGetTasks[requestKey];
+    if (existing != null) {
+      return existing;
+    }
+
+    final future = _doGetTasks(
+      filterByAssignment: filterByAssignment,
+      filterByStatus: filterByStatus,
+      filterByDueDate: filterByDueDate,
+    );
+
+    _pendingGetTasks[requestKey] = future;
+
+    try {
+      return await future;
+    } finally {
+      _pendingGetTasks.remove(requestKey);
+    }
+  }
+
+
+
+  // Get tasks for the current user's team
+  Future<List<Map<String, dynamic>>> _doGetTasks({
     bool filterByAssignment = false,
     String? filterByStatus,
     String? filterByDueDate,
@@ -2280,7 +2319,10 @@ class SupabaseService {
       debugPrint('Processed meetings: ${processedMeetings.length}');
 
       // Update the stream
-      _meetingsStreamController.add(processedMeetings);
+      if (!_disposed && !_meetingsStreamController.isClosed) {
+        _meetingsStreamController.add(processedMeetings);
+      }
+
 
       return processedMeetings;
     } catch (e) {
@@ -2512,8 +2554,12 @@ class SupabaseService {
 
   // Clean up resources
   void dispose() {
+    if (_disposed) return;
+
     _tasksStreamController.close();
     _ticketsStreamController.close();
     _meetingsStreamController.close();
+
+    _disposed = true;
   }
 }

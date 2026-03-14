@@ -4,7 +4,7 @@ import '../../widgets/custom_widgets.dart';
 
 class TicketDetailScreen extends StatefulWidget {
   final String ticketId;
-  
+
   const TicketDetailScreen({super.key, required this.ticketId});
 
   @override
@@ -14,29 +14,29 @@ class TicketDetailScreen extends StatefulWidget {
 class _TicketDetailScreenState extends State<TicketDetailScreen> {
   final _supabaseService = SupabaseService();
   final _commentController = TextEditingController();
-  
+
   bool _isLoading = true;
   bool _isAdmin = false;
   Map<String, dynamic>? _ticket;
   List<Map<String, dynamic>> _comments = [];
-  
+
   @override
   void initState() {
     super.initState();
     _loadTicketDetails();
   }
-  
+
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTicketDetails() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Check if user is admin
       final userProfile = await _supabaseService.getCurrentUserProfile();
@@ -45,15 +45,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           _isAdmin = userProfile?['role'] == 'admin';
         });
       }
-      
+
       // Load team members first
       if (userProfile != null && userProfile['team_id'] != null) {
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
       }
-      
+
       // Get ticket details
       final result = await _supabaseService.getTicketDetails(widget.ticketId);
-      
+
       if (result != null && mounted) {
         setState(() {
           _ticket = result['ticket'];
@@ -86,16 +86,85 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
   }
-  
+
+  Future<void> _deleteTicket() async {
+    // Show confirmation dialog
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            'Delete Ticket',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: Text(
+            'Are you sure you want to delete this ticket? This action cannot be undone.',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final result = await _supabaseService.deleteTicket(widget.ticketId);
+
+      if (mounted) {
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ticket deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true); // Return true to trigger refresh
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting ticket: ${result['error']}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error deleting ticket: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting ticket: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _addComment() async {
     if (_commentController.text.trim().isEmpty) return;
-    
+
     try {
       final result = await _supabaseService.addTicketComment(
         ticketId: widget.ticketId,
         content: _commentController.text.trim(),
       );
-      
+
       if (result['success']) {
         setState(() {
           _comments.add(result['comment']);
@@ -123,21 +192,21 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
   }
-  
+
   Future<void> _updateTicketStatus(String status) async {
     try {
       final result = await _supabaseService.updateTicketStatus(
         ticketId: widget.ticketId,
         status: status,
       );
-      
+
       if (result['success']) {
         setState(() {
           if (_ticket != null) {
             _ticket!['status'] = status;
           }
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -150,7 +219,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to update ticket status: ${result['error']}'),
+              content:
+                  Text('Failed to update ticket status: ${result['error']}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -168,21 +238,21 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
   }
-  
+
   Future<void> _updateTicketPriority(String priority) async {
     try {
       final result = await _supabaseService.updateTicketPriority(
         ticketId: widget.ticketId,
         priority: priority,
       );
-      
+
       if (result['success']) {
         setState(() {
           if (_ticket != null) {
             _ticket!['priority'] = priority;
           }
         });
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -195,7 +265,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to update ticket priority: ${result['error']}'),
+              content:
+                  Text('Failed to update ticket priority: ${result['error']}'),
               backgroundColor: Colors.red,
             ),
           );
@@ -213,18 +284,18 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       }
     }
   }
-  
+
   Future<void> _assignTicket(String userId) async {
     try {
       final result = await _supabaseService.assignTicket(
         ticketId: widget.ticketId,
         userId: userId,
       );
-      
+
       if (result['success']) {
         // Reload ticket details to get updated assignee info
         _loadTicketDetails();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -262,10 +333,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2D2D2D),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
             'Assign Ticket',
-            style: TextStyle(color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -275,22 +346,23 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                
+
                 if (snapshot.hasError) {
                   return Text(
                     'Error loading team members',
                     style: TextStyle(color: Colors.red.shade400),
                   );
                 }
-                
+
                 final teamMembers = snapshot.data ?? [];
                 if (teamMembers.isEmpty) {
-                  return const Text(
+                  return Text(
                     'No team members found',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   );
                 }
-                
+
                 return ListView.builder(
                   shrinkWrap: true,
                   itemCount: teamMembers.length,
@@ -298,10 +370,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     final member = teamMembers[index];
                     final fullName = member['full_name'] ?? 'Unknown';
                     final isAdmin = member['role'] == 'admin';
-                    
+
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: isAdmin ? Colors.orange.shade700 : Colors.blue.shade700,
+                        backgroundColor: isAdmin
+                            ? Colors.orange.shade700
+                            : Colors.blue.shade700,
                         child: Text(
                           fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',
                           style: const TextStyle(
@@ -312,12 +386,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                       title: Text(
                         fullName,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       subtitle: Text(
                         isAdmin ? 'Admin' : 'Team Member',
                         style: TextStyle(
-                          color: isAdmin ? Colors.orange.shade400 : Colors.grey.shade400,
+                          color: isAdmin
+                              ? Colors.orange.shade400
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                       onTap: () {
@@ -333,9 +410,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
           ],
@@ -343,7 +420,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       },
     );
   }
-  
+
   Future<List<Map<String, dynamic>>> _getTeamMembers() async {
     try {
       final userProfile = await _supabaseService.getCurrentUserProfile();
@@ -361,20 +438,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2D2D2D),
+          backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Ticket Details'),
         ),
         body: const Center(child: CustomLoading()),
       );
     }
-    
+
     if (_ticket == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF2D2D2D),
+          backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Ticket Details'),
         ),
         body: Center(
@@ -387,12 +464,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 color: Colors.red.shade400,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Ticket not found',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -400,7 +477,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 'The ticket may have been deleted or you do not have access to it.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade400,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -409,11 +486,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         ),
       );
     }
-    
+
     final priority = _ticket!['priority'] as String;
     final status = _ticket!['status'] as String;
     final approvalStatus = _ticket!['approval_status'] as String;
-    
+
     Color priorityColor;
     switch (priority.toLowerCase()) {
       case 'high':
@@ -428,7 +505,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       default:
         priorityColor = Colors.grey;
     }
-    
+
     Color statusColor;
     switch (status) {
       case 'open':
@@ -443,7 +520,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       default:
         statusColor = Colors.grey;
     }
-    
+
     Color approvalColor;
     IconData approvalIcon;
     switch (approvalStatus) {
@@ -460,68 +537,89 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         approvalColor = Colors.grey;
         approvalIcon = Icons.pending;
     }
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(_ticket!['ticket_number'] ?? 'Ticket Details'),
         actions: [
-          if (_isAdmin)
+          if (_isAdmin ||
+              _ticket!['created_by'] == _supabaseService.currentUser?.id)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
-                if (value.startsWith('status:')) {
+                if (value == 'delete') {
+                  _deleteTicket();
+                } else if (value.startsWith('status:')) {
                   _updateTicketStatus(value.split(':')[1]);
                 } else if (value.startsWith('priority:')) {
                   _updateTicketPriority(value.split(':')[1]);
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'header_status',
-                  enabled: false,
-                  child: Text(
-                    'Change Status',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                if (_isAdmin) ...[
+                  const PopupMenuItem(
+                    value: 'header_status',
+                    enabled: false,
+                    child: Text(
+                      'Change Status',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'status:open',
-                  child: Text('Open'),
-                ),
-                const PopupMenuItem(
-                  value: 'status:in_progress',
-                  child: Text('In Progress'),
-                ),
-                const PopupMenuItem(
-                  value: 'status:resolved',
-                  child: Text('Resolved'),
-                ),
-                const PopupMenuItem(
-                  value: 'divider1',
-                  enabled: false,
-                  child: Divider(),
-                ),
-                const PopupMenuItem(
-                  value: 'header_priority',
-                  enabled: false,
-                  child: Text(
-                    'Change Priority',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const PopupMenuItem(
+                    value: 'status:open',
+                    child: Text('Open'),
                   ),
-                ),
+                  const PopupMenuItem(
+                    value: 'status:in_progress',
+                    child: Text('In Progress'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'status:resolved',
+                    child: Text('Resolved'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'divider1',
+                    enabled: false,
+                    child: Divider(),
+                  ),
+                  const PopupMenuItem(
+                    value: 'header_priority',
+                    enabled: false,
+                    child: Text(
+                      'Change Priority',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'priority:high',
+                    child: Text('High'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'priority:medium',
+                    child: Text('Medium'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'priority:low',
+                    child: Text('Low'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'divider2',
+                    enabled: false,
+                    child: Divider(),
+                  ),
+                ],
                 const PopupMenuItem(
-                  value: 'priority:high',
-                  child: Text('High'),
-                ),
-                const PopupMenuItem(
-                  value: 'priority:medium',
-                  child: Text('Medium'),
-                ),
-                const PopupMenuItem(
-                  value: 'priority:low',
-                  child: Text('Low'),
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      SizedBox(width: 8),
+                      Text('Delete Ticket',
+                          style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -535,7 +633,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               children: [
                 // Ticket header
                 Card(
-                  color: const Color(0xFF2D2D2D),
+                  color: Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -547,7 +645,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: priorityColor.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
@@ -574,7 +673,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
@@ -590,7 +690,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: approvalColor.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
@@ -617,7 +718,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             ),
                             const Spacer(),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.purple.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
@@ -636,8 +738,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         const SizedBox(height: 16),
                         Text(
                           _ticket!['title'] ?? 'Untitled Ticket',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -646,12 +748,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         Text(
                           _ticket!['description'] ?? 'No description provided.',
                           style: TextStyle(
-                            color: Colors.grey.shade300,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Divider(color: Colors.grey),
+                        Divider(color: Theme.of(context).dividerColor),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -660,9 +763,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                 radius: 16,
                                 backgroundColor: Colors.green.shade700,
                                 child: Text(
-                                  _ticket!['creator']['full_name'] != null && 
-                                  _ticket!['creator']['full_name'].isNotEmpty
-                                      ? _ticket!['creator']['full_name'][0].toUpperCase()
+                                  _ticket!['creator']['full_name'] != null &&
+                                          _ticket!['creator']['full_name']
+                                              .isNotEmpty
+                                      ? _ticket!['creator']['full_name'][0]
+                                          .toUpperCase()
                                       : '?',
                                   style: const TextStyle(
                                     fontSize: 14,
@@ -678,14 +783,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   Text(
                                     'Created by',
                                     style: TextStyle(
-                                      color: Colors.grey.shade500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
-                                    _ticket!['creator']['full_name'] ?? 'Unknown',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    _ticket!['creator']['full_name'] ??
+                                        'Unknown',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -701,14 +811,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   Text(
                                     'Assigned to',
                                     style: TextStyle(
-                                      color: Colors.grey.shade500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
-                                    _ticket!['assignee']['full_name'] ?? 'Unknown',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    _ticket!['assignee']['full_name'] ??
+                                        'Unknown',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -720,9 +835,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                 radius: 16,
                                 backgroundColor: Colors.blue.shade700,
                                 child: Text(
-                                  _ticket!['assignee']['full_name'] != null && 
-                                  _ticket!['assignee']['full_name'].isNotEmpty
-                                      ? _ticket!['assignee']['full_name'][0].toUpperCase()
+                                  _ticket!['assignee']['full_name'] != null &&
+                                          _ticket!['assignee']['full_name']
+                                              .isNotEmpty
+                                      ? _ticket!['assignee']['full_name'][0]
+                                          .toUpperCase()
                                       : '?',
                                   style: const TextStyle(
                                     fontSize: 14,
@@ -739,7 +856,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue.shade700,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                 ),
                               ),
                             ],
@@ -749,9 +867,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Comments section
                 Text(
                   'Comments (${_comments.length})',
@@ -762,7 +880,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 if (_comments.isEmpty)
                   Center(
                     child: Padding(
@@ -794,12 +912,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ),
                     ),
                   ),
-                
+
                 ...List.generate(_comments.length, (index) {
                   final comment = _comments[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
-                    color: const Color(0xFF2D2D2D),
+                    color: Theme.of(context).colorScheme.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -815,9 +933,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   radius: 14,
                                   backgroundColor: Colors.green.shade700,
                                   child: Text(
-                                    comment['user']['full_name'] != null && 
-                                    comment['user']['full_name'].isNotEmpty
-                                        ? comment['user']['full_name'][0].toUpperCase()
+                                    comment['user']['full_name'] != null &&
+                                            comment['user']['full_name']
+                                                .isNotEmpty
+                                        ? comment['user']['full_name'][0]
+                                            .toUpperCase()
                                         : '?',
                                     style: const TextStyle(
                                       fontSize: 12,
@@ -859,19 +979,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     ),
                   );
                 }),
-                
+
                 // Add extra space at the bottom for the comment input
                 const SizedBox(height: 80),
               ],
             ),
           ),
-          
+
           // Comment input
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
@@ -883,19 +1003,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     controller: _commentController,
                     decoration: InputDecoration(
                       hintText: 'Add a comment...',
-                      hintStyle: TextStyle(color: Colors.grey.shade500),
                       filled: true,
-                      fillColor: const Color(0xFF1A1A1A),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                     maxLines: 3,
                     minLines: 1,
                   ),
@@ -914,10 +1032,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       ),
     );
   }
-  
+
   String _formatDate(String? dateString) {
     if (dateString == null) return '';
-    
+
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
@@ -925,4 +1043,4 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       return '';
     }
   }
-} 
+}

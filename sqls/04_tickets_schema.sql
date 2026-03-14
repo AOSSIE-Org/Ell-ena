@@ -4,6 +4,7 @@ CREATE TABLE tickets (
     ticket_number TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
+    description_embedding vector(768),
     priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
     category TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),

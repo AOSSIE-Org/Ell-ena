@@ -33,7 +33,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
 
     try {
       final members = await _supabaseService.getTeamMembers(widget.teamId);
-      
+
       if (mounted) {
         setState(() {
           _teamMembers = members;
@@ -68,7 +68,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
       Colors.indigo,
       Colors.pink,
     ];
-    
+
     int hashCode = name.hashCode;
     return colors[hashCode.abs() % colors.length];
   }
@@ -292,4 +292,4 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
       },
     );
   }
-} 
+}
