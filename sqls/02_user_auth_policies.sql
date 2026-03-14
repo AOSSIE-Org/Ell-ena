@@ -90,6 +90,8 @@ CREATE POLICY "Users can update their own profile (except role)"
     id = auth.uid()
     -- Prevent users from changing their own role
     AND role = get_current_user_role()
+    -- Prevent users from changing their own team_id
+    AND team_id = (SELECT team_id FROM users WHERE id = auth.uid())
   );
 
 -- Policy for admins to update roles of team members
