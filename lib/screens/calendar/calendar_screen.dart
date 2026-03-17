@@ -41,18 +41,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Cache duration (5 minutes)
   static const Duration _cacheDuration = Duration(minutes: 5);
 
+  ({DateTime first, DateTime last}) _calendarBounds(DateTime anchor) {
+    return (
+      first: DateTime.utc(anchor.year - 1, anchor.month, anchor.day),
+      last: DateTime.utc(anchor.year + 3, anchor.month, anchor.day),
+    );
+  }
+
+  DateTime _clampDay(DateTime day, DateTime first, DateTime last) {
+    if (day.isBefore(first)) return first;
+    if (day.isAfter(last)) return last;
+    return day;
+  }
+
   @override
   void initState() {
     super.initState();
     // Safety clamp for initial dates in case system clock is off bounds
-    final now = DateTime.now();
-    // Clamping range: 1 year in the past to 3 years in the future
-    final firstBoundedDay = DateTime.utc(now.year - 1, now.month, now.day);
-    final lastBoundedDay = DateTime.utc(now.year + 3, now.month, now.day);
-
-    DateTime safeDay = now;
-    if (safeDay.isBefore(firstBoundedDay)) safeDay = firstBoundedDay;
-    if (safeDay.isAfter(lastBoundedDay)) safeDay = lastBoundedDay;
+    final bounds = _calendarBounds(DateTime.now());
+    final safeDay = _clampDay(DateTime.now(), bounds.first, bounds.last);
 
     _focusedDay = safeDay;
     _selectedDay = safeDay;
@@ -373,17 +380,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     // Create a dynamic rolling window to avoid unbounded memory growth
-    final now = DateTime.now();
-    // Clamping range: 1 year in the past to 3 years in the future
-    final firstBoundedDay = DateTime.utc(now.year - 1, now.month, now.day);
-    final lastBoundedDay = DateTime.utc(now.year + 3, now.month, now.day);
-
+    final bounds = _calendarBounds(DateTime.now());
+    
     // Safely clamp focused day to mathematically prevent table_calendar runtime crashes
-    DateTime safeFocusedDay = _focusedDay;
-    if (safeFocusedDay.isBefore(firstBoundedDay)) {
-      safeFocusedDay = firstBoundedDay;
-    }
-    if (safeFocusedDay.isAfter(lastBoundedDay)) safeFocusedDay = lastBoundedDay;
+    final safeFocusedDay = _clampDay(_focusedDay, bounds.first, bounds.last);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -394,8 +394,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
-          firstDay: firstBoundedDay,
-          lastDay: lastBoundedDay,
+          firstDay: bounds.first,
+          lastDay: bounds.last,
           focusedDay: safeFocusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
