@@ -41,11 +41,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Cache duration (5 minutes)
   static const Duration _cacheDuration = Duration(minutes: 5);
 
-  ({DateTime first, DateTime last}) _calendarBounds(DateTime anchor) {
-    return (
-      first: DateTime.utc(anchor.year - 1, anchor.month, anchor.day),
-      last: DateTime.utc(anchor.year + 3, anchor.month, anchor.day),
-    );
+  DateTime _getFirstBoundedDay(DateTime anchor) {
+    return DateTime.utc(anchor.year - 1, anchor.month, anchor.day);
+  }
+
+  DateTime _getLastBoundedDay(DateTime anchor) {
+    return DateTime.utc(anchor.year + 3, anchor.month, anchor.day);
   }
 
   DateTime _clampDay(DateTime day, DateTime first, DateTime last) {
@@ -58,8 +59,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void initState() {
     super.initState();
     // Safety clamp for initial dates in case system clock is off bounds
-    final bounds = _calendarBounds(DateTime.now());
-    final safeDay = _clampDay(DateTime.now(), bounds.first, bounds.last);
+    final now = DateTime.now();
+    final first = _getFirstBoundedDay(now);
+    final last = _getLastBoundedDay(now);
+    final safeDay = _clampDay(now, first, last);
 
     _focusedDay = safeDay;
     _selectedDay = safeDay;
@@ -380,10 +383,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     // Create a dynamic rolling window to avoid unbounded memory growth
-    final bounds = _calendarBounds(DateTime.now());
-    
+    final now = DateTime.now();
+    final first = _getFirstBoundedDay(now);
+    final last = _getLastBoundedDay(now);
+
     // Safely clamp focused day to mathematically prevent table_calendar runtime crashes
-    final safeFocusedDay = _clampDay(_focusedDay, bounds.first, bounds.last);
+    final safeFocusedDay = _clampDay(_focusedDay, first, last);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -394,8 +399,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
-          firstDay: bounds.first,
-          lastDay: bounds.last,
+          firstDay: first,
+          lastDay: last,
           focusedDay: safeFocusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
