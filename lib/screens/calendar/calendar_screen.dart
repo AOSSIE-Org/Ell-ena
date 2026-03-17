@@ -44,7 +44,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedDay = _focusedDay;
+    // Safety clamp for initial dates in case system clock is off bounds
+    final now = DateTime.now();
+    // Clamping range: 1 year in the past to 3 years in the future
+    final firstBoundedDay = DateTime.utc(now.year - 1, now.month, now.day);
+    final lastBoundedDay = DateTime.utc(now.year + 3, now.month, now.day);
+
+    DateTime safeDay = now;
+    if (safeDay.isBefore(firstBoundedDay)) safeDay = firstBoundedDay;
+    if (safeDay.isAfter(lastBoundedDay)) safeDay = lastBoundedDay;
+
+    _focusedDay = safeDay;
+    _selectedDay = safeDay;
     _loadCurrentUserInfo();
   }
 
@@ -285,7 +296,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           title: ticket['title'] ?? 'Untitled Ticket',
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
           endTime:
-              TimeOfDay(hour: createdAt.hour + 1, minute: createdAt.minute),
+              TimeOfDay.fromDateTime(createdAt.add(const Duration(hours: 1))),
           type: EventType.ticket,
           id: ticket['id'],
         ));
@@ -324,10 +335,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // For meetings, assume 1 hour duration
         _events[dateOnly]!.add(CalendarEvent(
           title: meeting['title'] ?? 'Untitled Meeting',
-          startTime:
-              TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
+          startTime: TimeOfDay.fromDateTime(meetingDate),
           endTime:
-              TimeOfDay(hour: meetingDate.hour + 1, minute: meetingDate.minute),
+              TimeOfDay.fromDateTime(meetingDate.add(const Duration(hours: 1))),
           type: EventType.meeting,
           id: meeting['id'],
         ));
@@ -361,6 +371,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendar() {
     final colorScheme = Theme.of(context).colorScheme;
+
+    // Create a dynamic rolling window to avoid unbounded memory growth
+    final now = DateTime.now();
+    // Clamping range: 1 year in the past to 3 years in the future
+    final firstBoundedDay = DateTime.utc(now.year - 1, now.month, now.day);
+    final lastBoundedDay = DateTime.utc(now.year + 3, now.month, now.day);
+
+    // Safely clamp focused day to mathematically prevent table_calendar runtime crashes
+    DateTime safeFocusedDay = _focusedDay;
+    if (safeFocusedDay.isBefore(firstBoundedDay)) {
+      safeFocusedDay = firstBoundedDay;
+    }
+    if (safeFocusedDay.isAfter(lastBoundedDay)) safeFocusedDay = lastBoundedDay;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -370,9 +394,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
-          firstDay: DateTime.utc(2024, 1, 1),
-          lastDay: DateTime.utc(2025, 12, 31),
-          focusedDay: _focusedDay,
+          firstDay: firstBoundedDay,
+          lastDay: lastBoundedDay,
+          focusedDay: safeFocusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           eventLoader: _getEventsForDay,
@@ -711,7 +735,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateMeetingScreen(),
+            builder: (context) =>
+                CreateMeetingScreen(initialDateTime: selectedDateTime),
           ),
         );
         break;
@@ -719,7 +744,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTaskScreen(),
+            builder: (context) =>
+                CreateTaskScreen(initialDateTime: selectedDateTime),
           ),
         );
         break;
@@ -727,7 +753,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTicketScreen(),
+            builder: (context) =>
+                CreateTicketScreen(initialDateTime: selectedDateTime),
           ),
         );
         break;
