@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
-import 'package:flutter/foundation.dart';
 
 class AIService {
   static final AIService _instance = AIService._internal();
