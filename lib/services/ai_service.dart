@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:flutter/foundation.dart';
 
 class AIService {
   static final AIService _instance = AIService._internal();
@@ -549,7 +550,7 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
     await initialize();
   }
 
-  print("👉 getRelevantMeetingSummaries() called with query: $query");
+  debugPrint("👉 getRelevantMeetingSummaries() called with query: $query");
 
   try {
     // Step 1: Queue the embedding request and get the response ID
@@ -561,7 +562,7 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
     );
 
     final respId = respIdResponse as int;
-    print("👉 Embedding queued with response ID: $respId");
+    debugPrint("👉 Embedding queued with response ID: $respId");
 
     // Step 2: Fetch meetings using the resp_id
     final response = await _supabaseService.client.rpc(
@@ -572,24 +573,24 @@ Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) asy
       },
     );
 
-    print("👉 Got search results using response ID: $respId");
+    debugPrint("👉 Got search results using response ID: $respId");
 
     if (response is List) {
       final meetings = List<Map<String, dynamic>>.from(response);
 
       for (var meeting in meetings) {
-        print("Meeting: ${meeting['title']} - Date: ${meeting['meeting_date']}");
+        debugPrint("Meeting: ${meeting['title']} - Date: ${meeting['meeting_date']}");
         if (meeting.containsKey('similarity')) {
-          print("Similarity: ${meeting['similarity']}");
+          debugPrint("Similarity: ${meeting['similarity']}");
         }
         if (meeting.containsKey('debug_info')) {
-          print("Debug info: ${meeting['debug_info']}");
+          debugPrint("Debug info: ${meeting['debug_info']}");
         }
       }
 
       return meetings;
     } else {
-      print("👉 No relevant meetings found or invalid response format");
+      debugPrint("👉 No relevant meetings found or invalid response format");
       return [];
     }
   } catch (e, st) {
