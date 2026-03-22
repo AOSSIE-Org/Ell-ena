@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../widgets/custom_widgets.dart';
-import '../../services/navigation_service.dart';
 import '../workspace/workspace_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../profile/profile_screen.dart';
@@ -17,122 +14,50 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [];
-  bool _isListening = false;
-  int _selectedIndex = 0;
-  bool _isFabExpanded = false;
-  late AnimationController _fabController;
-  late Animation<double> _fabAnimation;
+class _HomeScreenState extends State<HomeScreen> {
+  static const int _chatTabIndex = 3;
+  static const int _tabCount = 5;
 
-  List<Widget> _screens = [];
+  int _selectedIndex = 0;
+  bool _chatInitialized = false;
+  Map<String, dynamic>? _chatArgs;
 
   @override
   void initState() {
     super.initState();
-    _fabController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _fabAnimation = CurvedAnimation(
-      parent: _fabController,
-      curve: Curves.easeOut,
-      reverseCurve: Curves.easeIn,
-    );
 
-    // Initialize screens
-    _initializeScreens();
+    // Parse arguments synchronously before first build so ChatScreen
+    // receives _chatArgs on its very first render with no race condition.
+    final args = widget.arguments;
+    if (args != null) {
+      final int targetIndex =
+          (args['screen'] is int) ? args['screen'] as int : _selectedIndex;
 
-    // Handle initial arguments if provided
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.arguments != null) {
-        if (widget.arguments!.containsKey('screen') &&
-            widget.arguments!['screen'] is int) {
-          setState(() {
-            _selectedIndex = widget.arguments!['screen'];
-          });
-        }
+      _selectedIndex = (targetIndex >= 0 && targetIndex < _tabCount)
+          ? targetIndex
+          : _selectedIndex;
 
-        // Handle initial message for chat screen
-        if (widget.arguments!.containsKey('initial_message') &&
-            widget.arguments!['initial_message'] is String &&
-            _selectedIndex == 3) {
-          // Update the chat screen with the initial message
-          setState(() {
-            _screens[3] = ChatScreen(arguments: {
-              'initial_message': widget.arguments!['initial_message']
-            });
-          });
-        }
+      // Always capture initial_message regardless of which tab is targeted,
+      // so the message is available when the user navigates to the chat tab.
+      final dynamic initialMessage = args['initial_message'];
+      if (initialMessage is String && initialMessage.trim().isNotEmpty) {
+        _chatArgs = {'initial_message': initialMessage.trim()};
       }
-    });
+    }
+
+    // If starting on chat tab, initialize it immediately.
+    if (_selectedIndex == _chatTabIndex) {
+      _chatInitialized = true;
+    }
   }
 
-  void _initializeScreens() {
-    _screens = [
-      const DashboardScreen(),
-      const CalendarScreen(),
-      const WorkspaceScreen(),
-      const ChatScreen(),
-      const ProfileScreen(),
-    ];
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    _fabController.dispose();
-    super.dispose();
-  }
-
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
+  void _onTap(int index) {
     setState(() {
-      _messages.add(
-        ChatMessage(
-          text: _messageController.text,
-          isUser: true,
-          timestamp: DateTime.now(),
-        ),
-      );
-      _messageController.clear();
-    });
-
-    _scrollToBottom();
-    // TODO: Implement AI response
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  void _toggleListening() {
-    setState(() {
-      _isListening = !_isListening;
-    });
-    // TODO: Implement voice recognition
-  }
-
-  void _toggleFab() {
-    setState(() {
-      _isFabExpanded = !_isFabExpanded;
-      if (_isFabExpanded) {
-        _fabController.forward();
-      } else {
-        _fabController.reverse();
+      _selectedIndex = index;
+      // Lazy-load ChatScreen only when user first visits the chat tab.
+      // This avoids unnecessary startup cost from eager IndexedStack init.
+      if (index == _chatTabIndex) {
+        _chatInitialized = true;
       }
     });
   }
@@ -140,11 +65,31 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final screens = <Widget>[
+      const DashboardScreen(),
+      const CalendarScreen(),
+      const WorkspaceScreen(),
+
+      // Lazy-load ChatScreen: only initialize when user first visits chat tab.
+      _chatInitialized
+          ? ChatScreen(
+              key: const PageStorageKey('chat_screen'),
+              arguments: _chatArgs,
+            )
+          : const SizedBox.shrink(),
+
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        onTap: _onTap,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: theme.colorScheme.primary,
         unselectedItemColor: theme.colorScheme.onSurfaceVariant,
@@ -157,57 +102,20 @@ class _HomeScreenState extends State<HomeScreen>
             icon: Icon(Icons.calendar_today),
             label: 'Calendar',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Workspace'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work),
+            label: 'Workspace',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             label: 'Chat',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
     );
   }
-}
-
-class _ChatBubble extends StatelessWidget {
-  final ChatMessage message;
-
-  const _ChatBubble({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: message.isUser
-              ? Colors.green.shade400
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            color: message.isUser
-                ? Colors.white
-                : Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-  });
 }
