@@ -3,6 +3,7 @@ CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
+  description_embedding vector(768),
   status TEXT NOT NULL CHECK (status IN ('todo', 'in_progress', 'completed')),
   approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -67,6 +68,19 @@ CREATE POLICY "Users can update tasks they created or are assigned to"
       SELECT 1 FROM users 
       WHERE users.id = auth.uid() 
       AND users.team_id = tasks.team_id
+    )
+  );
+
+-- Users can delete tasks they created or admins can delete any task in their team
+CREATE POLICY "Users can delete tasks they created or admins can delete" 
+  ON tasks FOR DELETE 
+  USING (
+    created_by = auth.uid() OR
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() 
+      AND role = 'admin' 
+      AND team_id = tasks.team_id
     )
   );
 

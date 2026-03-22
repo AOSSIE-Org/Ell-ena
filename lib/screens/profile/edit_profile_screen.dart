@@ -19,31 +19,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  
+
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
   late final TextEditingController _emailController;
-  
+
   String? _fullName;
   String? _email;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Split full name into first and last name
     final nameParts = widget.userProfile['full_name']?.split(' ') ?? ['', ''];
     final firstName = nameParts.isNotEmpty ? nameParts.first : '';
     final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-    
+
     _firstNameController = TextEditingController(text: firstName);
     _lastNameController = TextEditingController(text: lastName);
-    _emailController = TextEditingController(text: widget.userProfile['email'] ?? '');
-    
+    _emailController =
+        TextEditingController(text: widget.userProfile['email'] ?? '');
+
     _fullName = widget.userProfile['full_name'];
     _email = widget.userProfile['email'];
   }
-  
+
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -51,25 +52,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
       final fullName = '$firstName $lastName'.trim();
-      
+
       // Only update if something has changed
       if (fullName != _fullName) {
         final success = await _supabaseService.updateUserProfile({
           'full_name': fullName,
         });
-        
+
         if (success) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -78,10 +79,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 backgroundColor: Colors.green,
               ),
             );
-            
+
             // Call the callback to refresh the profile screen
             widget.onProfileUpdated();
-            
+
             // Pop back to profile screen
             Navigator.pop(context);
           }
@@ -120,21 +121,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2D2D2D),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Edit Profile'),
         actions: [
           TextButton.icon(
             onPressed: _isLoading ? null : _saveProfile,
-            icon: _isLoading 
+            icon: _isLoading
                 ? const SizedBox(
-                    width: 20, 
-                    height: 20, 
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
-                  )
-                : const Icon(Icons.save, color: Colors.white),
-            label: const Text('Save', style: TextStyle(color: Colors.white)),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : Icon(Icons.save,
+                    color: Theme.of(context).colorScheme.onSurface),
+            label: Text('Save',
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
@@ -160,16 +164,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               border: Border.all(color: Colors.white, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .shadow
+                                      .withOpacity(0.2),
                                   blurRadius: 10,
                                   offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.person,
                               size: 50,
-                              color: Color(0xFF1A1A1A),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Container(
@@ -188,13 +195,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    const Text(
+                    Text(
                       'Personal Information',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -218,43 +224,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextFormField(
                       controller: _emailController,
                       readOnly: true,
-                      style: TextStyle(color: Colors.grey.shade500),
-                      decoration: InputDecoration(
+                      style: TextStyle(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
+                      decoration: const InputDecoration(
                         labelText: 'Email',
-                        labelStyle: TextStyle(color: Colors.grey.shade600),
                         helperText: 'Email cannot be changed',
-                        helperStyle: TextStyle(color: Colors.grey.shade600),
-                        prefixIcon: Icon(
-                          Icons.email_outlined,
-                          color: Colors.grey.shade600,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade900),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey.shade900),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF1F1F1F),
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
                     ),
-
                     const SizedBox(height: 32),
-                    const Text(
+                    Text(
                       'Role',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2D2D2D),
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -281,9 +272,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                widget.userProfile['role'] == 'admin' ? 'Team Admin' : 'Team Member',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                widget.userProfile['role'] == 'admin'
+                                    ? 'Team Admin'
+                                    : 'Team Member',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -292,7 +286,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 widget.userProfile['role'] == 'admin'
                                     ? 'You have admin privileges'
                                     : 'Standard team member access',
-                                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontSize: 12),
                               ),
                             ],
                           ),
@@ -305,7 +303,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
     );
   }
-  
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -318,32 +316,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       controller: controller,
       enabled: enabled,
       validator: validator,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey.shade400),
         helperText: helperText,
-        helperStyle: TextStyle(color: Colors.grey.shade600),
-        prefixIcon: Icon(icon, color: Colors.grey.shade400),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade800),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade800),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.green.shade400),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade900),
-        ),
-        filled: true,
-        fillColor: const Color(0xFF2D2D2D),
+        prefixIcon: Icon(icon),
       ),
     );
   }
-} 
+}

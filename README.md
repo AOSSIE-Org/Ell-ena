@@ -64,7 +64,11 @@ I’ve made demo videos for Ell-ena and separated them by features. So, we can d
 
 <img width="2072" height="1592" alt="NoteGPT-Sequence Diagram-1756295185752" src="https://github.com/user-attachments/assets/07ca0a2c-200e-4669-9c8a-1294dd78e789" />
 
+## ✨ Database Schema
 
+Ell-ena uses PostgreSQL (via Supabase) with strict Row-Level Security (RLS) and AI-optimized vector search tables.
+
+👉 [View Database Schema](https://dbdiagram.io/d/69525ba139fa3db27bb9e56c)
 
 ## ✨ Key Features
 
@@ -195,6 +199,9 @@ lib/
 
 ### SQL Structure
 
+The following SQL scripts represent structured database definitions used during development. Supabase deployments rely on migration files located in `supabase/migrations/`.
+
+
 ```
 sqls/
 ├── 01_user_auth_schema.sql    # User authentication schema
@@ -208,6 +215,13 @@ sqls/
 ├── 09_meeting_vector_search.sql # Vector search capabilities
 └── 10_generate_missing_embeddings.sql # Embedding generation
 ```
+
+### Database Schema Source of Truth
+
+Ell-ena maintains database migrations under `supabase/migrations/`, which serves as the authoritative schema source for Supabase deployments.
+
+The `sqls/` directory contains structured SQL scripts used during development and feature implementation. When modifying database structure, contributors should ensure consistency with the migration files inside `supabase/migrations/`.
+
 
 ### Future Enhancements
 
@@ -245,3 +259,5 @@ Reference designs for the project can be found here:
 
 
 **Note:** This project is part of **GSoC'25 under AOSSIE** and is actively under development.
+
+

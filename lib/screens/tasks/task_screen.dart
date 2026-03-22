@@ -6,10 +6,11 @@ import 'create_task_screen.dart';
 
 class TaskScreen extends StatefulWidget {
   // Create a static key that can be used to access the state
-  static final GlobalKey<_TaskScreenState> globalKey = GlobalKey<_TaskScreenState>();
-  
+  static final GlobalKey<_TaskScreenState> globalKey =
+      GlobalKey<_TaskScreenState>();
+
   const TaskScreen({Key? key}) : super(key: key);
-  
+
   // Static method to refresh tasks from anywhere
   static void refreshTasks() {
     globalKey.currentState?.refreshTasks();
@@ -25,33 +26,33 @@ class _TaskScreenState extends State<TaskScreen> {
   List<Map<String, dynamic>> _tasks = [];
   String _selectedStatus = 'todo';
   bool _isAdmin = false;
-  
+
   @override
   void initState() {
     super.initState();
     _loadTeamMembersAndTasks();
     _checkUserRole();
   }
-  
+
   // This method can be called from outside to refresh tasks
   void refreshTasks() {
     _loadTeamMembersAndTasks();
   }
-  
+
   // Load team members first, then tasks
   Future<void> _loadTeamMembersAndTasks() async {
     try {
       setState(() {
         _isLoading = true;
       });
-      
+
       // Get the user's team ID
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null && userProfile['team_id'] != null) {
         // Load team members first
         await _supabaseService.loadTeamMembers(userProfile['team_id']);
       }
-      
+
       // Then load tasks
       await _loadTasks();
     } catch (e) {
@@ -63,7 +64,7 @@ class _TaskScreenState extends State<TaskScreen> {
       }
     }
   }
-  
+
   Future<void> _checkUserRole() async {
     final userProfile = await _supabaseService.getCurrentUserProfile();
     if (mounted) {
@@ -72,11 +73,11 @@ class _TaskScreenState extends State<TaskScreen> {
       });
     }
   }
-  
+
   Future<void> _loadTasks() async {
     try {
       final tasks = await _supabaseService.getTasks(filterByAssignment: true);
-      
+
       if (mounted) {
         setState(() {
           _tasks = tasks;
@@ -92,14 +93,14 @@ class _TaskScreenState extends State<TaskScreen> {
       }
     }
   }
-  
+
   Future<void> _updateTaskStatus(String taskId, String status) async {
     try {
       await _supabaseService.updateTaskStatus(
         taskId: taskId,
         status: status,
       );
-      
+
       // Reload tasks after update
       _loadTasks();
     } catch (e) {
@@ -112,14 +113,14 @@ class _TaskScreenState extends State<TaskScreen> {
       );
     }
   }
-  
+
   Future<void> _updateTaskApproval(String taskId, String approvalStatus) async {
     try {
       await _supabaseService.updateTaskApproval(
         taskId: taskId,
         approvalStatus: approvalStatus,
       );
-      
+
       // Reload tasks after update
       _loadTasks();
     } catch (e) {
@@ -136,26 +137,28 @@ class _TaskScreenState extends State<TaskScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF1A1A1A),
-        body: Center(child: CustomLoading()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: const Center(child: CustomLoading()),
       );
     }
-    
+
     // Make sure the key is properly associated with this instance
     if (TaskScreen.globalKey.currentState != this) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         TaskScreen.refreshTasks();
       });
     }
-    
+
     final todoTasks = _tasks.where((task) => task['status'] == 'todo').toList();
-    final inProgressTasks = _tasks.where((task) => task['status'] == 'in_progress').toList();
-    final completedTasks = _tasks.where((task) => task['status'] == 'completed').toList();
+    final inProgressTasks =
+        _tasks.where((task) => task['status'] == 'in_progress').toList();
+    final completedTasks =
+        _tasks.where((task) => task['status'] == 'completed').toList();
     final totalTasks = _tasks.length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(
@@ -165,7 +168,7 @@ class _TaskScreenState extends State<TaskScreen> {
               fullscreenDialog: true,
             ),
           );
-          
+
           if (result == true) {
             _loadTasks();
             ScaffoldMessenger.of(context).showSnackBar(
@@ -198,19 +201,23 @@ class _TaskScreenState extends State<TaskScreen> {
   }
 
   Widget _buildDraggableTaskList() {
-    final filteredTasks = _tasks.where((task) => task['status'] == _selectedStatus).toList();
-    
+    final filteredTasks =
+        _tasks.where((task) => task['status'] == _selectedStatus).toList();
+
     if (filteredTasks.isEmpty) {
+      final colorScheme = Theme.of(context).colorScheme;
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              _selectedStatus == 'todo' ? Icons.assignment_outlined :
-              _selectedStatus == 'in_progress' ? Icons.pending_actions_outlined :
-              Icons.task_alt_outlined,
+              _selectedStatus == 'todo'
+                  ? Icons.assignment_outlined
+                  : _selectedStatus == 'in_progress'
+                      ? Icons.pending_actions_outlined
+                      : Icons.task_alt_outlined,
               size: 80,
-              color: Colors.grey.shade600,
+              color: colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
             Text(
@@ -218,17 +225,19 @@ class _TaskScreenState extends State<TaskScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade400,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              _selectedStatus == 'todo' ? 'Add new tasks to get started' :
-              _selectedStatus == 'in_progress' ? 'Move tasks here when you start working on them' :
-              'Completed tasks will appear here',
+              _selectedStatus == 'todo'
+                  ? 'Add new tasks to get started'
+                  : _selectedStatus == 'in_progress'
+                      ? 'Move tasks here when you start working on them'
+                      : 'Completed tasks will appear here',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color: colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -238,7 +247,7 @@ class _TaskScreenState extends State<TaskScreen> {
         ),
       );
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: ReorderableListView.builder(
@@ -298,7 +307,7 @@ class _TaskScreenState extends State<TaskScreen> {
                     builder: (context) => TaskDetailScreen(taskId: task['id']),
                   ),
                 );
-                
+
                 if (result == true) {
                   _loadTasks();
                 }
@@ -311,35 +320,37 @@ class _TaskScreenState extends State<TaskScreen> {
   }
 
   Widget _buildStatusChangeHint() {
-    final nextStatus = _selectedStatus == 'todo' 
-        ? 'In Progress' 
-        : _selectedStatus == 'in_progress' 
-            ? 'Completed' 
+    final nextStatus = _selectedStatus == 'todo'
+        ? 'In Progress'
+        : _selectedStatus == 'in_progress'
+            ? 'Completed'
             : 'To Do';
-    
-    final nextStatusId = _selectedStatus == 'todo' 
-        ? 'in_progress' 
-        : _selectedStatus == 'in_progress' 
-            ? 'completed' 
+
+    final nextStatusId = _selectedStatus == 'todo'
+        ? 'in_progress'
+        : _selectedStatus == 'in_progress'
+            ? 'completed'
             : 'todo';
-    
-    final color = _selectedStatus == 'todo' 
-        ? Colors.orange 
-        : _selectedStatus == 'in_progress' 
-            ? Colors.green 
+
+    final color = _selectedStatus == 'todo'
+        ? Colors.orange
+        : _selectedStatus == 'in_progress'
+            ? Colors.green
             : Colors.blue;
-    
+
     return ElevatedButton.icon(
       onPressed: () => setState(() => _selectedStatus = nextStatusId),
       icon: Icon(
-        _selectedStatus == 'todo' ? Icons.arrow_forward : 
-        _selectedStatus == 'in_progress' ? Icons.check : 
-        Icons.refresh,
+        _selectedStatus == 'todo'
+            ? Icons.arrow_forward
+            : _selectedStatus == 'in_progress'
+                ? Icons.check
+                : Icons.refresh,
         color: Colors.white,
         size: 16,
       ),
       label: Text(
-        'View $nextStatus Tasks', 
+        'View $nextStatus Tasks',
         style: const TextStyle(color: Colors.white),
       ),
       style: ElevatedButton.styleFrom(
@@ -355,7 +366,7 @@ class _TaskScreenState extends State<TaskScreen> {
       {'id': 'in_progress', 'label': 'In Progress', 'color': Colors.orange},
       {'id': 'completed', 'label': 'Completed', 'color': Colors.green},
     ];
-    
+
     return Container(
       height: 40,
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -363,16 +374,16 @@ class _TaskScreenState extends State<TaskScreen> {
         children: statusOptions.map((status) {
           final isSelected = status['id'] == _selectedStatus;
           final color = status['color'] as MaterialColor;
-          
+
           return Expanded(
             child: DragTarget<Map<String, dynamic>>(
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: isSelected 
-                        ? color.withOpacity(0.2) 
-                        : candidateData.isNotEmpty 
-                            ? color.withOpacity(0.1) 
+                    color: isSelected
+                        ? color.withOpacity(0.2)
+                        : candidateData.isNotEmpty
+                            ? color.withOpacity(0.1)
                             : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
@@ -381,14 +392,18 @@ class _TaskScreenState extends State<TaskScreen> {
                     ),
                   ),
                   child: InkWell(
-                    onTap: () => setState(() => _selectedStatus = status['id'] as String),
+                    onTap: () => setState(
+                        () => _selectedStatus = status['id'] as String),
                     borderRadius: BorderRadius.circular(20),
                     child: Center(
                       child: Text(
                         status['label'] as String,
                         style: TextStyle(
-                          color: isSelected ? color : Colors.white70,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? color
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -417,9 +432,9 @@ class _TaskScreenState extends State<TaskScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF2D2D2D),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -454,7 +469,10 @@ class _TaskScreenState extends State<TaskScreen> {
             borderRadius: BorderRadius.circular(10),
             child: Stack(
               children: [
-                Container(height: 8, color: Colors.grey.shade800),
+                Container(
+                    height: 8,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest),
                 Row(
                   children: [
                     _buildProgressBar(
@@ -499,7 +517,9 @@ class _TaskScreenState extends State<TaskScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12),
         ),
       ],
     );
@@ -535,7 +555,7 @@ class _TaskCard extends StatelessWidget {
     final String description = task['description'] ?? 'No description';
     final String status = task['status'] ?? 'todo';
     final String approvalStatus = task['approval_status'] ?? 'pending';
-    
+
     // Get names from the team members cache
     final supabaseService = SupabaseService();
     String creatorName;
@@ -548,7 +568,7 @@ class _TaskCard extends StatelessWidget {
     } else {
       creatorName = 'Unknown';
     }
-    
+
     String assigneeName;
     if (task['assigned_to'] != null) {
       if (supabaseService.isCurrentUser(task['assigned_to'])) {
@@ -559,25 +579,25 @@ class _TaskCard extends StatelessWidget {
     } else {
       assigneeName = 'Unassigned';
     }
-    
+
     // Format due date if available
     String dueDate = 'No due date';
     if (task['due_date'] != null) {
       final DateTime date = DateTime.parse(task['due_date']);
       dueDate = '${date.day}/${date.month}/${date.year}';
     }
-    
+
     // Determine colors based on status
-    final Color statusColor = status == 'todo' 
-        ? Colors.blue 
-        : status == 'in_progress' 
-            ? Colors.orange 
+    final Color statusColor = status == 'todo'
+        ? Colors.blue
+        : status == 'in_progress'
+            ? Colors.orange
             : Colors.green;
-            
-    final Color approvalColor = approvalStatus == 'pending' 
-        ? Colors.grey 
-        : approvalStatus == 'approved' 
-            ? Colors.green 
+
+    final Color approvalColor = approvalStatus == 'pending'
+        ? Colors.grey
+        : approvalStatus == 'approved'
+            ? Colors.green
             : Colors.red;
 
     return GestureDetector(
@@ -585,11 +605,11 @@ class _TaskCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2D2D2D),
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -613,16 +633,21 @@ class _TaskCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        status == 'todo' ? Icons.assignment_outlined :
-                        status == 'in_progress' ? Icons.pending_actions_outlined :
-                        Icons.task_alt_outlined,
+                        status == 'todo'
+                            ? Icons.assignment_outlined
+                            : status == 'in_progress'
+                                ? Icons.pending_actions_outlined
+                                : Icons.task_alt_outlined,
                         color: statusColor,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        status == 'todo' ? 'To Do' :
-                        status == 'in_progress' ? 'In Progress' : 'Completed',
+                        status == 'todo'
+                            ? 'To Do'
+                            : status == 'in_progress'
+                                ? 'In Progress'
+                                : 'Completed',
                         style: TextStyle(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -636,16 +661,20 @@ class _TaskCard extends StatelessWidget {
                         Row(
                           children: [
                             IconButton(
-                              onPressed: () => onApprovalChange(task['id'], 'approved'),
-                              icon: Icon(Icons.check_circle, color: Colors.green.shade400, size: 20),
+                              onPressed: () =>
+                                  onApprovalChange(task['id'], 'approved'),
+                              icon: Icon(Icons.check_circle,
+                                  color: Colors.green.shade400, size: 20),
                               tooltip: 'Approve',
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => onApprovalChange(task['id'], 'rejected'),
-                              icon: Icon(Icons.cancel, color: Colors.red.shade400, size: 20),
+                              onPressed: () =>
+                                  onApprovalChange(task['id'], 'rejected'),
+                              icon: Icon(Icons.cancel,
+                                  color: Colors.red.shade400, size: 20),
                               tooltip: 'Reject',
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
@@ -653,9 +682,115 @@ class _TaskCard extends StatelessWidget {
                             const SizedBox(width: 12),
                           ],
                         ),
-                      Text(
-                        dueDate,
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                      Row(
+                        children: [
+                          if (task['created_by'] ==
+                                  SupabaseService()
+                                      .client
+                                      .auth
+                                      .currentUser
+                                      ?.id ||
+                              isAdmin)
+                            IconButton(
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.surface,
+                                    title: Text('Delete Task',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge),
+                                    content: Text(
+                                      'Are you sure you want to delete this task? This action cannot be undone.',
+                                      style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        style: TextButton.styleFrom(
+                                            foregroundColor: Colors.red),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  try {
+                                    final result = await SupabaseService()
+                                        .deleteTask(task['id']);
+                                    if (result['success'] == true) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Task deleted successfully'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                        // Refresh the task list
+                                        TaskScreen.refreshTasks();
+                                      }
+                                    } else {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(result['error'] ??
+                                                'Failed to delete task'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text('Error: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                              icon: Icon(Icons.delete_outline,
+                                  color: Colors.red.shade400, size: 20),
+                              tooltip: 'Delete',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          if (task['created_by'] ==
+                                  SupabaseService()
+                                      .client
+                                      .auth
+                                      .currentUser
+                                      ?.id ||
+                              isAdmin)
+                            const SizedBox(width: 8),
+                          Text(
+                            dueDate,
+                            style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontSize: 12),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -673,15 +808,16 @@ class _TaskCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: approvalColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -700,7 +836,9 @@ class _TaskCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     description,
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 14),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -714,7 +852,9 @@ class _TaskCard extends StatelessWidget {
                             radius: 12,
                             backgroundColor: Colors.blue.shade700,
                             child: Text(
-                              creatorName.isNotEmpty ? creatorName[0].toUpperCase() : '?',
+                              creatorName.isNotEmpty
+                                  ? creatorName[0].toUpperCase()
+                                  : '?',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -726,7 +866,9 @@ class _TaskCard extends StatelessWidget {
                           Text(
                             'Created by $creatorName',
                             style: TextStyle(
-                              color: Colors.grey.shade400,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -739,7 +881,9 @@ class _TaskCard extends StatelessWidget {
                               radius: 12,
                               backgroundColor: Colors.purple.shade700,
                               child: Text(
-                                assigneeName.isNotEmpty ? assigneeName[0].toUpperCase() : '?',
+                                assigneeName.isNotEmpty
+                                    ? assigneeName[0].toUpperCase()
+                                    : '?',
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -751,7 +895,9 @@ class _TaskCard extends StatelessWidget {
                             Text(
                               'Assigned to $assigneeName',
                               style: TextStyle(
-                                color: Colors.grey.shade400,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                                 fontSize: 12,
                               ),
                             ),
@@ -766,7 +912,7 @@ class _TaskCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade800,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
@@ -777,7 +923,7 @@ class _TaskCard extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.drag_indicator,
-                    color: Colors.grey.shade500,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 20,
                   ),
                   const SizedBox(width: 8),

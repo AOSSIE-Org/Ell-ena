@@ -19,21 +19,22 @@ CREATE TABLE users (
 
 -- Tickets table
 CREATE TABLE tickets (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_number   TEXT NOT NULL,
-    title           TEXT NOT NULL,
-    description     TEXT,
-    priority        TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
-    category        TEXT NOT NULL,
-    status          TEXT NOT NULL DEFAULT 'open'
-                        CHECK (status IN ('open', 'in_progress', 'resolved')),
-    approval_status TEXT NOT NULL DEFAULT 'pending'
-                        CHECK (approval_status IN ('pending', 'approved', 'rejected')),
-    created_by      UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    assigned_to     UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    team_id         UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_number         TEXT NOT NULL,
+    title                 TEXT NOT NULL,
+    description           TEXT,
+    description_embedding vector(768),
+    priority              TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
+    category              TEXT NOT NULL,
+    status                TEXT NOT NULL DEFAULT 'open'
+                              CHECK (status IN ('open', 'in_progress', 'resolved')),
+    approval_status       TEXT NOT NULL DEFAULT 'pending'
+                              CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+    created_by            UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    assigned_to           UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    team_id               UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    created_at            TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at            TIMESTAMP WITH TIME ZONE DEFAULT now(),
     CONSTRAINT uq_ticket_number_per_team UNIQUE (team_id, ticket_number),
     CONSTRAINT uq_ticket_number UNIQUE (ticket_number)
 );
