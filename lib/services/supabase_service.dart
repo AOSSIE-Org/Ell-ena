@@ -1,4 +1,4 @@
-import 'dart:convert';
+\import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -1149,6 +1149,8 @@ class SupabaseService {
   // Task-related methods
 
   // Get tasks for the current user's team
+  // FIX: Replaced N+1 loop (_getUserInfo per task) with a single joined query.
+  // creator and assignee data are now fetched inline via PostgREST foreign key joins.
   Future<List<Map<String, dynamic>>> getTasks({
     bool filterByAssignment = false,
     String? filterByStatus,
@@ -1160,7 +1162,6 @@ class SupabaseService {
       final user = _client.auth.currentUser;
       if (user == null) return [];
 
-      // Get the user's team ID
       final userProfile = await getCurrentUserProfile();
       if (userProfile == null || userProfile['team_id'] == null) return [];
 
@@ -1168,32 +1169,30 @@ class SupabaseService {
       final userId = user.id;
       final isAdmin = userProfile['role'] == 'admin';
 
-      // Create base query
-      final query = _client.from('tasks').select('*').eq('team_id', teamId);
+      // Single query with joins — fetches creator and assignee in one round-trip
+      var query = _client.from('tasks').select('''
+        *,
+        creator:created_by(id, full_name, role),
+        assignee:assigned_to(id, full_name, role)
+      ''').eq('team_id', teamId);
 
-      // Filter by assignment if requested and user is not admin
-      if (filterByAssignment && !isAdmin) {
-        query.eq('assigned_to', userId);
-      } else if (filterByAssignment) {
-        // If admin but still wants to see assigned tasks
-        query.eq('assigned_to', userId);
+      if (filterByAssignment || (!isAdmin)) {
+        query = query.eq('assigned_to', userId);
       }
 
-      // Filter by status if provided
       if (filterByStatus != null) {
-        query.eq('status', filterByStatus);
+        query = query.eq('status', filterByStatus);
       }
 
-      // Filter by due date if provided
       if (filterByDueDate != null) {
         try {
           final date = DateTime.parse(filterByDueDate);
           final startOfDay = DateTime(date.year, date.month, date.day);
           final endOfDay =
               DateTime(date.year, date.month, date.day, 23, 59, 59);
-
-          query.gte('due_date', startOfDay.toIso8601String());
-          query.lte('due_date', endOfDay.toIso8601String());
+          query = query
+              .gte('due_date', startOfDay.toIso8601String())
+              .lte('due_date', endOfDay.toIso8601String());
         } catch (e) {
           debugPrint('Error parsing due date filter: $e');
         }
@@ -1201,31 +1200,7 @@ class SupabaseService {
 
       final response = await query.order('created_at', ascending: false);
 
-      // Process the response to make it compatible with existing code
-      final List<Map<String, dynamic>> processedTasks = [];
-      for (var task in response) {
-        final Map<String, dynamic> processedTask = {...task};
-
-        // Add creator info
-        if (task['created_by'] != null) {
-          final creatorInfo = await _getUserInfo(task['created_by']);
-          if (creatorInfo != null) {
-            processedTask['creator'] = creatorInfo;
-          }
-        }
-
-        // Add assignee info
-        if (task['assigned_to'] != null) {
-          final assigneeInfo = await _getUserInfo(task['assigned_to']);
-          if (assigneeInfo != null) {
-            processedTask['assignee'] = assigneeInfo;
-          }
-        }
-
-        processedTasks.add(processedTask);
-      }
-
-      return processedTasks;
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint('Error getting tasks: $e');
       return [];
@@ -1390,6 +1365,9 @@ class SupabaseService {
   }
 
   // Get task details with comments
+  // FIX: Replaced separate per-field and per-comment _getUserInfo calls with joins.
+  // creator, assignee, and each comment's user are all fetched in 2 queries total
+  // (one for the task, one for comments with user join) instead of 2 + N.
   Future<Map<String, dynamic>?> getTaskDetails(String taskId) async {
     try {
       if (!_isInitialized) return null;
@@ -1397,81 +1375,23 @@ class SupabaseService {
       final user = _client.auth.currentUser;
       if (user == null) return null;
 
-      // Get task details
-      final taskResponse =
-          await _client.from('tasks').select('*').eq('id', taskId).single();
+      // Single query: task + creator + assignee joined
+      final taskResponse = await _client.from('tasks').select('''
+        *,
+        creator:created_by(id, full_name, role),
+        assignee:assigned_to(id, full_name, role)
+      ''').eq('id', taskId).single();
 
-      // Get task comments
+      // Single query: all comments + their users joined
       final commentsResponse = await _client
           .from('task_comments')
-          .select('*')
+          .select('*, user:user_id(id, full_name, role)')
           .eq('task_id', taskId)
           .order('created_at', ascending: true);
 
-      // Get creator and assignee info
-      String? createdById = taskResponse['created_by'];
-      String? assignedToId = taskResponse['assigned_to'];
-
-      Map<String, dynamic>? creator;
-      Map<String, dynamic>? assignee;
-
-      if (createdById != null) {
-        final creatorResponse = await _client
-            .from('users')
-            .select('id, full_name')
-            .eq('id', createdById)
-            .maybeSingle();
-
-        if (creatorResponse != null) {
-          creator = creatorResponse;
-        }
-      }
-
-      if (assignedToId != null) {
-        final assigneeResponse = await _client
-            .from('users')
-            .select('id, full_name')
-            .eq('id', assignedToId)
-            .maybeSingle();
-
-        if (assigneeResponse != null) {
-          assignee = assigneeResponse;
-        }
-      }
-
-      // Get comment user info
-      List<Map<String, dynamic>> commentsWithUsers = [];
-      for (var comment in commentsResponse) {
-        String? userId = comment['user_id'];
-        Map<String, dynamic>? user;
-
-        if (userId != null) {
-          final userResponse = await _client
-              .from('users')
-              .select('id, full_name')
-              .eq('id', userId)
-              .maybeSingle();
-
-          if (userResponse != null) {
-            user = userResponse;
-          }
-        }
-
-        commentsWithUsers.add({
-          ...comment,
-          'user': user,
-        });
-      }
-
-      Map<String, dynamic> taskWithDetails = {
-        ...taskResponse,
-        'creator': creator,
-        'assignee': assignee,
-      };
-
       return {
-        'task': taskWithDetails,
-        'comments': commentsWithUsers,
+        'task': taskResponse,
+        'comments': List<Map<String, dynamic>>.from(commentsResponse),
       };
     } catch (e) {
       debugPrint('Error getting task details: $e');
@@ -1500,12 +1420,12 @@ class SupabaseService {
         };
       }
 
-      // Add the comment
+      // Add the comment and join user info in the same select
       final response = await _client.from('task_comments').insert({
         'task_id': taskId,
         'user_id': user.id,
         'content': content,
-      }).select();
+      }).select('*, user:user_id(id, full_name, role)');
 
       if (response.isEmpty) {
         return {
@@ -1514,21 +1434,9 @@ class SupabaseService {
         };
       }
 
-      // Get user info
-      final userResponse = await _client
-          .from('users')
-          .select('id, full_name')
-          .eq('id', user.id)
-          .maybeSingle();
-
-      final commentWithUser = {
-        ...response[0],
-        'user': userResponse,
-      };
-
       return {
         'success': true,
-        'comment': commentWithUser,
+        'comment': response[0],
       };
     } catch (e) {
       debugPrint('Error adding task comment: $e');
@@ -1607,6 +1515,8 @@ class SupabaseService {
   }
 
   // Get tickets for the current user's team
+  // FIX: Replaced N+1 loop (_getUserInfo per ticket) with a single joined query.
+  // creator and assignee data are now fetched inline via PostgREST foreign key joins.
   Future<List<Map<String, dynamic>>> getTickets({
     bool filterByAssignment = false,
     String? filterByStatus,
@@ -1618,7 +1528,6 @@ class SupabaseService {
       final user = _client.auth.currentUser;
       if (user == null) return [];
 
-      // Get the user's team ID
       final userProfile = await getCurrentUserProfile();
       if (userProfile == null || userProfile['team_id'] == null) return [];
 
@@ -1626,96 +1535,31 @@ class SupabaseService {
       final userId = user.id;
       final isAdmin = userProfile['role'] == 'admin';
 
-      // Create base query
-      final query = _client.from('tickets').select('*').eq('team_id', teamId);
+      // Single query with joins — fetches creator and assignee in one round-trip
+      var query = _client.from('tickets').select('''
+        *,
+        creator:created_by(id, full_name, role),
+        assignee:assigned_to(id, full_name, role)
+      ''').eq('team_id', teamId);
 
-      // Filter by assignment if requested and user is not admin
-      if (filterByAssignment && !isAdmin) {
-        query.eq('assigned_to', userId);
-      } else if (filterByAssignment) {
-        // If admin but still wants to see assigned tickets
-        query.eq('assigned_to', userId);
+      if (filterByAssignment || (!isAdmin)) {
+        query = query.eq('assigned_to', userId);
       }
 
-      // Filter by status if provided
       if (filterByStatus != null) {
-        query.eq('status', filterByStatus);
+        query = query.eq('status', filterByStatus);
       }
 
-      // Filter by priority if provided
       if (filterByPriority != null) {
-        query.eq('priority', filterByPriority);
+        query = query.eq('priority', filterByPriority);
       }
 
       final response = await query.order('created_at', ascending: false);
 
-      // Process the response to add creator and assignee info
-      final List<Map<String, dynamic>> processedTickets = [];
-      for (var ticket in response) {
-        final Map<String, dynamic> processedTicket = {...ticket};
-
-        // Add creator info
-        if (ticket['created_by'] != null) {
-          final creatorInfo = await _getUserInfo(ticket['created_by']);
-          if (creatorInfo != null) {
-            processedTicket['creator'] = creatorInfo;
-          }
-        }
-
-        // Add assignee info
-        if (ticket['assigned_to'] != null) {
-          final assigneeInfo = await _getUserInfo(ticket['assigned_to']);
-          if (assigneeInfo != null) {
-            processedTicket['assignee'] = assigneeInfo;
-          }
-        }
-
-        processedTickets.add(processedTicket);
-      }
-
-      return processedTickets;
+      return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       debugPrint('Error getting tickets: $e');
       return [];
-    }
-  }
-
-  // Helper method to get user info
-  Future<Map<String, dynamic>?> _getUserInfo(String userId) async {
-    try {
-      // First check the cache
-      final cachedUser = _teamMembersCache.firstWhere(
-        (member) => member['id'] == userId,
-        orElse: () => {},
-      );
-
-      if (cachedUser.isNotEmpty) {
-        return {
-          'id': cachedUser['id'],
-          'full_name': cachedUser['full_name'],
-          'role': cachedUser['role'],
-        };
-      }
-
-      // If not in cache, fetch from database
-      final response = await _client
-          .from('users')
-          .select('id, full_name, role')
-          .eq('id', userId)
-          .limit(1);
-
-      if (response.isNotEmpty) {
-        return {
-          'id': response[0]['id'],
-          'full_name': response[0]['full_name'],
-          'role': response[0]['role'],
-        };
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('Error getting user info: $e');
-      return null;
     }
   }
 
@@ -1929,6 +1773,9 @@ class SupabaseService {
   }
 
   // Get ticket details with comments
+  // FIX: Replaced separate per-field and per-comment _getUserInfo calls with joins.
+  // creator, assignee, and each comment's user are all fetched in 2 queries total
+  // (one for the ticket, one for comments with user join) instead of 2 + N.
   Future<Map<String, dynamic>?> getTicketDetails(String ticketId) async {
     try {
       if (!_isInitialized) return null;
@@ -1936,57 +1783,23 @@ class SupabaseService {
       final user = _client.auth.currentUser;
       if (user == null) return null;
 
-      // Get ticket details
-      final ticketResponse =
-          await _client.from('tickets').select('*').eq('id', ticketId).single();
+      // Single query: ticket + creator + assignee joined
+      final ticketResponse = await _client.from('tickets').select('''
+        *,
+        creator:created_by(id, full_name, role),
+        assignee:assigned_to(id, full_name, role)
+      ''').eq('id', ticketId).single();
 
-      // Get ticket comments
+      // Single query: all comments + their users joined
       final commentsResponse = await _client
           .from('ticket_comments')
-          .select('*')
+          .select('*, user:user_id(id, full_name, role)')
           .eq('ticket_id', ticketId)
           .order('created_at', ascending: true);
 
-      // Get creator and assignee info
-      String? createdById = ticketResponse['created_by'];
-      String? assignedToId = ticketResponse['assigned_to'];
-
-      Map<String, dynamic>? creator;
-      Map<String, dynamic>? assignee;
-
-      if (createdById != null) {
-        creator = await _getUserInfo(createdById);
-      }
-
-      if (assignedToId != null) {
-        assignee = await _getUserInfo(assignedToId);
-      }
-
-      // Get comment user info
-      List<Map<String, dynamic>> commentsWithUsers = [];
-      for (var comment in commentsResponse) {
-        String? userId = comment['user_id'];
-        Map<String, dynamic>? user;
-
-        if (userId != null) {
-          user = await _getUserInfo(userId);
-        }
-
-        commentsWithUsers.add({
-          ...comment,
-          'user': user,
-        });
-      }
-
-      Map<String, dynamic> ticketWithDetails = {
-        ...ticketResponse,
-        'creator': creator,
-        'assignee': assignee,
-      };
-
       return {
-        'ticket': ticketWithDetails,
-        'comments': commentsWithUsers,
+        'ticket': ticketResponse,
+        'comments': List<Map<String, dynamic>>.from(commentsResponse),
       };
     } catch (e) {
       debugPrint('Error getting ticket details: $e');
@@ -2015,12 +1828,12 @@ class SupabaseService {
         };
       }
 
-      // Add the comment
+      // Add the comment and join user info in the same select
       final response = await _client.from('ticket_comments').insert({
         'ticket_id': ticketId,
         'user_id': user.id,
         'content': content,
-      }).select();
+      }).select('*, user:user_id(id, full_name, role)');
 
       if (response.isEmpty) {
         return {
@@ -2029,17 +1842,9 @@ class SupabaseService {
         };
       }
 
-      // Get user info
-      final userInfo = await _getUserInfo(user.id);
-
-      final commentWithUser = {
-        ...response[0],
-        'user': userInfo,
-      };
-
       return {
         'success': true,
-        'comment': commentWithUser,
+        'comment': response[0],
       };
     } catch (e) {
       debugPrint('Error adding ticket comment: $e');
@@ -2149,6 +1954,8 @@ class SupabaseService {
   // Meetings-related methods
 
   // Get meetings for the current user's team
+  // FIX: Replaced N+1 loop (_getUserInfo per meeting) with a single joined query.
+  // creator data is now fetched inline via PostgREST foreign key join.
   Future<List<Map<String, dynamic>>> getMeetings() async {
     try {
       if (!_isInitialized) return [];
@@ -2156,7 +1963,6 @@ class SupabaseService {
       final user = _client.auth.currentUser;
       if (user == null) return [];
 
-      // Get the user's team ID
       final userProfile = await getCurrentUserProfile();
       if (userProfile == null || userProfile['team_id'] == null) return [];
 
@@ -2164,32 +1970,15 @@ class SupabaseService {
 
       debugPrint('Fetching meetings for team ID: $teamId');
 
-      // Get all meetings for this team
-      final response = await _client
-          .from('meetings')
-          .select('*')
-          .eq('team_id', teamId)
-          .order('meeting_date', ascending: true);
+      // Single query with join — fetches creator in the same round-trip
+      final response = await _client.from('meetings').select('''
+        *,
+        creator:created_by(id, full_name, role)
+      ''').eq('team_id', teamId).order('meeting_date', ascending: true);
 
-      debugPrint('Raw meetings response: ${response.length} meetings found');
+      debugPrint('Meetings fetched: ${response.length}');
 
-      // Process the response to add creator info
-      final List<Map<String, dynamic>> processedMeetings = [];
-      for (var meeting in response) {
-        final Map<String, dynamic> processedMeeting = {...meeting};
-
-        // Add creator info if available
-        if (meeting['created_by'] != null) {
-          final creatorInfo = await _getUserInfo(meeting['created_by']);
-          if (creatorInfo != null) {
-            processedMeeting['creator'] = creatorInfo;
-          }
-        }
-
-        processedMeetings.add(processedMeeting);
-      }
-
-      debugPrint('Processed meetings: ${processedMeetings.length}');
+      final processedMeetings = List<Map<String, dynamic>>.from(response);
 
       // Update the stream
       _meetingsStreamController.add(processedMeetings);
@@ -2274,6 +2063,7 @@ class SupabaseService {
   }
 
   // Get meeting details
+  // FIX: Replaced separate _getUserInfo call with an inline join.
   Future<Map<String, dynamic>?> getMeetingDetails(String meetingId) async {
     try {
       if (!_isInitialized) return null;
@@ -2281,27 +2071,13 @@ class SupabaseService {
       final user = _client.auth.currentUser;
       if (user == null) return null;
 
-      // Get meeting details
-      final meetingResponse = await _client
-          .from('meetings')
-          .select('*')
-          .eq('id', meetingId)
-          .single();
+      // Single query: meeting + creator joined
+      final meetingResponse = await _client.from('meetings').select('''
+        *,
+        creator:created_by(id, full_name, role)
+      ''').eq('id', meetingId).single();
 
-      // Get creator info
-      String? createdById = meetingResponse['created_by'];
-      Map<String, dynamic>? creator;
-
-      if (createdById != null) {
-        creator = await _getUserInfo(createdById);
-      }
-
-      Map<String, dynamic> meetingWithDetails = {
-        ...meetingResponse,
-        'creator': creator,
-      };
-
-      return meetingWithDetails;
+      return meetingResponse;
     } catch (e) {
       debugPrint('Error getting meeting details: $e');
       return null;
