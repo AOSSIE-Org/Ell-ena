@@ -60,6 +60,33 @@ CREATE INDEX IF NOT EXISTS idx_tickets_created_by      ON tickets(created_by);
 CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to     ON tickets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_ticket_comments_user_id ON ticket_comments(user_id);
 
+DROP FUNCTION IF EXISTS validate_ticket_user_team() CASCADE;
+
+CREATE OR REPLACE FUNCTION validate_ticket_user_team()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.created_by IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = NEW.created_by
+        AND u.team_id = NEW.team_id
+    ) THEN
+        RAISE EXCEPTION 'created_by must belong to the same team as the ticket';
+    END IF;
+
+    IF NEW.assigned_to IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = NEW.assigned_to
+        AND u.team_id = NEW.team_id
+    ) THEN
+        RAISE EXCEPTION 'assigned_to must belong to the same team as the ticket';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_ticket_number ON tickets;
+
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -106,29 +133,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION validate_ticket_user_team()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.created_by IS NOT NULL AND NOT EXISTS (
-        SELECT 1 FROM users u
-        WHERE u.id = NEW.created_by
-        AND u.team_id = NEW.team_id
-    ) THEN
-        RAISE EXCEPTION 'created_by must belong to the same team as the ticket';
-    END IF;
-
-    IF NEW.assigned_to IS NOT NULL AND NOT EXISTS (
-        SELECT 1 FROM users u
-        WHERE u.id = NEW.assigned_to
-        AND u.team_id = NEW.team_id
-    ) THEN
-        RAISE EXCEPTION 'assigned_to must belong to the same team as the ticket';
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE OR REPLACE FUNCTION prevent_user_team_change_if_tickets_exist()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -159,6 +163,8 @@ BEFORE INSERT ON tickets
 FOR EACH ROW
 EXECUTE FUNCTION generate_ticket_number();
 
+DROP TRIGGER IF EXISTS trg_validate_ticket_user_team ON tickets;
+
 CREATE TRIGGER trg_validate_ticket_user_team
 BEFORE INSERT OR UPDATE ON tickets
 FOR EACH ROW
@@ -168,6 +174,8 @@ CREATE TRIGGER trg_prevent_user_team_change
 BEFORE UPDATE OF team_id ON users
 FOR EACH ROW
 EXECUTE FUNCTION prevent_user_team_change_if_tickets_exist();
+
+DROP TRIGGER IF EXISTS update_tickets_updated_at ON tickets;
 
 CREATE TRIGGER update_tickets_updated_at
 BEFORE UPDATE ON tickets
@@ -186,6 +194,16 @@ EXECUTE FUNCTION update_updated_at_column();
 
 ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_comments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tickets_view_policy ON tickets;
+DROP POLICY IF EXISTS tickets_insert_policy ON tickets;
+DROP POLICY IF EXISTS tickets_update_policy ON tickets;
+DROP POLICY IF EXISTS tickets_delete_policy ON tickets;
+
+DROP POLICY IF EXISTS ticket_comments_view_policy ON ticket_comments;
+DROP POLICY IF EXISTS ticket_comments_insert_policy ON ticket_comments;
+DROP POLICY IF EXISTS ticket_comments_update_policy ON ticket_comments;
+DROP POLICY IF EXISTS ticket_comments_delete_policy ON ticket_comments;
 
 CREATE POLICY tickets_view_policy ON tickets
 FOR SELECT
