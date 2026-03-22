@@ -1,59 +1,63 @@
 -- Teams table
-CREATE TABLE IF NOT EXISTS teams (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE,
+CREATE TABLE teams (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name       TEXT NOT NULL UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    email TEXT NOT NULL,
-    name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('member', 'admin')),
-    team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+CREATE TABLE users (
+    id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email      TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    role       TEXT NOT NULL CHECK (role IN ('member', 'admin')),
+    team_id    UUID REFERENCES teams(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Tickets table
-CREATE TABLE IF NOT EXISTS tickets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_number TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    description TEXT,
-    priority TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
-    category TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
-    approval_status TEXT NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
-    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+CREATE TABLE tickets (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_number   TEXT NOT NULL,
+    title           TEXT NOT NULL,
+    description     TEXT,
+    priority        TEXT NOT NULL CHECK (priority IN ('low', 'medium', 'high')),
+    category        TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'open'
+                        CHECK (status IN ('open', 'in_progress', 'resolved')),
+    approval_status TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+    created_by      UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    assigned_to     UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    team_id         UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at      TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    CONSTRAINT uq_ticket_number_per_team UNIQUE (team_id, ticket_number),
+    CONSTRAINT uq_ticket_number UNIQUE (ticket_number)
 );
 
 -- Ticket comments table
-CREATE TABLE IF NOT EXISTS ticket_comments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_id UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    content TEXT NOT NULL,
+CREATE TABLE ticket_comments (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id  UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    user_id    UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    content    TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Core RLS performance indexes
-CREATE INDEX IF NOT EXISTS idx_tickets_team_id ON tickets(team_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_team_id           ON tickets(team_id);
 CREATE INDEX IF NOT EXISTS idx_ticket_comments_ticket_id ON ticket_comments(ticket_id);
-CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);
+CREATE INDEX IF NOT EXISTS idx_users_team_id             ON users(team_id);
 
 -- Query optimization indexes
-CREATE INDEX IF NOT EXISTS idx_users_id_team_id ON users(id, team_id);
-CREATE INDEX IF NOT EXISTS idx_tickets_team_status ON tickets(team_id, status);
-CREATE INDEX IF NOT EXISTS idx_tickets_team_created ON tickets(team_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_tickets_created_by ON tickets(created_by);
-CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to ON tickets(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_users_id_team_id       ON users(id, team_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_team_status     ON tickets(team_id, status);
+CREATE INDEX IF NOT EXISTS idx_tickets_team_created    ON tickets(team_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_tickets_created_by      ON tickets(created_by);
+CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to     ON tickets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_ticket_comments_user_id ON ticket_comments(user_id);
 
 CREATE OR REPLACE FUNCTION generate_ticket_number()
@@ -61,11 +65,13 @@ RETURNS TRIGGER AS $$
 DECLARE
     team_prefix TEXT;
     next_number INT;
+    lock_key1   BIGINT;
+    lock_key2   BIGINT;
 BEGIN
     SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
-    INTO team_prefix
-    FROM teams
-    WHERE id = NEW.team_id;
+    INTO   team_prefix
+    FROM   teams
+    WHERE  id = NEW.team_id;
 
     -- Distinguish missing team vs empty name
     IF team_prefix IS NULL THEN
@@ -74,10 +80,10 @@ BEGIN
         team_prefix := 'TKT';
     END IF;
 
-    PERFORM pg_advisory_xact_lock(
-        ('x' || substr(replace(NEW.team_id::text, '-', ''), 1, 16))::bit(64)::bigint,
-        ('x' || substr(replace(NEW.team_id::text, '-', ''), 17, 16))::bit(64)::bigint
-    );
+    lock_key1 := ('x' || substr(replace(NEW.team_id::text, '-', ''), 1,  16))::bit(64)::bigint;
+    lock_key2 := ('x' || substr(replace(NEW.team_id::text, '-', ''), 17, 16))::bit(64)::bigint;
+
+    PERFORM pg_advisory_xact_lock(lock_key1, lock_key2);
 
     SELECT COALESCE(
         MAX(
@@ -91,10 +97,11 @@ BEGIN
     ) + 1
     INTO next_number
     FROM tickets
-    WHERE ticket_number LIKE team_prefix || '-%';
+    WHERE team_id = NEW.team_id
+      AND ticket_number LIKE team_prefix || '-%';
 
     NEW.ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 5, '0');
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -214,13 +221,20 @@ USING (
     )
 )
 WITH CHECK (
-    auth.uid() = created_by
-    OR auth.uid() = assigned_to
-    OR EXISTS (
+    EXISTS (
         SELECT 1 FROM users
         WHERE users.id = auth.uid()
         AND users.team_id = tickets.team_id
-        AND users.role = 'admin'
+    )
+    AND (
+        auth.uid() = created_by
+        OR auth.uid() = assigned_to
+        OR EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id = auth.uid()
+            AND users.team_id = tickets.team_id
+            AND users.role = 'admin'
+        )
     )
 );
 
