@@ -359,9 +359,13 @@ class _TicketScreenState extends State<TicketScreen> {
               },
               onAcceptWithDetails: (details) {
                 final data = details.data;
-                print(data['id']);
+                final newStatus = status['id'] as String;
+
+                if (data['status'] != newStatus) {
+                   _updateTicketStatus(data['id'], newStatus);
+                }
               },
-              onWillAcceptWithDetails: (data) => data != null,
+              onWillAcceptWithDetails: (details) => details.data != null,
             ),
           );
         }).toList(),

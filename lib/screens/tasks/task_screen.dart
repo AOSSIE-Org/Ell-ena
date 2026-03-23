@@ -412,9 +412,13 @@ class _TaskScreenState extends State<TaskScreen> {
               },
               onAcceptWithDetails: (details) {
                 final data = details.data;
-                print(data['id']);
-              },
-              onWillAcceptWithDetails: (data) => data != null
+                final newStatus = status['id'] as String;
+
+                if (data['status'] != newStatus) {
+                  _updateTaskStatus(data['id'], newStatus);
+                }
+             },
+              onWillAcceptWithDetails: (details) => details.data != null,
             ),
           );
         }).toList(),
