@@ -417,7 +417,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     CustomPaint(
                       painter: DotPatternPainter(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha:0.1),
                       ),
                       size: Size(MediaQuery.of(context).size.width, 140),
                     ),
@@ -435,7 +435,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   width: 48,
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha:0.2),
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: Colors.white,
@@ -483,7 +483,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                               vertical: 4,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(
+                                              color: Colors.white.withValues(alpha:
                                                 0.2,
                                               ),
                                               borderRadius:
@@ -528,7 +528,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                   _currentTeamName ?? 'My Team',
                                                   style: TextStyle(
                                                     color: Colors.white
-                                                        .withOpacity(0.9),
+                                                        .withValues(alpha:0.9),
                                                     fontSize: 14,
                                                   ),
                                                 ),
@@ -536,7 +536,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 Icon(
                                                   Icons.swap_horiz,
                                                   color: Colors.white
-                                                      .withOpacity(0.9),
+                                                      .withValues(alpha:0.9),
                                                   size: 16,
                                                 ),
                                               ],
@@ -591,7 +591,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha:0.2),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -615,7 +615,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade400.withOpacity(0.2),
+                  color: Colors.green.shade400.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -704,7 +704,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha:0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 24),
@@ -735,7 +735,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
+            color: colorScheme.shadow.withValues(alpha:0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -862,7 +862,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     toY:
                                         5, // Maximum expected value or slightly higher
                                     color:
-                                        Colors.green.shade400.withOpacity(0.1),
+                                        Colors.green.shade400.withValues(alpha:0.1),
                                   ),
                                 ),
                               ],
@@ -935,7 +935,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               dotData: FlDotData(show: true),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: Colors.green.shade400.withOpacity(0.1),
+                                color: Colors.green.shade400.withValues(alpha:0.1),
                               ),
                             ),
                           ],
@@ -1062,7 +1062,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: colorScheme.shadow.withOpacity(0.1),
+                color: colorScheme.shadow.withValues(alpha:0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -1123,7 +1123,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha:0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),
@@ -1196,7 +1196,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha:0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -1266,7 +1266,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (a['color'] as Color).withOpacity(0.1),
+                      color: (a['color'] as Color).withValues(alpha:0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(a['icon'] as IconData,

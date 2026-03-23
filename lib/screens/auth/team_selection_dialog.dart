@@ -317,7 +317,7 @@ class _OptionCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.green.withOpacity(0.2)
+              ? Colors.green.withValues(alpha:0.2)
               : Theme.of(context).colorScheme.surfaceContainerLow,
           border: Border.all(
             color: isSelected

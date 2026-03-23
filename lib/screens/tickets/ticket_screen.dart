@@ -328,9 +328,9 @@ class _TicketScreenState extends State<TicketScreen> {
                 return Container(
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? color.withOpacity(0.2)
+                        ? color.withValues(alpha:0.2)
                         : candidateData.isNotEmpty
-                            ? color.withOpacity(0.1)
+                            ? color.withValues(alpha:0.1)
                             : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
@@ -357,13 +357,11 @@ class _TicketScreenState extends State<TicketScreen> {
                   ),
                 );
               },
-              onAccept: (ticket) {
-                final newStatus = status['id'] as String;
-                if (ticket['status'] != newStatus) {
-                  _updateTicketStatus(ticket['id'], newStatus);
-                }
+              onAcceptWithDetails: (details) {
+                final data = details.data;
+                print(data['id']);
               },
-              onWillAccept: (data) => data != null,
+              onWillAcceptWithDetails: (data) => data != null,
             ),
           );
         }).toList(),
@@ -632,7 +630,7 @@ class _TicketCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.shadow.withValues(alpha:0.1),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -644,7 +642,7 @@ class _TicketCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: priorityColor.withOpacity(0.1),
+                color: priorityColor.withValues(alpha:0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -843,7 +841,7 @@ class _TicketCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: approvalColor.withOpacity(0.1),
+                          color: approvalColor.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -874,7 +872,7 @@ class _TicketCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.2),
+                          color: Colors.purple.withValues(alpha:0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(

@@ -380,7 +380,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.2),
+              color: Colors.green.withValues(alpha:0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.task_alt, color: Colors.green),
@@ -411,7 +411,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.2),
+              color: Colors.orange.withValues(alpha:0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
@@ -490,7 +490,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -620,7 +620,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
+                        color: Colors.green.withValues(alpha:0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
@@ -699,7 +699,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withOpacity(0.2) : cardColor,
+          color: isSelected ? Colors.green.withValues(alpha:0.2) : cardColor,
           borderRadius: BorderRadius.circular(12),
         ),
         alignment: Alignment.center,
@@ -730,7 +730,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.2),
+                  color: Colors.blue.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -745,7 +745,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
+                  color: Colors.orange.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -905,7 +905,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: isSelected ? Colors.green.withOpacity(0.2) : Colors.transparent,
+                                color: isSelected ? Colors.green.withValues(alpha:0.2) : Colors.transparent,
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
@@ -1000,14 +1000,14 @@ class CalendarLoadingSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: eventColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: eventColor.withValues(alpha:0.3), width: 1),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: eventColor.withOpacity(0.2),
+              color: eventColor.withValues(alpha:0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(eventIcon, color: eventColor, size: 16),
