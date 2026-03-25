@@ -2,16 +2,45 @@
 
 This guide explains how to set up Ell-ena locally (frontend + Supabase backend) and how to contribute via pull requests.
 
+## Quick start (most people follow this)
+   Fork the repository https://github.com/AOSSIE-Org/Ell-ena
+
+1. Clone the repo and install Flutter deps:
+   - `git clone https://github.com/<your username>/Ell-ena`
+   - `cd Ell-ena`
+   - `flutter pub get`
+2. Create `.env` from `.env.example` and fill in:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `GEMINI_API_KEY`
+   - `VEXA_API_KEY`
+   - `OAUTH_REDIRECT_URL`
+3. Set up Supabase backend (from repo root):
+   - `supabase login`
+   - `supabase init`
+   - `supabase link --project-ref YOUR_PROJECT_REF`
+   - `supabase db push`
+   - `supabase functions deploy`
+   - `supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key`
+   - `supabase secrets set SUPABASE_DB_URL=your-db-url`
+   - `supabase secrets set GEMINI_API_KEY=your-gemini-api-key`
+   - `supabase secrets set VEXA_API_KEY=your-vexa-api-key`
+4. Run:
+   - `flutter run`
+
 ## Prerequisites
 
 1. **Flutter SDK**
-   - The app is a Flutter project. `pubspec.yaml` targets Dart `>=2.17.0 <4.0.0`.
+   - Flutter is used for the frontend. `pubspec.yaml` targets Dart `>=2.17.0 <4.0.0`.
+   - `FRONTEND.md` specifies Flutter `3.7.0` or later.
+   - Recommended: run `flutter doctor` and fix any toolchain issues it reports (see `FRONTEND.md`).
 2. **Supabase development tooling**
-   - **Node.js and npm** (required by the Supabase CLI workflow)
+   - **Node.js and npm** (required by Supabase CLI workflow)
    - **Docker** (required for local development with Supabase CLI)
    - **Git**
 3. **External service keys**
-   - `GEMINI_API_KEY` (used by the app’s AI features)
+   - `GEMINI_API_KEY` (used by the app’s AI service)
    - `VEXA_API_KEY` (used by Supabase Edge Functions in `supabase/functions`)
 
 ## Local Setup
@@ -41,10 +70,13 @@ The Flutter app loads environment variables from a root `.env` file using `flutt
 2. Fill in the values in `.env`:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
    - `GEMINI_API_KEY`
    - `VEXA_API_KEY`
    - `OAUTH_REDIRECT_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+
+> Tip: `.env` must be present at the project root so `flutter_dotenv` can load it at startup.
+> Note: `.env` is ignored by git in this repo (see `.gitignore`).
 
 ### 4. Set up the Supabase backend (migrations + Edge Functions)
 
@@ -60,6 +92,7 @@ supabase init
 supabase link --project-ref YOUR_PROJECT_REF
 ```
 
+> Replace `YOUR_PROJECT_REF` with the project ref shown in your Supabase project’s dashboard URL.
 > Note: This repo does not include `supabase/config.toml` in git. Running `supabase init` will generate the config locally.
 
 3. Deploy the database schema:
@@ -79,6 +112,8 @@ supabase secrets set SUPABASE_DB_URL=your-db-url
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 supabase secrets set VEXA_API_KEY=your-vexa-api-key
 ```
+
+> These secrets are required by the Edge Function code under `supabase/functions/` (for example, `start-bot`, `fetch-transcript`, and `summarize-transcription`).
 
 ### 5. (Optional) Run Edge Functions locally
 
@@ -158,4 +193,13 @@ flutter test
 
 - `BACKEND.md` (Supabase CLI, secrets, migrations, Edge Functions)
 - `FRONTEND.md` (Flutter setup and running the app)
+
+## Troubleshooting (quick fixes)
+
+1. **Flutter won’t run**
+   - Run `flutter doctor -v` and fix toolchain issues it lists.
+2. **Supabase backend commands fail**
+   - Double-check `supabase login` and the `YOUR_PROJECT_REF` used in `supabase link ...`.
+3. **Edge Functions don’t work**
+   - Ensure you set the required secrets with `supabase secrets set ...` before testing.
 
