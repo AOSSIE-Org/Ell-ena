@@ -240,7 +240,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: color.withOpacity(0.2),
+          backgroundColor: color.withValues(alpha:0.2),
           child: Icon(
             icon,
             color: color,
@@ -289,7 +289,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color:
-                      isSelected ? color.withOpacity(0.2) : Colors.transparent,
+                      isSelected ? color.withValues(alpha:0.2) : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isSelected ? color : Colors.transparent,
@@ -470,7 +470,7 @@ class _MeetingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade400.withOpacity(0.2),
+                color: Colors.green.shade400.withValues(alpha:0.2),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),

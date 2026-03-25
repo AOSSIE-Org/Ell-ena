@@ -87,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.green.withOpacity(0.3),
+                                color: Colors.green.withValues(alpha:0.3),
                                 blurRadius: 20,
                                 spreadRadius: 5,
                               ),
@@ -144,7 +144,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               : Theme.of(context)
                                   .colorScheme
                                   .onSurfaceVariant
-                                  .withOpacity(0.5),
+                                  .withValues(alpha:0.5),
                         ),
                       ),
                     ),
