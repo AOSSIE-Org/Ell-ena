@@ -175,20 +175,6 @@ flutter analyze
 flutter test
 ```
 
-## Pull Request Guidelines
-
-1. Use a feature branch and open a PR against the main branch.
-2. Include a clear description of what changed and why (see `.github/PULL_REQUEST_TEMPLATE.md`).
-3. Add/adjust tests when behavior changes (if applicable).
-4. Update documentation when needed.
-
-### PR checklist (recommended)
-
-- [ ] I have read the contributing guidelines.
-- [ ] I have added tests that prove my fix is effective or that my feature works.
-- [ ] I have added necessary documentation (if applicable).
-- [ ] Any dependent changes have been merged and published in downstream modules.
-
 ## References
 
 - `BACKEND.md` (Supabase CLI, secrets, migrations, Edge Functions)
