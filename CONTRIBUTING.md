@@ -203,3 +203,62 @@ flutter test
 3. **Edge Functions don’t work**
    - Ensure you set the required secrets with `supabase secrets set ...` before testing.
 
+
+## 🧑‍💻 Contribution Guidelines
+
+We welcome contributions of all kinds! Please follow the guidelines below to ensure a smooth and consistent workflow.
+
+### Before You Start
+
+* Check if an issue already exists for your work
+* If not, create a new issue and discuss it before starting
+* Wait for assignment or confirmation from maintainers (if required)
+
+### Branch Naming Convention
+
+Create a new branch from `main` using a clear naming format:
+
+```bash
+git checkout -b <type>/<short-description>
+```
+
+Examples:
+
+* `feat/add-login-screen`
+* `fix/api-error-handling`
+* `docs/update-contributing-guide`
+* `refactor/cleanup-services`
+
+
+### Code Quality & Standards
+
+* Follow the existing project structure and coding style
+* Keep your code clean, readable, and well-organized
+* Avoid unnecessary complexity
+* Add comments where logic is not immediately clear
+* Run linting/formatting tools if configured
+
+### Making Changes
+
+* Keep PRs focused on a **single issue or feature**
+* Avoid mixing unrelated changes
+* Ensure your changes do not break existing functionality
+
+### Pull Request Process
+
+1. Fork the repository (if required)
+2. Create a feature branch
+3. Make your changes
+4. Test your changes locally
+5. Push your branch
+6. Open a Pull Request
+
+### Pull Request Checklist
+
+Before submitting your PR, ensure:
+
+* [ ] The project runs successfully after your changes
+* [ ] No new errors or warnings are introduced
+* [ ] Code follows project conventions
+* [ ] Relevant documentation is updated
+* [ ] PR is linked to an issue (e.g., `Closes #123`)
