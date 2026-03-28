@@ -82,7 +82,7 @@ flutter run
 ---
 
 ## 📁 Project Structure
-```
+```text
 Ell-ena/
 ├── lib/
 │   ├── main.dart          # Entry point
