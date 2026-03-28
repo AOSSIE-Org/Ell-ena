@@ -82,7 +82,6 @@ flutter run
 ---
 
 ## 📁 Project Structure
-
 ```
 Ell-ena/
 ├── lib/
