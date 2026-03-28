@@ -26,7 +26,6 @@ flutter run
 ```
 > ⚠️ If `.env.example` is missing, create `.env` manually using the variables below.
 ---
-
 ## 📋 Prerequisites
 
 Ensure the following are installed before you begin:
