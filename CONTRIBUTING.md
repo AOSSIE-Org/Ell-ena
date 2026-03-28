@@ -3,7 +3,6 @@
 Thank you for your interest in contributing to Ell-ena! This guide will help you get set up quickly and contribute effectively.
 
 ---
-
 ## Table of Contents
 
 - [Quick Start](#-quick-start)
@@ -14,12 +13,10 @@ Thank you for your interest in contributing to Ell-ena! This guide will help you
 - [Code Style](#-code-style)
 - [Reporting Issues](#-reporting-issues)
 - [Pull Request Guidelines](#-pull-request-guidelines)
-- [Common Issues](#-common-issues--fixes)
-
+- [Common Issues & Fixes](#common-issues--fixes)
 ---
 
 ## ⚡ Quick Start
-
 ```bash
 git clone https://github.com/AOSSIE-Org/Ell-ena.git
 cd Ell-ena
