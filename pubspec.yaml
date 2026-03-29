@@ -67,6 +67,10 @@ dependencies:
 
   speech_to_text: ^7.3.0
 
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
   google_sign_in: ^6.2.1
   googleapis: ^13.1.0
   googleapis_auth: ^1.4.1

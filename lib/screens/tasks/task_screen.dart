@@ -583,7 +583,7 @@ class _TaskCard extends StatelessWidget {
     // Format due date if available
     String dueDate = 'No due date';
     if (task['due_date'] != null) {
-      final DateTime date = DateTime.parse(task['due_date']);
+      final DateTime date = DateTime.parse(task['due_date']).toLocal();
       dueDate = '${date.day}/${date.month}/${date.year}';
     }
 

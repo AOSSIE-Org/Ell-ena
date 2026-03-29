@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Bell body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,2C10.9,2 10,2.9 10,4L10,4.3C7.7,5.2 6,7.4 6,10L6,16L4,18L4,19L20,19L20,18L18,16L18,10C18,7.4 16.3,5.2 14,4.3L14,4C14,2.9 13.1,2 12,2Z" />
+    <!-- Clapper -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,22C13.1,22 14,21.1 14,20L10,20C10,21.1 10.9,22 12,22Z" />
+</vector>

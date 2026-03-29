@@ -1320,7 +1320,7 @@ class SupabaseService {
       }
 
       if (dueDate != null) {
-        taskData['due_date'] = dueDate.toIso8601String();
+        taskData['due_date'] = dueDate.toUtc().toIso8601String();
       }
 
       final response = await _client.from('tasks').insert(taskData).select();
@@ -2282,7 +2282,7 @@ class SupabaseService {
       final Map<String, dynamic> meetingData = {
         'title': title,
         'description': description,
-        'meeting_date': meetingDate.toIso8601String(),
+        'meeting_date': meetingDate.toUtc().toIso8601String(),
         'meeting_url': meetingUrl,
         'team_id': teamId,
         'created_by': user.id,
@@ -2381,9 +2381,9 @@ class SupabaseService {
       final Map<String, dynamic> meetingData = {
         'title': title,
         'description': description,
-        'meeting_date': meetingDate.toIso8601String(),
+        'meeting_date': meetingDate.toUtc().toIso8601String(),
         'meeting_url': meetingUrl,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
       // Only add these fields if they are provided
