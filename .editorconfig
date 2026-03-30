@@ -23,7 +23,8 @@ trim_trailing_whitespace = false
 indent_size = 2
 
 # Shell scripts (2 spaces common practice)
-[*.sh]
+[*.{sh,bash,zsh}]
+indent_size = 2
 indent_size = 2
 
 # Makefiles (must use tabs)
