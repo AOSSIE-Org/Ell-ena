@@ -19,7 +19,7 @@ indent_size = 4
 trim_trailing_whitespace = false
 
 # JavaScript / TypeScript / Web / Config files (2-space indentation)
-[*.{js,jsx,ts,tsx,json,yml,yaml}]
+[*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,yml,yaml,css,scss,less,html,vue}]
 indent_size = 2
 
 # Shell scripts (2 spaces common practice)
