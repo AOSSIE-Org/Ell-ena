@@ -21,15 +21,15 @@ void main() async {
   
   final themeController = await ThemeController.create();
 
-runApp(
-  WidgetsBindingObserverWidget(
-    child: ChangeNotifierProvider<ThemeController>.value(
-      value: themeController,
-      child: const MyApp(),
+  runApp(
+    WidgetsBindingObserverWidget(
+      child: ChangeNotifierProvider<ThemeController>.value(
+        value: themeController,
+        child: const MyApp(),
+      ),
     ),
-  ),
-);
-
+  );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
