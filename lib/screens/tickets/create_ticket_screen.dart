@@ -337,7 +337,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.orange.shade400
-                                            .withOpacity(0.2),
+                                            .withValues(alpha:0.2),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -413,7 +413,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withOpacity(0.2)
+                ? color.withValues(alpha:0.2)
                 : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(

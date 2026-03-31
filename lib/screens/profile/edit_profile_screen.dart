@@ -167,7 +167,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   color: Theme.of(context)
                                       .colorScheme
                                       .shadow
-                                      .withOpacity(0.2),
+                                      .withValues(alpha:0.2),
                                   blurRadius: 10,
                                   offset: const Offset(0, 5),
                                 ),
@@ -254,8 +254,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: widget.userProfile['role'] == 'admin'
-                                  ? Colors.orange.withOpacity(0.1)
-                                  : Colors.blue.withOpacity(0.1),
+                                  ? Colors.orange.withValues(alpha:0.1)
+                                  : Colors.blue.withValues(alpha:0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(

@@ -204,7 +204,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Future<void> _loadEventsFromNetwork() async {
     try {
       // Load tasks, tickets, and meetings in parallel
-      final results = await Future.wait([
+      await Future.wait([
         _loadTasks(),
         _loadTickets(),
         _loadMeetings(),
@@ -427,7 +427,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   height: 16,
                   width: events.length > 3 ? 35 : (events.length * 8 + 10),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(markerOpacity),
+                    color: Colors.green.withValues(alpha:markerOpacity),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
@@ -450,13 +450,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             selectedTextStyle: TextStyle(color: colorScheme.onPrimary),
             todayTextStyle: TextStyle(color: colorScheme.onSurface),
             outsideTextStyle:
-                TextStyle(color: colorScheme.onSurface.withOpacity(0.38)),
+                TextStyle(color: colorScheme.onSurface.withValues(alpha:0.38)),
             selectedDecoration: const BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.8),
+              color: Colors.green.withValues(alpha:0.8),
               shape: BoxShape.circle,
             ),
             markersMaxCount: 0,
@@ -513,7 +513,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 SizedBox(
                   width: 50,
                   child: Text(
-                    '${time.format(context).toLowerCase()}',
+                    time.format(context).toLowerCase(),
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12),
@@ -562,7 +562,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         margin: const EdgeInsets.only(top: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: event.type.color.withOpacity(0.2),
+          color: event.type.color.withValues(alpha:0.2),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: event.type.color, width: 1),
         ),
@@ -699,7 +699,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -724,14 +724,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     Navigator.of(context).pop(); // Close dialog
 
     if (_selectedDay == null) return;
-
-    final selectedDateTime = DateTime(
-      _selectedDay!.year,
-      _selectedDay!.month,
-      _selectedDay!.day,
-      selectedTime.hour,
-      selectedTime.minute,
-    );
 
     dynamic result;
 

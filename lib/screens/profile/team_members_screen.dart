@@ -180,8 +180,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: role == 'admin'
-                        ? Colors.orange.shade400.withOpacity(0.2)
-                        : Colors.blue.shade400.withOpacity(0.2),
+                        ? Colors.orange.shade400.withValues(alpha:0.2)
+                        : Colors.blue.shade400.withValues(alpha:0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
