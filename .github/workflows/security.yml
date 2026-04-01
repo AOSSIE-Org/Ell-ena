@@ -1,0 +1,70 @@
+name: Security Dependency Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan
+  push:
+    paths:
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/security.yml'
+  pull_request:
+    paths:
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+
+jobs:
+  security-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
+        with:
+          flutter-version: '3.24.0'
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Dart security analyzer
+        run: dart pub outdated --json > outdated.json
+        continue-on-error: true
+
+      - name: Check for known vulnerabilities
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+      - name: Report outdated packages
+        if: always()
+        run: |
+          if [ -f outdated.json ]; then
+            echo "## Package Outdated Report" >> $GITHUB_STEP_SUMMARY
+            echo "```json" >> $GITHUB_STEP_SUMMARY
+            cat outdated.json >> $GITHUB_STEP_SUMMARY
+            echo "```" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  code-scanning:
+    name: Dart Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
+        with:
+          flutter-version: '3.24.0'
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Dart static analysis
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
