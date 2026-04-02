@@ -1437,8 +1437,12 @@ class SupabaseService {
       if (user == null) return null;
 
       // Get task details
-      final taskResponse =
-          await _client.from('tasks').select('*').eq('id', taskId).single();
+      final taskResponseList =
+          await _client.from('tasks').select('*').eq('id', taskId);
+      if (taskResponseList.isEmpty) {
+        throw Exception('Task not found');
+      }
+      final taskResponse = taskResponseList.first;
 
       // Get task comments
       final commentsResponse = await _client
@@ -1758,6 +1762,7 @@ class SupabaseService {
     }
   }
 
+  
   // Create a new ticket
   Future<Map<String, dynamic>> createTicket({
     required String title,
@@ -1793,7 +1798,7 @@ class SupabaseService {
 
       final teamId = userProfile['team_id'];
 
-      // Create the ticket
+      // Create the ticket payload
       final Map<String, dynamic> ticketData = {
         'title': title,
         'description': description,
@@ -1819,12 +1824,52 @@ class SupabaseService {
         };
       }
 
+      final createdTicket = response[0];
+      final ticketId = createdTicket['id'];
+
+      // Try creating GitHub issue (non-blocking)
+      try {
+        if (ticketId != null) {
+          final ticketNumber = createdTicket['ticket_number'] ?? 'UNKNOWN';
+
+          final safeDescription =
+              (description != null && description.trim().isNotEmpty)
+                  ? description.trim()
+                  : 'No description provided.';
+
+          final githubResponse = await _client.functions.invoke(
+            'create-github-issue',
+            body: {
+              'title': title,
+              'description': safeDescription,
+              'ticketNumber': ticketNumber,
+            },
+          );
+
+          final data = githubResponse.data;
+
+          if (data is Map &&
+              data['issue_number'] != null &&
+              data['issue_url'] != null) {
+            await _client
+                .from('tickets')
+                .update({
+                  'github_issue_number': data['issue_number'],
+                  'github_issue_url': data['issue_url'],
+                })
+                .eq('id', ticketId);
+          }
+        }
+      } catch (e) {
+        debugPrint('GitHub issue creation failed: $e');
+      }
+
       // Refresh tickets
       await getTickets();
 
       return {
         'success': true,
-        'ticket': response[0],
+        'ticket': createdTicket,
       };
     } catch (e) {
       debugPrint('Error creating ticket: $e');
@@ -2324,11 +2369,14 @@ class SupabaseService {
       if (user == null) return null;
 
       // Get meeting details
-      final meetingResponse = await _client
+      final meetingResponseList = await _client
           .from('meetings')
           .select('*')
-          .eq('id', meetingId)
-          .single();
+          .eq('id', meetingId);
+      if (meetingResponseList.isEmpty) {
+        throw Exception('Meeting not found');
+      }
+      final meetingResponse = meetingResponseList.first;
 
       // Get creator info
       String? createdById = meetingResponse['created_by'];

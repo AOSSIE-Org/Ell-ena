@@ -69,8 +69,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   }
 
   Future<void> _createTicket() async {
-    if (!_formKey.currentState!.validate()) return;
-
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    
     setState(() {
       _isLoading = true;
     });
