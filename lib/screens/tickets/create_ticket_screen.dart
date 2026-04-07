@@ -19,7 +19,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   List<Map<String, dynamic>> _teamMembers = [];
   String? _selectedAssignee;
   bool _isLoading = true;
-
+  bool _createGithubIssue = false;
+  
   @override
   void initState() {
     super.initState();
@@ -69,8 +70,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   }
 
   Future<void> _createTicket() async {
-    if (!_formKey.currentState!.validate()) return;
-
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    
     setState(() {
       _isLoading = true;
     });
@@ -82,6 +83,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         priority: _selectedPriority,
         category: _selectedCategory,
         assignedToUserId: _selectedAssignee,
+        createGithubIssue: _createGithubIssue,
       );
 
       if (result['success']) {
@@ -361,8 +363,32 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-
+                  const SizedBox(height: 24),
+                  // GitHub Issue Creation
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _createGithubIssue,
+                        activeColor: Colors.green.shade700,
+                        onChanged: (value) {
+                          setState(() {
+                            _createGithubIssue = value ?? false;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Create GitHub Issue',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   // Submit button
                   ElevatedButton(
                     onPressed: _isLoading ? null : _createTicket,
