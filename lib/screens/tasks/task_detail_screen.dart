@@ -72,27 +72,29 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Future<void> _updateTaskStatus(String status) async {
     try {
-      final success = await _supabaseService.updateTaskStatus(
+      final result = await _supabaseService.updateTaskStatus(
         taskId: widget.taskId,
         status: status,
       );
 
       if (mounted) {
-        if (success == true) {
+        if (result['success'] == true) {
           // Reload task details
           await _loadTaskDetails();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Task status updated to ${_getStatusLabel(status)}',
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Task status updated to ${_getStatusLabel(status)}',
+                ),
+                backgroundColor: Colors.green,
               ),
-              backgroundColor: Colors.green,
-            ),
-          );
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to update task status'),
+            SnackBar(
+              content: Text(result['error'] ?? 'Failed to update task status'),
               backgroundColor: Colors.red,
             ),
           );
