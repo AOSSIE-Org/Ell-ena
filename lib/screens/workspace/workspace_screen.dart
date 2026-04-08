@@ -80,12 +80,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         // Force refresh of the task screen
         TaskScreen.refreshTasks();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task created successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     });
   }
@@ -106,12 +108,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         // Force refresh of the ticket screen
         TicketScreen.refreshTickets();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ticket created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ticket created successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     });
   }
@@ -132,12 +136,14 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         // Force refresh of the meeting screen
         MeetingScreen.refreshMeetings();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Meeting created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Meeting created successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     });
   }
