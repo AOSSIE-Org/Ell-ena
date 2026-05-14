@@ -72,13 +72,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Future<void> _updateTaskStatus(String status) async {
     try {
-      final success = await _supabaseService.updateTaskStatus(
+      final result = await _supabaseService.updateTaskStatus(
         taskId: widget.taskId,
         status: status,
       );
 
       if (mounted) {
-        if (success == true) {
+        if (result['success'] == true) {
           // Reload task details
           await _loadTaskDetails();
           ScaffoldMessenger.of(context).showSnackBar(
