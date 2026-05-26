@@ -38,7 +38,7 @@ dependencies:
 
   # Supabase
   supabase_flutter: ^2.3.4
-  flutter_dotenv: ^5.2.1
+
 
   # State management
   provider: ^6.1.2
@@ -97,7 +97,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    #- .env
+   
     - ELL-ena-logo/png/
     - ELL-ena-logo/svg/
   # assets:

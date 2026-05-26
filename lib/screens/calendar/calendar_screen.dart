@@ -44,6 +44,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const String _lastFetchTimeKey = 'calendar_last_fetch_time';
 
   static const Duration _cacheDuration = Duration(minutes: 5);
+  
+ double markerOpacity = 0.5;
 
   DateTime _getFirstBoundedDay(DateTime anchor) {
     return DateTime.utc(anchor.year - 1, anchor.month, anchor.day);
@@ -507,8 +509,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       : (events.length * 8 + 10),
                   decoration: BoxDecoration(
                     color: Colors.green
-                        .withValues(
-                      alpha: markerOpacity,
+                        .withOpacity(
+                      markerOpacity,
                     ),
                     borderRadius:
                         BorderRadius.circular(10),
@@ -646,7 +648,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         decoration: BoxDecoration(
           color:
-              event.type.color.withValues(alpha: 0.2),
+              event.type.color.withOpacity(markerOpacity),
           borderRadius:
               BorderRadius.circular(8),
           border: Border.all(
@@ -792,7 +794,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color:
-              color.withValues(alpha: 0.1),
+              color.withOpacity(markerOpacity),
           borderRadius:
               BorderRadius.circular(12),
         ),

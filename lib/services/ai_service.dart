@@ -1,11 +1,27 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:ell_ena/config/app_config.dart';
 
+class AIService {
+  late final String _apiKey;
+
+  AIService() {
+    _apiKey = AppConfig.geminiApiKey;
+
+    if (_apiKey.isEmpty) {
+      throw Exception("Missing GEMINI_API_KEY");
+    }
+  }
+}
+class AppConfig {
+  static const geminiApiKey =
+      String.fromEnvironment('GEMINI_API_KEY');
+}
 class AIService {
   static final AIService _instance = AIService._internal();
   final String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
@@ -32,7 +48,7 @@ class AIService {
         debugPrint('Error loading .env file: $e');
       });
       
-      _apiKey = dotenv.env['GEMINI_API_KEY'];
+      _apiKey = AppConfig.geminiApiKey;
       
       if (_apiKey == null || _apiKey!.isEmpty) {
         throw Exception('Missing Gemini API key. Please check your .env file.');

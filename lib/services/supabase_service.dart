@@ -1,13 +1,20 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class AppConfig {
+  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+}
+
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
+
+  
   late final SupabaseClient _client;
   bool _isInitialized = false;
   bool _disposed = false;
@@ -48,13 +55,13 @@ class SupabaseService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    try {
-      await dotenv.load().catchError((e) {
-        debugPrint('Error loading .env file: $e');
-      });
+    if (AppConfig.supabaseUrl.isEmpty ||
+    AppConfig.supabaseAnonKey.isEmpty) {
+  throw Exception("Missing environment variables");
+}
 
-      final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-      final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+      final supabaseUrl = AppConfig.supabaseUrl;
+final supabaseAnonKey = AppConfig.supabaseAnonKey;
 
       if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
         throw Exception(
