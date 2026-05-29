@@ -1,0 +1,19 @@
+# CODEOWNERS - Automatic code review assignment
+
+# Default reviewers for all files
+* @AOSSIE-Org/Ell-ena-maintainers
+
+# Flutter/Dart specific files
+*.dart @AOSSIE-Org/Ell-ena-maintainers
+pubspec.yaml @AOSSIE-Org/Ell-ena-maintainers
+analysis_options.yaml @AOSSIE-Org/Ell-ena-maintainers
+
+# CI/CD workflows
+.github/workflows/*.yml @AOSSIE-Org/Ell-ena-maintainers
+
+# Database files
+/sqls/ @AOSSIE-Org/Ell-ena-maintainers
+/supabase/ @AOSSIE-Org/Ell-ena-maintainers
+
+# Frontend specific
+/lib/ @AOSSIE-Org/Ell-ena-maintainers
