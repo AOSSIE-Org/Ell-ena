@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    hide ChangeNotifierProvider;
 import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -23,9 +25,11 @@ void main() async {
 
 runApp(
   WidgetsBindingObserverWidget(
-    child: ChangeNotifierProvider<ThemeController>.value(
-      value: themeController,
-      child: const MyApp(),
+    child: ProviderScope(
+      child: ChangeNotifierProvider<ThemeController>.value(
+        value: themeController,
+        child: const MyApp(),
+      ),
     ),
   ),
 );

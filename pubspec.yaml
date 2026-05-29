@@ -42,6 +42,7 @@ dependencies:
 
   # State management
   provider: ^6.1.2
+  flutter_riverpod: ^2.6.1
 
   # Local storage
   shared_preferences: ^2.5.3
