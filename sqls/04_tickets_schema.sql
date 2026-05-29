@@ -1,7 +1,7 @@
 -- Tickets table
 CREATE TABLE tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ticket_number TEXT NOT NULL,
+    ticket_number TEXT NOT NULL UNIQUE,  -- added UNIQUE
     title TEXT NOT NULL,
     description TEXT,
     description_embedding vector(768),
@@ -24,31 +24,60 @@ CREATE TABLE ticket_comments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Fixed generate_ticket_number with advisory lock
 CREATE OR REPLACE FUNCTION generate_ticket_number()
 RETURNS TRIGGER AS $$
 DECLARE
     team_prefix TEXT;
+    sanitized_prefix TEXT;
     next_number INT;
-    ticket_number TEXT;
+    lock_key BIGINT;
 BEGIN
-    SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
-    INTO team_prefix
-    FROM teams
-    WHERE id = NEW.team_id;
-    
-    IF team_prefix IS NULL THEN
+    -- Determine team prefix
+    IF NEW.team_id IS NULL THEN
         team_prefix := 'TKT';
+    ELSE
+        SELECT UPPER(SUBSTRING(name FROM 1 FOR 3))
+        INTO team_prefix
+        FROM teams
+        WHERE id = NEW.team_id;
+
+        IF team_prefix IS NULL OR team_prefix = '' THEN
+            team_prefix := 'TKT';
+        END IF;
     END IF;
-    
-    SELECT COALESCE(MAX(SUBSTRING(tickets.ticket_number FROM '[0-9]+')::INT), 0) + 1
+
+    -- Sanitize prefix: letters only, uppercase, max 3 chars
+    sanitized_prefix := UPPER(regexp_replace(team_prefix, '[^A-Za-z]', '', 'g'));
+    IF sanitized_prefix = '' OR length(sanitized_prefix) < 3 THEN
+        sanitized_prefix := 'TKT';
+    ELSE
+        sanitized_prefix := SUBSTRING(sanitized_prefix FROM 1 FOR 3);
+    END IF;
+
+    -- Acquire advisory lock per team prefix to prevent race condition
+    lock_key := hashtext(sanitized_prefix)::BIGINT;
+    PERFORM pg_advisory_xact_lock(lock_key);
+
+    -- Calculate next ticket number
+    SELECT COALESCE(
+        MAX(
+            CASE
+                WHEN ticket_number ~ ('^' || sanitized_prefix || '-[0-9]+$')
+                THEN SUBSTRING(ticket_number FROM '[0-9]+$')::INT
+                ELSE NULL
+            END
+        ),
+        0
+    ) + 1
     INTO next_number
     FROM tickets
-    WHERE tickets.ticket_number LIKE team_prefix || '-%';
-    
-    ticket_number := team_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
-    
-    NEW.ticket_number := ticket_number;
-    
+    WHERE ticket_number LIKE sanitized_prefix || '-%';
+
+    -- Assign ticket number in format ABC-001
+    NEW.ticket_number :=
+        sanitized_prefix || '-' || LPAD(next_number::TEXT, 3, '0');
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -169,4 +198,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_tickets_updated_at
 BEFORE UPDATE ON tickets
 FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column(); 
+EXECUTE FUNCTION update_updated_at_column();
