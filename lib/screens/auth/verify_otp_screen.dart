@@ -194,6 +194,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       _errorMessage = null;
     });
 
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
       final result = await _supabaseService.resendVerificationEmail(
@@ -201,8 +202,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         type: widget.verifyType,
       );
 
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (result['success'] && mounted) {
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Verification code resent successfully. Please check your inbox and spam folder.'),
             backgroundColor: Colors.green,
