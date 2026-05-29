@@ -6,6 +6,7 @@ import 'screens/chat/chat_screen.dart';
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
+import 'services/notification_service.dart';
 import 'theme/theme_controller.dart';
 import 'theme/app_themes.dart';
 
@@ -15,6 +16,7 @@ void main() async {
   try {
     await SupabaseService().initialize();
     await AIService().initialize();
+    await NotificationService().initialize();
   } catch (e) {
     debugPrint('Error initializing services: $e');
   }

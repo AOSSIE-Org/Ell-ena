@@ -146,7 +146,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
     // Filter meetings based on selected filter
     final filteredMeetings = _meetings.where((meeting) {
-      final meetingDate = DateTime.parse(meeting['meeting_date']);
+      final meetingDate = DateTime.parse(meeting['meeting_date']).toLocal();
       if (_selectedFilter == 'upcoming') {
         return meetingDate.isAfter(now);
       } else {
@@ -155,10 +155,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
     }).toList();
 
     final upcomingCount = _meetings
-        .where((m) => DateTime.parse(m['meeting_date']).isAfter(now))
+        .where((m) => DateTime.parse(m['meeting_date']).toLocal().isAfter(now))
         .length;
     final pastCount = _meetings
-        .where((m) => DateTime.parse(m['meeting_date']).isBefore(now))
+        .where((m) => DateTime.parse(m['meeting_date']).toLocal().isBefore(now))
         .length;
 
     return Scaffold(
@@ -358,7 +358,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       itemCount: filteredMeetings.length,
       itemBuilder: (context, index) {
         final meeting = filteredMeetings[index];
-        final meetingDate = DateTime.parse(meeting['meeting_date']);
+        final meetingDate = DateTime.parse(meeting['meeting_date']).toLocal();
         final isUpcoming = meetingDate.isAfter(DateTime.now());
 
         return _MeetingCard(
@@ -433,8 +433,8 @@ class _MeetingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Parse the date and force it into the local timezone for rendering
     final meetingDate = DateTime.parse(meeting['meeting_date']).toLocal();
+    final dateFormat = DateFormat('E, MMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
     final hasUrl = meeting['meeting_url'] != null &&
         meeting['meeting_url'].toString().isNotEmpty;
