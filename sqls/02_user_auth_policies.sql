@@ -22,8 +22,10 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Team members can view their team" 
   ON teams FOR SELECT 
   USING (
-    -- Everyone can see all teams for now (we'll restrict this later if needed)
-    TRUE
+    -- Only allow users to see the team they are actually assigned to
+    id IN (
+      SELECT team_id FROM users WHERE id = auth.uid()
+    )
   );
 
 CREATE POLICY "Only admins can update their team" 
@@ -32,7 +34,8 @@ CREATE POLICY "Only admins can update their team"
 
 CREATE POLICY "Allow team creation" 
   ON teams FOR INSERT 
-  WITH CHECK (TRUE);
+  -- Restrict team creation to authenticated users
+  WITH CHECK (auth.role() = 'authenticated');
 
 -- Create new policies for users
 CREATE POLICY "Users can view themselves" 
@@ -42,6 +45,7 @@ CREATE POLICY "Users can view themselves"
 CREATE POLICY "Users can view team members" 
   ON users FOR SELECT 
   USING (
+    -- Cross-reference with the user_teams view to restrict visibility
     team_id IN (
       SELECT team_id FROM user_teams WHERE id = auth.uid()
     )
@@ -53,10 +57,17 @@ CREATE POLICY "Users can update their own profile"
 
 CREATE POLICY "Allow user creation" 
   ON users FOR INSERT 
-  WITH CHECK (TRUE);
+  -- Users can only insert their own profile record during signup
+  WITH CHECK (auth.uid() = id);
 
--- Grant necessary permissions
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
-GRANT SELECT ON user_teams TO anon, authenticated;
-GRANT ALL ON teams TO anon, authenticated;
-GRANT ALL ON users TO anon, authenticated; 
+-- Grant and Revoke permissions (Security Hardening)
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON user_teams TO authenticated;
+
+-- Revoke all access from anonymous (not logged in) users
+REVOKE ALL ON teams FROM anon;
+REVOKE ALL ON users FROM anon;
+
+-- Grant standard access to authenticated users only
+GRANT SELECT, INSERT, UPDATE ON teams TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON users TO authenticated;
