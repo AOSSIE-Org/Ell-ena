@@ -152,6 +152,7 @@ class _TicketScreenState extends State<TicketScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
@@ -160,9 +161,9 @@ class _TicketScreenState extends State<TicketScreen> {
             ),
           );
 
-          if (result == true) {
+          if (result == true && mounted) {
             refreshTickets();
-            ScaffoldMessenger.of(context).showSnackBar(
+            messenger.showSnackBar(
               const SnackBar(
                 content: Text('Ticket created successfully'),
                 backgroundColor: Colors.green,

@@ -105,12 +105,14 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task status: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating task status: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating task status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -125,12 +127,14 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task approval: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating task approval: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating task approval: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -161,6 +165,7 @@ class _TaskScreenState extends State<TaskScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
@@ -169,9 +174,9 @@ class _TaskScreenState extends State<TaskScreen> {
             ),
           );
 
-          if (result == true) {
+          if (result == true && mounted) {
             _loadTasks();
-            ScaffoldMessenger.of(context).showSnackBar(
+            messenger.showSnackBar(
               const SnackBar(
                 content: Text('Task created successfully'),
                 backgroundColor: Colors.green,
