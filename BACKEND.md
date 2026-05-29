@@ -219,10 +219,37 @@ Supabase provides built-in authentication. The project uses email-based authenti
 4. Package name: `org.aossie.ell_ena`
 5. Get SHA-1 certificate fingerprint:
    ```bash
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   ```
+keytool -list -v \ -keystore ~/.android/debug.keystore \ -alias androiddebugkey \ -storepass android \ -keypass android
+```
 6. Paste the SHA-1 fingerprint
 7. Click **Create** and copy the Client ID
+
+**For Windows Powershell:**
+> **Note:** `%USERPROFILE%` does not expand in PowerShell.
+> Use the full path instead.
+
+Step 1 - Create .android folder if it doesn't exist:
+```bash
+mkdir C:\Users\YOUR_USERNAME\.android
+```
+
+Step 2 - Generate keystore:
+```bash
+keytool -genkey -v `
+  -keystore C:\Users\YOUR_USERNAME\.android\debug.keystore `
+  -alias androiddebugkey `
+  -keyalg RSA -keysize 2048 -validity 10000 `
+  -storepass android -keypass android `
+  -dname "CN=Android Debug,O=Android,C=US"
+```
+Step 3 - Get SHA1 fingerprint:
+```bash
+keytool -list -v `
+  -keystore C:\Users\YOUR_USERNAME\.android\debug.keystore `
+  -alias androiddebugkey `
+  -storepass android `
+  -keypass android
+```
 
 **For iOS:**
 
