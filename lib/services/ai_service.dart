@@ -389,40 +389,50 @@ class AIService {
       );
       
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        
+        final Map<String, dynamic> responseData;
+        try {
+          responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        } catch (_) {
+          return {'type': 'error', 'content': 'Received malformed response from AI service.'};
+        }
+
         // Check if the response contains a function call
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          final content = candidates[0]['content'];
-          final parts = content['parts'] as List<dynamic>;
-          
-          for (var part in parts) {
-            if (part.containsKey('functionCall')) {
-              final functionCall = part['functionCall'];
-              final functionName = functionCall['name'];
-              final arguments = functionCall['args'];
-              
+        final candidatesRaw = responseData['candidates'];
+        if (candidatesRaw is! List || candidatesRaw.isEmpty) {
+          return {'type': 'error', 'content': 'No response generated'};
+        }
+        final candidates = candidatesRaw as List<dynamic>;
+
+        final contentRaw = candidates[0] is Map ? candidates[0]['content'] : null;
+        if (contentRaw is! Map) {
+          return {'type': 'error', 'content': 'Unexpected response structure from AI service.'};
+        }
+
+        final partsRaw = contentRaw['parts'];
+        if (partsRaw is! List) {
+          return {'type': 'error', 'content': 'Unexpected response structure from AI service.'};
+        }
+        final parts = partsRaw as List<dynamic>;
+
+        for (var part in parts) {
+          if (part is Map && part.containsKey('functionCall')) {
+            final functionCall = part['functionCall'];
+            if (functionCall is Map) {
               return {
                 'type': 'function_call',
-                'function_name': functionName,
-                'arguments': arguments,
+                'function_name': functionCall['name']?.toString() ?? '',
+                'arguments': functionCall['args'],
                 'raw_response': jsonEncode(responseData),
               };
             }
           }
-          
-          // If no function call is detected, return as regular message
-          return {
-            'type': 'message',
-            'content': candidates[0]['content']['parts'][0]['text'] ?? '',
-          };
         }
-        
-        return {
-          'type': 'error',
-          'content': 'No response generated',
-        };
+
+        // No function call — return first text part
+        final firstText = parts.isNotEmpty && parts[0] is Map
+            ? parts[0]['text']?.toString() ?? ''
+            : '';
+        return {'type': 'message', 'content': firstText};
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return {
@@ -527,10 +537,19 @@ class AIService {
       );
       
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final candidates = responseData['candidates'] as List<dynamic>;
-        if (candidates.isNotEmpty) {
-          return candidates[0]['content']['parts'][0]['text'] ?? 'Function executed successfully.';
+        final Map<String, dynamic> responseData;
+        try {
+          responseData = jsonDecode(response.body) as Map<String, dynamic>;
+        } catch (_) {
+          return 'Function executed successfully.';
+        }
+        final candidatesRaw = responseData['candidates'];
+        if (candidatesRaw is List && candidatesRaw.isNotEmpty) {
+          final first = candidatesRaw[0];
+          final text = (first is Map)
+              ? first['content']?['parts']?[0]?['text']?.toString()
+              : null;
+          return text ?? 'Function executed successfully.';
         }
         return 'Function executed successfully.';
       } else {
