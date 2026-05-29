@@ -122,21 +122,60 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
     );
   }
 
+  Future<void> _changeRole(String memberId, String newRole) async {
+    final result = await _supabaseService.changeTeamMemberRole(
+      userId: memberId,
+      newRole: newRole,
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      await _loadTeamMembers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newRole == 'admin'
+                  ? 'Promoted to admin'
+                  : 'Demoted to member',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['error']?.toString() ?? 'Failed to update role'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildMembersList() {
+    final currentUserId = _supabaseService.currentUser?.id;
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _teamMembers.length,
       itemBuilder: (context, index) {
         final member = _teamMembers[index];
+        final memberId = member['id'] as String?;
         final name = member['full_name'] ?? 'Unknown';
         final email = member['email'] ?? '';
         final role = member['role'] ?? 'member';
         final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : '?';
         final avatarColor = _getAvatarColor(name);
+        final isCurrentUser = memberId != null && memberId == currentUserId;
+        final canChangeRole = !isCurrentUser && memberId != null;
+
+        final colorScheme = Theme.of(context).colorScheme;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          color: Theme.of(context).colorScheme.surface,
+          color: colorScheme.surface,
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -158,7 +197,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
             title: Text(
               name,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -170,7 +209,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                 Text(
                   email,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
                 ),
@@ -197,12 +236,57 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                 ),
               ],
             ),
-            trailing: role == 'admin'
-                ? Icon(
-                    Icons.star,
-                    color: Colors.orange.shade400,
+            trailing: canChangeRole
+                ? PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    color: colorScheme.surface,
+                    onSelected: (value) {
+                      if (value == 'admin' || value == 'member') {
+                        _changeRole(memberId, value);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      if (role == 'member')
+                        PopupMenuItem<String>(
+                          value: 'admin',
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.star, color: Colors.orange, size: 20),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Promote to admin',
+                                style: TextStyle(color: colorScheme.onSurface),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (role == 'admin')
+                        PopupMenuItem<String>(
+                          value: 'member',
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.person_outline, size: 20),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Demote to member',
+                                style: TextStyle(color: colorScheme.onSurface),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   )
-                : null,
+                : role == 'admin'
+                    ? Icon(
+                        Icons.star,
+                        color: Colors.orange.shade400,
+                      )
+                    : null,
           ),
         );
       },
