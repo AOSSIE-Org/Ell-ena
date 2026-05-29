@@ -254,12 +254,14 @@ class _LoginScreenState extends State<LoginScreen>
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
                     icon: const FaIcon(
                       FontAwesomeIcons.google,
+                      color: Colors.white,
                       size: 20,
                     ),
                     label: const Text(
                       'Sign in with Google',
                       style: TextStyle(
                         fontSize: 16,
+                        color: Colors.grey,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
