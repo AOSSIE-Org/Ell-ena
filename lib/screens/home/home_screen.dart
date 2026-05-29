@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../widgets/custom_widgets.dart';
-import '../../services/navigation_service.dart';
 import '../workspace/workspace_screen.dart';
 import '../calendar/calendar_screen.dart';
 import '../profile/profile_screen.dart';
