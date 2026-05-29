@@ -168,7 +168,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const CreateMeetingScreen(),
+              builder: (context) =>  CreateMeetingScreen(),
             ),
           );
 

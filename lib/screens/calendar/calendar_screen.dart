@@ -837,11 +837,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                CreateMeetingScreen(
-              initialDateTime:
-                  selectedDateTime,
-            ),
+            builder: (context) =>
+                CreateMeetingScreen(),
           ),
         );
         break;
@@ -850,11 +847,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                CreateTaskScreen(
-              initialDateTime:
-                  selectedDateTime,
-            ),
+            builder: (context) =>
+                CreateTaskScreen(),
           ),
         );
         break;
@@ -863,11 +857,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                CreateTicketScreen(
-              initialDateTime:
-                  selectedDateTime,
-            ),
+            builder: (context) =>
+                CreateTicketScreen(),
           ),
         );
         break;
