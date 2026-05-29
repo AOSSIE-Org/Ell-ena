@@ -338,14 +338,14 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
                   children: [
                     Text(
                       speaker,
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       text,
                       style:
-                          const TextStyle(color: Colors.white70, height: 1.3),
+                          TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.3),
                     ),
                   ],
                 ),
