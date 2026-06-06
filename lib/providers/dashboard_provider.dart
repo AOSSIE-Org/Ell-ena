@@ -5,13 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Mirrors [DashboardScreen]'s `_selectedTimeRange` for future migration.
 final dashboardTimeRangeProvider = StateProvider<int>((ref) => 0);
 
-/// Active workspace/team id shown on the dashboard.
-///
+/// Active workspace/team id for dashboard context.
 /// Null until a team is selected or loaded from the profile.
+/// Display name should be derived from [SupabaseService.getCurrentUserProfile]
 final dashboardTeamIdProvider = StateProvider<String?>((ref) => null);
-
-/// Display name for the active team on the dashboard.
-final dashboardTeamNameProvider = StateProvider<String?>((ref) => null);
 
 /// Optional filter applied to dashboard lists (tasks, tickets, meetings).
 enum DashboardListFilter { all, tasks, tickets, meetings }
