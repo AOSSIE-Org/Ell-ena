@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     hide ChangeNotifierProvider;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/chat/chat_screen.dart';
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
+import 'providers/locale_provider.dart';
+import 'providers/shared_preferences_provider.dart';
 import 'providers/theme_provider.dart';
 import 'theme/theme_controller.dart';
 import 'theme/app_themes.dart';
@@ -21,34 +26,44 @@ void main() async {
   } catch (e) {
     debugPrint('Error initializing services: $e');
   }
-  
+
+  final prefs = await SharedPreferences.getInstance();
   final themeController = await ThemeController.create();
 
-runApp(
-  WidgetsBindingObserverWidget(
-    child: ProviderScope(
-      overrides: [
-        themeControllerProvider.overrideWith((ref) => themeController),
-      ],
-      child: ChangeNotifierProvider<ThemeController>.value(
-        value: themeController,
-        child: const MyApp(),
+  runApp(
+    WidgetsBindingObserverWidget(
+      child: ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          themeControllerProvider.overrideWith((ref) => themeController),
+        ],
+        child: ChangeNotifierProvider<ThemeController>.value(
+          value: themeController,
+          child: const MyApp(),
+        ),
       ),
     ),
-  ),
-);
-
+  );
 }
+
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeController = ref.watch(themeControllerProvider);
+    final locale = ref.watch(localeControllerProvider);
     return MaterialApp(
-      title: 'Ell-ena',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
-      navigatorKey: NavigationService().navigatorKey,
+      locale: locale ?? const Locale('en'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,      navigatorKey: NavigationService().navigatorKey,
       navigatorObservers: <NavigatorObserver>[AppRouteObserver.instance],
       theme: lightTheme,
       darkTheme: darkTheme,
