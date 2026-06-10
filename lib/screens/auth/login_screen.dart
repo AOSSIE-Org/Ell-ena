@@ -4,13 +4,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/app_shortcuts_service.dart';
 import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import 'team_selection_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final Map<String, dynamic>? arguments;
+
+  const LoginScreen({super.key, this.arguments});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -30,6 +33,10 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+
+    // Debug arguments
+    print('[LoginScreen] initState called with arguments: ${widget.arguments}');
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -69,18 +76,49 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Login with Supabase
       final response = await _supabaseService.client.auth.signInWithPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
 
-      if (mounted && response.user != null) {
-        NavigationService().navigateToReplacement(const HomeScreen());
-      } else if (mounted) {
+      if (response.user != null) {
+        // Merge pending shortcut and existing arguments
+        Map<String, dynamic> homeScreenArgs = Map.from(widget.arguments ?? {});
+        final pendingShortcut = AppShortcutsService.getPendingShortcut();
+
+        if (pendingShortcut != null) {
+          final screenIndex = _getScreenIndex(pendingShortcut);
+          if (screenIndex != null) {
+            homeScreenArgs['screen'] = screenIndex;
+            homeScreenArgs['initial_route'] = pendingShortcut;
+          }
+        }
+
+        print('[LoginScreen] Navigating to HomeScreen with args: $homeScreenArgs');
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(arguments: homeScreenArgs),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid email or password'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('[LoginScreen] Login error: $e'); // Log for debugging
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Login failed. Please try again.'),
+            content: Text('Login failed. Please check your credentials and try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -104,9 +142,24 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  int? _getScreenIndex(String? route) {
+    switch (route) {
+      case 'dashboard':
+        return 0;
+      case 'calendar':
+        return 1;
+      case 'workspace':
+        return 2;
+      case 'chat':
+        return 3;
+      case 'profile':
+        return 4;
+      default:
+        return null;
     }
   }
 
@@ -176,12 +229,8 @@ class _LoginScreenState extends State<LoginScreen>
                     label: 'Email',
                     icon: Icons.email_outlined,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
+                      if (value == null || value.isEmpty) return 'Please enter your email';
+                      if (!value.contains('@')) return 'Please enter a valid email';
                       return null;
                     },
                   ),
@@ -192,12 +241,8 @@ class _LoginScreenState extends State<LoginScreen>
                     icon: Icons.lock_outline,
                     isPassword: true,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
+                      if (value == null || value.isEmpty) return 'Please enter your password';
+                      if (value.length < 6) return 'Password must be at least 6 characters';
                       return null;
                     },
                   ),
@@ -205,11 +250,7 @@ class _LoginScreenState extends State<LoginScreen>
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        NavigationService().navigateTo(
-                          const ForgotPasswordScreen(),
-                        );
-                      },
+                      onPressed: () => NavigationService().navigateTo(const ForgotPasswordScreen()),
                       child: Text(
                         'Forgot Password?',
                         style: TextStyle(
@@ -281,16 +322,11 @@ class _LoginScreenState extends State<LoginScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'Don\'t have an account? ',
-                        style: TextStyle(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant),
-                      ),
+                      Text('Don\'t have an account? ', style: TextStyle(color: Colors.grey.shade400)),
                       TextButton(
-                        onPressed: () {
-                          NavigationService().navigateTo(const SignupScreen());
-                        },
+                        onPressed: () => NavigationService().navigateTo(
+                          SignupScreen(arguments: widget.arguments),
+                        ),
                         child: Text(
                           'Sign Up',
                           style: TextStyle(
