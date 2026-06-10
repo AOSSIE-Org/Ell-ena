@@ -33,7 +33,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
 
     try {
       final members = await _supabaseService.getTeamMembers(widget.teamId);
-      
+
       if (mounted) {
         setState(() {
           _teamMembers = members;
@@ -68,7 +68,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
       Colors.indigo,
       Colors.pink,
     ];
-    
+
     int hashCode = name.hashCode;
     return colors[hashCode.abs() % colors.length];
   }
@@ -76,7 +76,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text('${widget.teamName} Members'),
         backgroundColor: Colors.green.shade800,
@@ -90,6 +90,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
   }
 
   Widget _buildEmptyState() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -97,7 +98,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           Icon(
             Icons.group_off,
             size: 80,
-            color: Colors.grey.shade600,
+            color: colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 16),
           Text(
@@ -105,7 +106,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade400,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -113,7 +114,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
             'Your team doesn\'t have any members yet',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -132,10 +133,10 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
         final role = member['role'] ?? 'member';
         final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : '?';
         final avatarColor = _getAvatarColor(name);
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          color: const Color(0xFF2D2D2D),
+          color: Theme.of(context).colorScheme.surface,
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -156,8 +157,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
             ),
             title: Text(
               name,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
@@ -169,23 +170,26 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                 Text(
                   email,
                   style: TextStyle(
-                    color: Colors.grey.shade400,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 14,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: role == 'admin' 
-                        ? Colors.orange.shade400.withOpacity(0.2) 
+                    color: role == 'admin'
+                        ? Colors.orange.shade400.withOpacity(0.2)
                         : Colors.blue.shade400.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     role == 'admin' ? 'Admin' : 'Member',
                     style: TextStyle(
-                      color: role == 'admin' ? Colors.orange.shade400 : Colors.blue.shade400,
+                      color: role == 'admin'
+                          ? Colors.orange.shade400
+                          : Colors.blue.shade400,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -204,4 +208,4 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
       },
     );
   }
-} 
+}

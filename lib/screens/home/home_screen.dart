@@ -156,16 +156,15 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2D2D2D),
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.white70,
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: theme.colorScheme.onSurfaceVariant,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
@@ -212,7 +211,14 @@ class _ChatBubble extends StatelessWidget {
               message.isUser ? Colors.green.shade400 : Colors.grey.shade800,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(message.text, style: const TextStyle(color: Colors.white)),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            color: message.isUser
+                ? Colors.white
+                : Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
       ),
     );
   }

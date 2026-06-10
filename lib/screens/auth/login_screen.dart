@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -122,6 +123,24 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         );
       }
+    } on AuthApiException catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid email or password'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connection error. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -251,18 +270,23 @@ class _LoginScreenState extends State<LoginScreen>
                   // OR divider
                   Row(
                     children: [
-                      Expanded(child: Divider(color: Colors.grey.shade700)),
+                      Expanded(
+                          child:
+                              Divider(color: Theme.of(context).dividerColor)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR',
                           style: TextStyle(
-                            color: Colors.grey.shade500,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Colors.grey.shade700)),
+                      Expanded(
+                          child:
+                              Divider(color: Theme.of(context).dividerColor)),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -271,17 +295,19 @@ class _LoginScreenState extends State<LoginScreen>
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
                     icon: const FaIcon(
                       FontAwesomeIcons.google,
+                      color: Colors.white,
                       size: 20,
                     ),
                     label: const Text(
                       'Sign in with Google',
                       style: TextStyle(
                         fontSize: 16,
+                        color: Colors.grey,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                       side: BorderSide(color: Colors.green.shade400, width: 2),
                       padding: const EdgeInsets.symmetric(
                         vertical: 16,

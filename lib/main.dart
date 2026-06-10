@@ -26,11 +26,22 @@ void main() async {
   runApp(const MyApp());
 }
 
+runApp(
+  WidgetsBindingObserverWidget(
+    child: ChangeNotifierProvider<ThemeController>.value(
+      value: themeController,
+      child: const MyApp(),
+    ),
+  ),
+);
+
+}
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeController = context.watch<ThemeController>();
     return MaterialApp(
       title: 'Ell-ena',
       debugShowCheckedModeBanner: false,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
+import '../../theme/app_theme_mode.dart';
+import '../../theme/theme_controller.dart';
 import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
@@ -31,13 +34,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final profile = await _supabaseService.getCurrentUserProfile();
-      
+
       // Also load all teams associated with the user's email
       if (profile != null && profile['email'] != null) {
         try {
-          final teamsResponse = await _supabaseService.getUserTeams(profile['email']);
-          if (teamsResponse['success'] == true && teamsResponse['teams'] != null) {
-            _userTeams = List<Map<String, dynamic>>.from(teamsResponse['teams']);
+          final teamsResponse =
+              await _supabaseService.getUserTeams(profile['email']);
+          if (teamsResponse['success'] == true &&
+              teamsResponse['teams'] != null) {
+            _userTeams =
+                List<Map<String, dynamic>>.from(teamsResponse['teams']);
           }
         } catch (e) {
           debugPrint('Error fetching user teams: $e');
@@ -64,23 +70,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
   }
-  
+
   Future<void> _handleLogout() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+    //Confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Log out?'),
+        content: const Text(
+          'You will need to log in again to access your account.',
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout != true) return;
+
+    // modal loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     try {
       await _supabaseService.signOut();
+
       if (mounted) {
+        Navigator.pop(context); // close loader
         NavigationService().navigateToReplacement(const LoginScreen());
       }
     } catch (e) {
-      debugPrint('Error logging out: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        Navigator.pop(context); // close loader
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error logging out: $e'),
@@ -95,7 +143,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1A1A1A),
         body: const Center(
           child: CircularProgressIndicator(),
         ),
@@ -109,7 +156,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final String teamCode = _userProfile?['teams']?['team_code'] ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -157,30 +203,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.white,
-                                    border: Border.all(color: Colors.white, width: 3),
+                                    border: Border.all(
+                                        color: Colors.white, width: 3),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .shadow
+                                            .withOpacity(0.2),
                                         blurRadius: 10,
                                         offset: const Offset(0, 5),
                                       ),
                                     ],
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.person,
                                     size: 50,
-                                    color: Color(0xFF1A1A1A),
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 // Role badge
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: role == 'admin' 
-                                        ? Colors.orange.shade400 
+                                    color: role == 'admin'
+                                        ? Colors.orange.shade400
                                         : Colors.blue.shade400,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white, width: 2),
+                                    border: Border.all(
+                                        color: Colors.white, width: 2),
                                   ),
                                   child: Text(
                                     role == 'admin' ? 'ADMIN' : 'MEMBER',
@@ -241,20 +294,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   void _showTeamSwitcher() {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2D2D2D),
+          backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text(
             'Switch Team',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -264,35 +313,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
               itemBuilder: (context, index) {
                 final team = _userTeams[index];
                 final isCurrentTeam = team['id'] == _userProfile?['team_id'];
-                
+
+                final colorScheme = Theme.of(context).colorScheme;
                 return ListTile(
                   title: Text(
                     team['name'] ?? 'Team',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: isCurrentTeam ? FontWeight.bold : FontWeight.normal,
+                      color: colorScheme.onSurface,
+                      fontWeight:
+                          isCurrentTeam ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   subtitle: Text(
                     'Team Code: ${team['team_code'] ?? 'N/A'}',
                     style: TextStyle(
-                      color: Colors.grey.shade400,
+                      color: colorScheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
                   leading: CircleAvatar(
-                    backgroundColor: isCurrentTeam 
-                        ? Colors.green.shade400 
+                    backgroundColor: isCurrentTeam
+                        ? Colors.green.shade400
                         : Colors.grey.shade700,
-                     child: Text(
+                    child: Text(
                       (() {
                         final n = (team['name'] as String?)?.trim();
-                        return (n != null && n.isNotEmpty ? n[0] : 'T').toUpperCase();
+                        return (n != null && n.isNotEmpty ? n[0] : 'T')
+                            .toUpperCase();
                       })(),
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  trailing: isCurrentTeam 
+                  trailing: isCurrentTeam
                       ? Icon(Icons.check, color: Colors.green.shade400)
                       : null,
                   onTap: () {
@@ -307,32 +359,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey.shade400),
-              ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
           ],
         );
       },
     );
   }
-  
+
   Future<void> _switchTeam(String teamId) async {
     try {
       setState(() {
         _isLoading = true;
       });
-      
+
       final result = await _supabaseService.switchTeam(teamId);
-      
+
       if (result['success'] == true) {
         // Reload profile with new team
         await _loadUserProfile();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -346,7 +393,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           setState(() {
             _isLoading = false;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error switching team: ${result['error']}'),
@@ -361,7 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error switching team: $e'),
@@ -398,14 +445,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTeamInfoSection(String teamName, String teamCode) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: colorScheme.shadow.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -414,39 +462,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Team Information',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Icon(Icons.groups, color: Colors.white70),
+              Icon(Icons.groups, color: colorScheme.onSurfaceVariant),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.business, color: Colors.grey),
+              Icon(Icons.business, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Team Name',
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: colorScheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
                   Text(
                     teamName,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -459,22 +507,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.key, color: Colors.grey),
+                Icon(Icons.key, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Team ID',
                       style: TextStyle(
-                        color: Colors.grey,
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
                     Text(
                       teamCode,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.5,
@@ -491,14 +539,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatsSection() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF2D2D2D),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: colorScheme.shadow.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -506,18 +555,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Your Activity',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Icon(Icons.insights, color: Colors.white70),
+              Icon(Icons.insights, color: colorScheme.onSurfaceVariant),
             ],
           ),
           const SizedBox(height: 20),
@@ -525,16 +574,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             future: SupabaseService().getTasks(),
             builder: (context, snapshot) {
               final tasks = snapshot.data ?? const <Map<String, dynamic>>[];
-              final completed = tasks.where((t) => t['status'] == 'completed').length;
+              final completed =
+                  tasks.where((t) => t['status'] == 'completed').length;
               // Placeholder dynamic numbers while no time tracking/projects table
               final hours = (tasks.length * 2).toString();
-              final projects =  (tasks.map((t) => t['team_id']).toSet().length).toString();
+              final projects =
+                  (tasks.map((t) => t['team_id']).toSet().length).toString();
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatItem('Tasks\nCompleted', completed.toString(), Colors.green.shade400),
+                  _buildStatItem('Tasks\nCompleted', completed.toString(),
+                      Colors.green.shade400),
                   _buildStatItem('Hours\nLogged', hours, Colors.blue.shade400),
-                  _buildStatItem('Team\nProjects', projects, Colors.purple.shade400),
+                  _buildStatItem(
+                      'Team\nProjects', projects, Colors.purple.shade400),
                 ],
               );
             },
@@ -566,7 +619,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
       ],
     );
@@ -576,14 +632,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isAdmin = _userProfile?['role'] == 'admin';
     final String teamId = _userProfile?['teams']?['team_code'] ?? '';
     final String teamName = _userProfile?['teams']?['name'] ?? 'Your Team';
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Settings',
           style: TextStyle(
-            color: Colors.white,
+            color: colorScheme.onSurface,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -591,7 +648,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF2D2D2D),
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -668,50 +725,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _themeModeLabel(AppThemeMode mode) {
+    switch (mode) {
+      case AppThemeMode.light:
+        return 'Light';
+      case AppThemeMode.dark:
+        return 'Dark';
+      case AppThemeMode.system:
+        return 'System';
+    }
+  }
+
+  void _showThemePicker() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return Consumer<ThemeController>(
+          builder: (context, controller, _) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: AppThemeMode.values.map((mode) {
+                  final isSelected = controller.themeMode == mode;
+                  return ListTile(
+                    leading: Icon(
+                      mode == AppThemeMode.light
+                          ? Icons.light_mode
+                          : mode == AppThemeMode.dark
+                              ? Icons.dark_mode
+                              : Icons.settings_brightness,
+                    ),
+                    title: Text(_themeModeLabel(mode)),
+                    trailing: isSelected ? const Icon(Icons.check) : null,
+                    onTap: () {
+                      controller.setThemeMode(mode);
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildPreferencesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Preferences',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+    return Consumer<ThemeController>(
+      builder: (context, themeController, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Preferences',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  _buildThemePreferenceItem(
+                    themeController: themeController,
+                  ),
+                  Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                  _buildPreferenceItem(
+                    icon: Icons.notifications_active_outlined,
+                    title: 'Push Notifications',
+                    isSwitch: true,
+                    iconColor: Colors.red.shade400,
+                  ),
+                  Divider(color: Theme.of(context).colorScheme.outlineVariant),
+                  _buildPreferenceItem(
+                    icon: Icons.language_outlined,
+                    title: 'Language',
+                    subtitle: 'English (US)',
+                    iconColor: Colors.blue.shade400,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildThemePreferenceItem({
+    required ThemeController themeController,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.purple.shade400.withOpacity(0.1),
+          shape: BoxShape.circle,
         ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF2D2D2D),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            children: [
-              _buildPreferenceItem(
-                icon: Icons.dark_mode_outlined,
-                title: 'Dark Mode',
-                isSwitch: true,
-                iconColor: Colors.purple.shade400,
-              ),
-              const Divider(color: Colors.grey),
-              _buildPreferenceItem(
-                icon: Icons.notifications_active_outlined,
-                title: 'Push Notifications',
-                isSwitch: true,
-                iconColor: Colors.red.shade400,
-              ),
-              const Divider(color: Colors.grey),
-              _buildPreferenceItem(
-                icon: Icons.language_outlined,
-                title: 'Language',
-                subtitle: 'English (US)',
-                iconColor: Colors.blue.shade400,
-              ),
-            ],
-          ),
+        child: Icon(Icons.dark_mode_outlined, color: Colors.purple.shade400),
+      ),
+      title: Text(
+        'Theme',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.bold,
         ),
-      ],
+      ),
+      subtitle: Text(
+        _themeModeLabel(themeController.themeMode),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onTap: _showThemePicker,
     );
   }
 
@@ -722,6 +857,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Color iconColor,
     VoidCallback? onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
@@ -733,17 +869,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade400)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white70),
-      onTap: onTap ?? () {
-        // Default implementation if no specific onTap is provided
-        // TODO: Implement settings navigation
-      },
+      subtitle:
+          Text(subtitle, style: TextStyle(color: colorScheme.onSurfaceVariant)),
+      trailing: Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+      onTap: onTap ??
+          () {
+            // Default implementation if no specific onTap is provided
+            // TODO: Implement settings navigation
+          },
     );
   }
 
@@ -754,6 +892,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Color iconColor,
     bool isSwitch = false,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
@@ -765,31 +904,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: colorScheme.onSurface,
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle:
-          subtitle != null
-              ? Text(subtitle, style: TextStyle(color: Colors.grey.shade400))
-              : null,
-      trailing:
-          isSwitch
-              ? Switch(
-                value: true,
-                onChanged: (value) {
-                  // TODO: Implement preference toggle
-                },
-                activeColor: Colors.green.shade400,
-              )
-              : const Icon(Icons.chevron_right, color: Colors.white70),
-      onTap:
-          isSwitch
-              ? null
-              : () {
-                // TODO: Implement preference navigation
+      subtitle: subtitle != null
+          ? Text(subtitle,
+              style: TextStyle(color: colorScheme.onSurfaceVariant))
+          : null,
+      trailing: isSwitch
+          ? Switch(
+              value: true,
+              onChanged: (value) {
+                // TODO: Implement preference toggle
               },
+              activeColor: Colors.green.shade400,
+            )
+          : Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+      onTap: isSwitch ? null : () {/* TODO: Implement preference navigation */},
     );
   }
 }
@@ -801,11 +934,10 @@ class DotPatternPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = color
-          ..strokeWidth = 2
-          ..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
 
     const spacing = 30.0;
     const dotSize = 2.0;

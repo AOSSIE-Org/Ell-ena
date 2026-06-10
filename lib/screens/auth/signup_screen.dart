@@ -152,6 +152,171 @@ class _SignupScreenState extends State<SignupScreen>
     }
   }
 
+  Widget _buildJoinTeamForm() {
+    return Form(
+      key: _joinTeamFormKey,
+      child: Column(
+        children: [
+          const SizedBox(height: 12), // Spacing for floating label
+          CustomTextField(
+            controller: _teamIdController,
+            label: 'Team ID',
+            icon: Icons.people_outline,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter team ID';
+              }
+              if (value.length != 6) {
+                return 'Team ID must be 6 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _nameController,
+            label: 'Full Name',
+            icon: Icons.person_outline,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your name';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _emailController,
+            label: 'Email',
+            icon: Icons.email_outlined,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your email';
+              }
+              if (!value.contains('@')) {
+                return 'Please enter a valid email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _passwordController,
+            label: 'Password',
+            icon: Icons.lock_outline,
+            isPassword: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _confirmPasswordController,
+            label: 'Confirm Password',
+            icon: Icons.lock_outline,
+            isPassword: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please confirm your password';
+              }
+              if (value != _passwordController.text) {
+                return 'Passwords do not match';
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreateTeamForm() {
+    return Form(
+      key: _createTeamFormKey,
+      child: Column(
+        children: [
+          const SizedBox(height: 12), // Spacing for floating label
+          CustomTextField(
+            controller: _teamNameController,
+            label: 'Team Name',
+            icon: Icons.group,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter team name';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _nameController,
+            label: 'Admin Name',
+            icon: Icons.person_outline,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter admin name';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _emailController,
+            label: 'Admin Email',
+            icon: Icons.email_outlined,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter admin email';
+              }
+              if (!value.contains('@')) {
+                return 'Please enter a valid email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _passwordController,
+            label: 'Password',
+            icon: Icons.lock_outline,
+            isPassword: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your password';
+              }
+              if (value.length < 6) {
+                return 'Password must be at least 6 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: _confirmPasswordController,
+            label: 'Confirm Password',
+            icon: Icons.lock_outline,
+            isPassword: true,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please confirm your password';
+              }
+              if (value != _passwordController.text) {
+                return 'Passwords do not match';
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AuthScreenWrapper(
@@ -165,9 +330,10 @@ class _SignupScreenState extends State<SignupScreen>
             Tab(text: 'Create the Team'),
           ],
           labelColor: Colors.green.shade400,
-          unselectedLabelColor: Colors.grey,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           indicatorColor: Colors.green.shade400,
           indicatorSize: TabBarIndicatorSize.tab,
+          onTap: (index) => setState(() {}),
         ),
         const SizedBox(height: 24),
         SizedBox(
@@ -315,18 +481,18 @@ class _SignupScreenState extends State<SignupScreen>
         // OR divider
         Row(
           children: [
-            Expanded(child: Divider(color: Colors.grey.shade700)),
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'OR',
                 style: TextStyle(
-                  color: Colors.grey.shade500,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: Colors.grey.shade700)),
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
           ],
         ),
         const SizedBox(height: 24),
@@ -336,17 +502,19 @@ class _SignupScreenState extends State<SignupScreen>
             onPressed: _isLoading ? null : _handleGoogleSignIn,
             icon: const FaIcon(
               FontAwesomeIcons.google,
+              color: Colors.white,
               size: 20,
             ),
             label: const Text(
               'Sign up with Google',
               style: TextStyle(
+                color: Colors.grey,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(color: Colors.green.shade400, width: 2),
               padding: const EdgeInsets.symmetric(
                 vertical: 16,

@@ -53,7 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -102,10 +102,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         const SizedBox(height: 40),
                         Text(
                           slide.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -114,7 +114,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           slide.description,
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey.shade400,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -138,20 +139,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color:
-                              _currentPage == index
-                                  ? Colors.green.shade400
-                                  : Colors.grey.shade700,
+                          color: _currentPage == index
+                              ? Colors.green.shade400
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withOpacity(0.5),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   CustomButton(
-                    text:
-                        _currentPage == _slides.length - 1
-                            ? 'Get Started'
-                            : 'Next',
+                    text: _currentPage == _slides.length - 1
+                        ? 'Get Started'
+                        : 'Next',
                     onPressed: _handleNext,
                   ),
                   const SizedBox(height: 16),
