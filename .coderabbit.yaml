@@ -1,0 +1,180 @@
+# Enables IDE autocompletion for this config file
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# Language for CodeRabbit's review comments
+language: en
+
+# Enable experimental features (currently not using any specific early_access features)
+early_access: true
+
+chat:
+  # CodeRabbit will automatically respond to @coderabbitai mentions in PR comments
+  auto_reply: true
+
+issue_enrichment:
+  labeling:
+    auto_apply_labels: true
+    labeling_instructions:
+      - label: bug
+        instructions: Issues reporting bugs, errors, crashes, incorrect behavior, or unexpected results. This includes runtime errors, logic errors, broken functionality, regressions, and any deviation from expected or documented behavior.
+      - label: enhancement
+        instructions: Feature requests, improvements to existing functionality, performance optimizations, refactoring suggestions, UI/UX enhancements, and any suggestions to make the project better or add new capabilities.
+      - label: documentation
+        instructions: Documentation updates, additions, corrections, or clarifications needed. This includes missing docs, outdated information, unclear instructions, API documentation, code examples, README improvements, and any requests for better explanations or guides.
+  planning:
+    enabled: true
+    auto_planning:
+      enabled: true
+      labels:
+        - "plan-me" # Auto-plan issues with this label
+        - "feature" # Also auto-plan these
+        - "!no-plan" # Never auto-plan issues with this label
+
+reviews:
+  profile: assertive # Options: chill (focuses on significant issues, less nitpicky about style), assertive (more thorough, flags style issues and minor improvements too)
+
+  auto_review:
+    # Automatically trigger reviews when PRs are opened or updated
+    enabled: true
+    # Skip auto-review if PR title contains these keywords
+    ignore_title_keywords:
+      - "WIP"
+    # Don't auto-review draft PRs
+    drafts: false
+    # Only auto-review PRs targeting these branches
+    base_branches:
+      - main
+      - develop
+
+  # Include a high-level summary at the start of each review
+  high_level_summary: true
+
+  # Generate sequence diagrams for complex code flows
+  sequence_diagrams: true
+
+  # Include poems in reviews
+  poem: true
+
+  # Show review completion status
+  review_status: true
+
+  # Keep the walkthrough section expanded by default
+  collapse_walkthrough: false
+
+  # Include summary of all changed files
+  changed_files_summary: true
+
+  # Automatically request changes on the PR (just leave comments)
+  request_changes_workflow: true
+
+  # Pre-merge checks to enforce before merging PRs
+  pre_merge_checks:
+    description:
+      # Validate that PR has a proper description
+      mode: warning # Options: off, warning, error
+    docstrings:
+      # Disable docstring coverage checks (let's assume we don't need them)
+      mode: off
+
+  # Exclude these paths from reviews (build artifacts and dependencies)
+  path_filters:
+    - "!**/build/**" # Flutter build output
+    - "!**/.dart_tool/**" # Dart tool cache
+    - "!**/android/**" # Native Android build files
+    - "!**/ios/**" # Native iOS build files
+    - "!**/windows/**" # Windows build files
+    - "!**/linux/**" # Linux build files
+    - "!**/macos/**" # macOS build files
+    - "!**/dist/**" # Any distribution output
+
+  # Use the following tools when reviewing
+  tools:
+    markdownlint:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    languagetool:
+      enabled: true
+      enabled_only: false
+      level: default
+    yamllint:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+  # Apply the following labels to PRs
+  labeling_instructions:
+    - label: Dart/Flutter
+      instructions: Apply when the PR/MR contains changes to Dart or Flutter source-code
+    - label: Documentation
+      instructions: >-
+        Apply whenever project documentation (namely markdown source-code) is
+        updated by the PR/MR
+
+  # Review instructions that apply to all files
+  instructions: >-
+    - Verify that documentation and comments are free of spelling mistakes
+    - Ensure that test code is automated, comprehensive, and follows testing best practices
+    - Verify that all critical functionality is covered by tests
+    - Confirm that the code meets the project's requirements and objectives
+    - Confirm that copyright years are up-to date whenever a file is changed
+    - Point out redundant obvious comments that do not add clarity to the code
+    - Ensure that comments are concise and suggest more concise comment statements if possible
+    - Discourage usage of verbose comment styles such as NatSpec
+    - Look for code duplication
+    - Suggest code completions when:
+        - seeing a TODO comment
+        - seeing a FIXME comment
+
+  # Custom review instructions for specific file patterns
+  path_instructions:
+    # Dart/Flutter files
+    - path: "**/*.dart"
+      instructions: |
+        Dart/Flutter Best Practices:
+        - Ensure code follows Effective Dart style guide
+        - Verify proper use of const constructors where applicable
+        - Check for null safety compliance (? and !)
+        - Review for proper state management patterns (Provider usage)
+        - Ensure widget composition is appropriate and not overly complex
+        - Check for memory leaks and proper disposal of resources
+        - Verify proper error handling and exception catching
+        - Ensure async/await is used correctly for Future handling
+        - Review for performance issues (rebuilds, expensive operations)
+        - Verify proper theming and design system adherence
+        - Check for proper navigation and routing patterns
+        
+        Security:
+        - Sensitive data should never be logged or stored insecurely
+        - Use secure storage for tokens and credentials (expo-secure-store or similar)
+        - Verify API calls use HTTPS
+        - Check for proper input validation
+
+    # Dart test files
+    - path: "**/*.test.dart"
+      instructions: |
+        Review test files for:
+        - Comprehensive coverage of widget and service behavior
+        - Proper use of mocking frameworks for dependencies
+        - Async behavior is properly tested
+        - Test descriptions are clear and descriptive
+        - Tests are not tautological and actually validate behavior
+
+    # Markdown documentation files
+    - path: "**/*.md"
+      instructions: |
+        Review documentation for:
+        - Clear and concise explanations
+        - Proper formatting and structure
+        - Accurate code examples
+        - Up-to-date information matching the codebase
+
+    # Asset files (images, fonts, etc.)
+    - path: "assets/**/*"
+      instructions: |
+        Review asset files for:
+        - Image optimization (appropriate size and format)
+        - Proper @2x and @3x variants for different screen densities
+        - SVG assets are optimized
+        - Font files are licensed and optimized

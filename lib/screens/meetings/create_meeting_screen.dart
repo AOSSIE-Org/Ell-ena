@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
+import '../../services/google_meet_service.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
-  const CreateMeetingScreen({super.key});
+   CreateMeetingScreen({super.key,});
 
   @override
   State<CreateMeetingScreen> createState() => _CreateMeetingScreenState();
@@ -20,6 +21,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
+  bool _isCreatingMeetLink = false;
   bool _isGoogleMeetUrl = true;
   
   @override

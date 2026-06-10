@@ -41,10 +41,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Cache duration (5 minutes)
   static const Duration _cacheDuration = Duration(minutes: 5);
 
+  DateTime _getFirstBoundedDay(DateTime anchor) {
+    return DateTime.utc(anchor.year - 1, anchor.month, anchor.day);
+  }
+
+  DateTime _getLastBoundedDay(DateTime anchor) {
+    return DateTime.utc(anchor.year + 3, anchor.month, anchor.day);
+  }
+
+  DateTime _clampDay(DateTime day, DateTime first, DateTime last) {
+    if (day.isBefore(first)) return first;
+    if (day.isAfter(last)) return last;
+    return day;
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedDay = _focusedDay;
+    // Safety clamp for initial dates in case system clock is off bounds
+    final now = DateTime.now();
+    final first = _getFirstBoundedDay(now);
+    final last = _getLastBoundedDay(now);
+    final safeDay = _clampDay(now, first, last);
+
+    _focusedDay = safeDay;
+    _selectedDay = safeDay;
     _loadCurrentUserInfo();
   }
   
@@ -704,7 +725,8 @@ Widget _buildCalendar() {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateMeetingScreen(),
+            builder: (context) =>
+                CreateMeetingScreen(),
           ),
         );
         break;
@@ -712,7 +734,8 @@ Widget _buildCalendar() {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTaskScreen(),
+            builder: (context) =>
+                CreateTaskScreen(),
           ),
         );
         break;
@@ -720,7 +743,8 @@ Widget _buildCalendar() {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTicketScreen(),
+            builder: (context) =>
+                CreateTicketScreen(),
           ),
         );
         break;
