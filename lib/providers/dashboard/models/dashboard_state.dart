@@ -1,14 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'dashboard_state.freezed.dart';
+import 'enums/dashboard_list_filter.dart';
 
-/// Filter applied to dashboard lists (tasks, tickets, meetings).
-enum DashboardListFilter {
-  all,
-  tasks,
-  tickets,
-  meetings,
-}
+part 'dashboard_state.freezed.dart';
 
 /// Dashboard UI state managed by [DashboardController].
 ///

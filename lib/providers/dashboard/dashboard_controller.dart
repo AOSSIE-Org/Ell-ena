@@ -1,9 +1,13 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'dashboard_state.dart';
+import 'models/dashboard_state.dart';
+import 'models/enums/dashboard_list_filter.dart';
+
+part 'dashboard_controller.g.dart';
 
 /// Single controller for dashboard-related Riverpod state.
-class DashboardController extends Notifier<DashboardState> {
+@Riverpod(keepAlive: true)
+class DashboardController extends _$DashboardController {
   @override
   DashboardState build() => const DashboardState();
 
@@ -32,9 +36,3 @@ class DashboardController extends Notifier<DashboardState> {
     state = const DashboardState();
   }
 }
-
-/// Unified dashboard state provider.
-final dashboardControllerProvider =
-    NotifierProvider<DashboardController, DashboardState>(
-  DashboardController.new,
-);
