@@ -67,7 +67,7 @@ class NavigationService {
 
   Future<dynamic> navigateToReplacement(Widget screen) {
     if (screen is HomeScreen) {
-      goHome(arguments: screen.arguments);
+      goHome();
       return Future<void>.value();
     }
 
