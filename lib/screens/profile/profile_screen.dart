@@ -308,6 +308,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _showLanguagePicker() {
     final l10n = AppLocalizations.of(context);
+    final selectedLocale = ref.watch(localeControllerProvider);
     final localeController = ref.read(localeControllerProvider.notifier);
 
     showModalBottomSheet<void>(
@@ -326,14 +327,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                 ),
               ),
-              ...supportedAppLocales.map((locale) {
-                final isSelected = localeController.isSelected(locale);
+              ...AppLocalizations.supportedLocales.map((locale) {
+                final isSelected =
+                    locale.languageCode == selectedLocale.languageCode;
                 return ListTile(
                   leading: Icon(
                     Icons.language,
                     color: isSelected ? Colors.green.shade400 : null,
                   ),
-                  title: Text(localeController.labelFor(l10n, locale)),
+                  title: Text(l10n.languageName(locale.languageCode)),
                   trailing: isSelected
                       ? Icon(Icons.check, color: Colors.green.shade400)
                       : null,
@@ -354,8 +356,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildLanguageSettingItem() {
     final l10n = AppLocalizations.of(context);
-    final localeController = ref.read(localeControllerProvider.notifier);
-    ref.watch(localeControllerProvider);
+    final selectedLocale = ref.watch(localeControllerProvider);
 
     return ListTile(
       leading: Container(
@@ -374,7 +375,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
       subtitle: Text(
-        localeController.currentLanguageLabel(l10n),
+        l10n.languageName(selectedLocale.languageCode),
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),

@@ -56,14 +56,15 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
-      locale: locale ?? const Locale('en'),
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: AppLocalizations.supportedLocales,      navigatorKey: NavigationService().navigatorKey,
+      supportedLocales: AppLocalizations.supportedLocales,
+      navigatorKey: NavigationService().navigatorKey,
       navigatorObservers: <NavigatorObserver>[AppRouteObserver.instance],
       theme: lightTheme,
       darkTheme: darkTheme,

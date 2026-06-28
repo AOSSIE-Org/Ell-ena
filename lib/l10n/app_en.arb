@@ -64,13 +64,14 @@
   "@language": {
     "description": "Language preference setting label."
   },
-  "languageEnglish": "English",
-  "@languageEnglish": {
-    "description": "English language option label."
-  },
-  "languageSpanish": "Español",
-  "@languageSpanish": {
-    "description": "Spanish language option label."
+  "languageName": "{localeCode, select, en{English} hi{हिन्दी} other{{localeCode}}}",
+  "@languageName": {
+    "description": "Display name for a language identified by locale code.",
+    "placeholders": {
+      "localeCode": {
+        "type": "String"
+      }
+    }
   },
   "selectLanguage": "Select Language",
   "@selectLanguage": {
