@@ -36,6 +36,7 @@ class WorkerConfig:
     whisper_device: str
     whisper_compute_type: str | None
     poll_interval_seconds: int
+    stuck_job_timeout_seconds: int
 
     @classmethod
     def from_env(cls) -> WorkerConfig:
@@ -53,4 +54,7 @@ class WorkerConfig:
             whisper_device=device,
             whisper_compute_type=compute_type,
             poll_interval_seconds=int(os.getenv("POLL_INTERVAL_SECONDS", "10")),
+            stuck_job_timeout_seconds=int(
+                os.getenv("STUCK_JOB_TIMEOUT_SECONDS", "1800")
+            ),
         )

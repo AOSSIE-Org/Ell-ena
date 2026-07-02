@@ -92,7 +92,8 @@ VALUES (
         'audio/ogg',
         'audio/x-m4a'
     ]
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY meeting_recordings_select_policy ON storage.objects
     FOR SELECT

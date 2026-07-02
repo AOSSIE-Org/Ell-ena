@@ -10,7 +10,7 @@ import os
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from faster_whisper import WhisperModel
@@ -149,6 +149,45 @@ def mark_job_failed(client: Client, job_id: str, error: str) -> None:
     ).eq("id", job_id).execute()
 
 
+def reset_job_to_pending(client: Client, job_id: str) -> None:
+    client.table("transcription_jobs").update(
+        {
+            "status": "pending",
+            "started_at": None,
+        }
+    ).eq("id", job_id).eq("status", "processing").execute()
+
+
+def recover_stuck_jobs(client: Client, *, timeout_seconds: int) -> int:
+    """Re-queue processing jobs whose worker died or hung past the timeout."""
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=timeout_seconds)
+    stuck = (
+        client.table("transcription_jobs")
+        .select("id, started_at, created_at")
+        .eq("status", "processing")
+        .execute()
+    )
+
+    recovered = 0
+    for job in stuck.data or []:
+        marker_raw = job.get("started_at") or job.get("created_at")
+        if marker_raw is None:
+            continue
+
+        marker = datetime.fromisoformat(marker_raw.replace("Z", "+00:00"))
+        if marker.tzinfo is None:
+            marker = marker.replace(tzinfo=timezone.utc)
+
+        if marker > cutoff:
+            continue
+
+        reset_job_to_pending(client, job["id"])
+        recovered += 1
+        logger.warning("Reset stuck job %s to pending", job["id"])
+
+    return recovered
+
+
 def process_job(
     client: Client,
     config: WorkerConfig,
@@ -181,8 +220,17 @@ def process_job(
         )
     except Exception as exc:
         logger.exception("Job %s failed", job_id)
-        mark_job_failed(client, job_id, str(exc))
-        raise
+        try:
+            mark_job_failed(client, job_id, str(exc))
+        except Exception:
+            logger.exception(
+                "Failed to persist failure for job %s; resetting to pending",
+                job_id,
+            )
+            try:
+                reset_job_to_pending(client, job_id)
+            except Exception:
+                logger.exception("Failed to reset job %s to pending", job_id)
     finally:
         if local_audio is not None and local_audio.exists():
             os.unlink(local_audio)
@@ -203,6 +251,8 @@ def run_worker(config: WorkerConfig, *, once: bool = False) -> None:
     )
 
     while True:
+        recover_stuck_jobs(client, timeout_seconds=config.stuck_job_timeout_seconds)
+
         job = claim_next_job(client)
         if job is None:
             if once:
@@ -211,7 +261,10 @@ def run_worker(config: WorkerConfig, *, once: bool = False) -> None:
             time.sleep(config.poll_interval_seconds)
             continue
 
-        process_job(client, config, model, job)
+        try:
+            process_job(client, config, model, job)
+        except Exception:
+            logger.exception("Unexpected error handling job %s", job["id"])
 
         if once:
             return
