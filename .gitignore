@@ -46,6 +46,10 @@ firebase*.json
 *.jks
 fastlane/.env*
 
+# Python (workers/faster-whisper-worker)
+__pycache__/
+.venv/
+venv/
 # Symbolication related
 app.*.symbols
 

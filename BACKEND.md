@@ -369,7 +369,17 @@ supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 # Local Testing the functions (optional)
 supabase functions serve --allow-env --env-file .env
 
+## Local transcription worker
 
+Worker at `workers/faster-whisper-worker/`. Uses the repository root `.env` for Supabase credentials; see root `.env.example` for optional `WHISPER_*` variables.
+
+```bash
+cd workers/faster-whisper-worker
+pip install -r requirements.txt
+python worker.py
+```
+
+Run instructions, transcript format, and manual test steps: [workers/faster-whisper-worker/README.md](../workers/faster-whisper-worker/README.md).
 
 ## Deploying Edge Functions
 
