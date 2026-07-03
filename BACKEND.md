@@ -379,8 +379,6 @@ pip install -r requirements.txt
 python worker.py
 ```
 
-Run instructions, transcript format, and manual test steps: [workers/faster-whisper-worker/README.md](../workers/faster-whisper-worker/README.md).
-
 ## Deploying Edge Functions
 
 The project uses Supabase Edge Functions for serverless functionality. Deploy them using the CLI:
