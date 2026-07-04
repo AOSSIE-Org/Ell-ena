@@ -83,25 +83,25 @@ Ell-ena uses PostgreSQL (via Supabase) with strict Row-Level Security (RLS) and 
 
 ## ✨ System Components
 
-#### 1. Frontend Layer (Flutter)
+### 1. Frontend Layer (Flutter)
 - **Auth Module**: Handles user authentication, team management, and role-based access control
 - **Task Manager**: Processes task creation, updates, and workflow management
 - **Meeting Manager**: Manages meeting scheduling, transcription, and contextual analysis
 - **Chat Interface**: Provides natural language interaction with the AI assistant
 
-#### 2. Supabase Service Layer
+### 2. Supabase Service Layer
 - **Auth Client**: Manages authentication tokens and session state
 - **Data Client**: Handles real-time data synchronization with PostgreSQL
 - **Storage Client**: Manages file uploads and retrieval
 - **RPC Client**: Executes remote procedure calls to Edge Functions
 
-#### 3. Backend Layer (Supabase)
+### 3. Backend Layer (Supabase)
 - **Authentication**: Handles user identity, security, and session management
 - **PostgreSQL DB**: Stores structured data with Row-Level Security policies
 - **Object Storage**: Manages binary assets like audio recordings and documents
 - **Edge Functions**: Executes serverless functions for business logic
 
-#### 4. AI Processing Pipeline
+### 4. AI Processing Pipeline
 - **NLU Processor**: Processes natural language using Gemini API
 - **Vector Database**: Stores and retrieves semantic embeddings for context-aware searches
 - **Embedding Generator**: Creates vector embeddings from text for semantic similarity
