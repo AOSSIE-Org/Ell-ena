@@ -68,31 +68,25 @@ class AIService {
     bool isMeetingQuery = _isMeetingRelatedQuery(userMessage);
     String meetingContext = "";
     
-    // If it's a meeting query, retrieve relevant meeting summaries
-    // If it's a meeting query, retrieve relevant meeting summaries
-        // If it's a meeting query, retrieve relevant meeting summaries
-    // If it's a meeting query, retrieve relevant meeting summaries
-    if (isMeetingQuery) {
-      final meetingSummaries = await getRelevantMeetingSummaries(userMessage);
-      
-      // Apply Context-Window Pruning and Token Truncation Middleware
-      final contextPruner = ContextPruningService();
-      final optimizedMeetingSummaries = contextPruner.prune(
-        query: userMessage, 
-        meetings: meetingSummaries, 
-        maxTokens: 1500 // Strict budget for meeting context
-      );
-      
-      if (optimizedMeetingSummaries.isNotEmpty) {
-        meetingContext = "\nRelevant meeting information:\n\n";
-        meetingContext += MeetingFormatter.formatMeetingSummaries(optimizedMeetingSummaries);
-      }
-    }
-
-
-
-    
     try {
+      // If it's a meeting query, retrieve relevant meeting summaries
+      if (isMeetingQuery) {
+        final meetingSummaries = await getRelevantMeetingSummaries(userMessage);
+        
+        // Apply Context-Window Pruning and Token Truncation Middleware
+        final contextPruner = ContextPruningService();
+        final optimizedMeetingSummaries = contextPruner.prune(
+          query: userMessage, 
+          meetings: meetingSummaries, 
+          maxTokens: 1500 // Strict budget for meeting context
+        );
+        
+        if (optimizedMeetingSummaries.isNotEmpty) {
+          meetingContext = "\nRelevant meeting information:\n\n";
+          meetingContext += MeetingFormatter.formatMeetingSummaries(optimizedMeetingSummaries);
+        }
+      }
+      
       // Define function declarations for the model
       final List<Map<String, dynamic>> functionDeclarations = [
         {

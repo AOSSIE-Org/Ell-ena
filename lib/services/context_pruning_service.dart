@@ -1,5 +1,6 @@
 import 'dart:core';
 import 'package:flutter/foundation.dart';
+import 'package:ell_ena/services/meeting_formatter.dart';
 
 class ContextPruningService {
   /// Estimates the number of tokens based on a character heuristic (approx. 4 chars per token).
@@ -10,8 +11,9 @@ class ContextPruningService {
   /// Calculates a lightweight keyword overlap score as a fallback
   /// if the vector search similarity score is unavailable.
   double _calculateKeywordOverlap(String query, String text) {
-    final queryWords = query.toLowerCase().split(RegExp(r'\s+')).toSet();
-    final textWords = text.toLowerCase().split(RegExp(r'\s+')).toSet();
+    final punctuationRegExp = RegExp(r'[^\w\s]+');
+    final queryWords = query.toLowerCase().replaceAll(punctuationRegExp, '').split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toSet();
+    final textWords = text.toLowerCase().replaceAll(punctuationRegExp, '').split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toSet();
     
     if (queryWords.isEmpty || textWords.isEmpty) return 0.0;
     
@@ -36,7 +38,11 @@ class ContextPruningService {
     // 1. Scoring & Initial Token Counting
     for (var chunk in chunks) {
       final summaryStr = chunk['summary']?.toString() ?? '';
-      final tokenCount = _estimateTokens(summaryStr);
+      
+      // Calculate token budget based on fully rendered meeting context
+      final renderedChunk = MeetingFormatter.formatMeetingSummaries([chunk]);
+      final tokenCount = _estimateTokens(renderedChunk);
+      
       originalTokens += tokenCount;
       chunk['_token_count'] = tokenCount;
 
@@ -57,7 +63,8 @@ class ContextPruningService {
 
     // 3. Sliding-Window Pruning (Remove lowest-ranked chunks until under budget)
     List<Map<String, dynamic>> optimizedChunks = [];
-    int currentTokens = 0;
+    // Reserve overhead for prepended content: "\nRelevant meeting information:\n\n"
+    int currentTokens = _estimateTokens("\nRelevant meeting information:\n\n");
 
     for (var chunk in chunks) {
       final tokenCount = chunk['_token_count'] as int;
@@ -84,14 +91,12 @@ class ContextPruningService {
           chunk['summary'] = partialSummary;
           optimizedChunks.add(chunk);
           currentTokens += remainingTokens;
-        } else {
-          chunksRemoved++;
         }
       }
     }
 
     // Accumulate skipped chunks in the count
-    chunksRemoved += (chunks.length - optimizedChunks.length - (chunksRemoved > 0 ? 0 : 0));
+    chunksRemoved = chunks.length - optimizedChunks.length;
 
     stopwatch.stop();
 
