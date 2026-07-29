@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
       AppErrorHandler.showSnackBar(
         context,
         e,
-        fallback: AppErrorHandler.networkMessage,
+        fallback: 'Unable to sign in. Please try again.',
       );
     } finally {
       if (mounted) {
@@ -132,11 +132,10 @@ class _LoginScreenState extends State<LoginScreen>
             NavigationService().navigateToReplacement(const HomeScreen());
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'], fallback: 'Google sign-in failed')),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Google sign-in failed',
           );
         }
       }

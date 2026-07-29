@@ -75,24 +75,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
       final result = await _supabaseService.deleteMeeting(meetingId);
 
       if (mounted && !result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(result['error'])),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, result['error']);
       } else {
         _loadInitialData();
       }
     } catch (e) {
       debugPrint('Error deleting meeting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -117,12 +107,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
     } catch (e) {
       debugPrint('Error launching URL: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

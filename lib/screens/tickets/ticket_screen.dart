@@ -92,12 +92,7 @@ class _TicketScreenState extends State<TicketScreen> {
     } catch (e) {
       debugPrint('Error updating ticket status: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -115,12 +110,7 @@ class _TicketScreenState extends State<TicketScreen> {
     } catch (e) {
       debugPrint('Error updating ticket approval: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

@@ -95,12 +95,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
             _isLoading = false;
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
@@ -110,12 +105,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

@@ -103,12 +103,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {

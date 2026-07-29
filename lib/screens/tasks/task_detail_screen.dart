@@ -102,12 +102,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     } catch (e) {
       debugPrint('Error updating task status: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -137,12 +132,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     } catch (e) {
       debugPrint('Error updating task approval: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -193,23 +183,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           );
           Navigator.of(context).pop(true); // Return true to trigger refresh
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
       debugPrint('Error deleting task: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -227,22 +207,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         _commentController.clear();
         _loadTaskDetails();
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(result['error'])),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       debugPrint('Error adding comment: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

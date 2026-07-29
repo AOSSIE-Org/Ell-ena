@@ -79,5 +79,17 @@ void main() {
         'Could not complete the request',
       );
     });
+
+    test('does not leak raw PostgREST error messages', () {
+      final info = AppErrorHandler.classify(
+        const PostgrestException(
+          message:
+              'duplicate key value violates unique constraint users_email_key',
+          code: '23505',
+        ),
+      );
+      expect(info.kind, AppErrorKind.server);
+      expect(info.message, AppErrorHandler.serverMessage);
+    });
   });
 }

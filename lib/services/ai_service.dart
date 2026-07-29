@@ -387,7 +387,7 @@ class AIService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(requestBody),
-      );
+      ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -426,13 +426,21 @@ class AIService {
         };
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
+        final statusCode = response.statusCode;
+        final String content;
+        if (statusCode == 401 || statusCode == 403) {
+          content =
+              'AI service credentials are invalid or missing. Please check your API key configuration.';
+        } else {
+          content = AppErrorHandler.messageFor(
+            'Gemini API error',
+            statusCode: statusCode,
+            fallback: AppErrorHandler.serverMessage,
+          );
+        }
         return {
           'type': 'error',
-          'content': AppErrorHandler.messageFor(
-            'Gemini API error',
-            statusCode: response.statusCode,
-            fallback: AppErrorHandler.serverMessage,
-          ),
+          'content': content,
         };
       }
     } catch (e) {
@@ -529,7 +537,7 @@ class AIService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(requestBody),
-      );
+      ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);

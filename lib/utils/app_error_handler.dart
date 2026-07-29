@@ -234,13 +234,7 @@ class AppErrorHandler {
       );
     }
 
-    if (_looksUserFacing(error.message)) {
-      return AppErrorInfo(
-        kind: AppErrorKind.server,
-        message: error.message,
-      );
-    }
-
+    // Never surface raw PostgREST/database details to users.
     return const AppErrorInfo(
       kind: AppErrorKind.server,
       message: serverMessage,

@@ -55,11 +55,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(AppErrorHandler.messageFor(e)),
-              backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -290,9 +286,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppErrorHandler.messageFor(e)), backgroundColor: Colors.red),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 

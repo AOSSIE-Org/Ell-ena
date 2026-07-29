@@ -78,12 +78,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -136,23 +131,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           );
           Navigator.of(context).pop(true); // Return true to trigger refresh
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
       debugPrint('Error deleting ticket: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -173,23 +158,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         });
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
       debugPrint('Error adding comment: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -230,12 +205,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     } catch (e) {
       debugPrint('Error updating ticket status: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -276,12 +246,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     } catch (e) {
       debugPrint('Error updating ticket priority: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -307,23 +272,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
       debugPrint('Error assigning ticket: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

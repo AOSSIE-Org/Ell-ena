@@ -177,11 +177,10 @@ class _SignupScreenState extends State<SignupScreen>
             NavigationService().navigateToReplacement(const HomeScreen());
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'], fallback: 'Google sign-in failed')),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Google sign-in failed',
           );
         }
       }

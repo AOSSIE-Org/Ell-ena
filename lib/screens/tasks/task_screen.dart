@@ -106,12 +106,7 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task status: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppErrorHandler.messageFor(e)),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 
@@ -126,12 +121,7 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task approval: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppErrorHandler.messageFor(e)),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 

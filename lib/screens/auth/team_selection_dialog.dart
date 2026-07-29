@@ -54,11 +54,10 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           Navigator.of(context).pop();
           NavigationService().navigateToReplacement(const HomeScreen());
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'], fallback: 'Failed to join team')),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Failed to join team',
           );
         }
       }
@@ -91,11 +90,10 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           // Show team ID dialog
           _showTeamIdDialog(result['teamId']);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'], fallback: 'Failed to create team')),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Failed to create team',
           );
         }
       }

@@ -149,12 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         await _loadData();
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
@@ -164,12 +159,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

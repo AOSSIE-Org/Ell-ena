@@ -112,12 +112,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -130,23 +125,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         if (result['success']) {
           Navigator.pop(context, true);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
       debugPrint('Error deleting meeting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -229,12 +214,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             _isLoading = false;
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
@@ -244,12 +224,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppErrorHandler.messageFor(e)),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -292,17 +267,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               content: Text('Ticket created'), backgroundColor: Colors.green),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppErrorHandler.messageFor(e)), backgroundColor: Colors.red),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 
@@ -333,17 +302,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               content: Text('Task created'), backgroundColor: Colors.green),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(AppErrorHandler.messageFor(result['error'])),
-              backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppErrorHandler.messageFor(e)), backgroundColor: Colors.red),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 
