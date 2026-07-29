@@ -90,6 +90,13 @@ class AppErrorHandler {
     int? statusCode,
     String? fallback,
   }) {
+    if (statusCode != null) {
+      final fromStatus = _fromStatusCode(statusCode);
+      if (fromStatus != null) {
+        return fromStatus.message;
+      }
+    }
+
     if (error is String) {
       final trimmed = error.trim();
       if (trimmed.isEmpty) {
