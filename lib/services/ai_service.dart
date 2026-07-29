@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class AIService {
   static final AIService _instance = AIService._internal();
@@ -427,14 +428,18 @@ class AIService {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
         return {
           'type': 'error',
-          'content': 'Sorry, I encountered an error while processing your request.',
+          'content': AppErrorHandler.messageFor(
+            'Gemini API error',
+            statusCode: response.statusCode,
+            fallback: AppErrorHandler.serverMessage,
+          ),
         };
       }
     } catch (e) {
       debugPrint('Error generating chat response: $e');
       return {
         'type': 'error',
-        'content': 'Sorry, I encountered an error while processing your request.',
+        'content': AppErrorHandler.messageFor(e),
       };
     }
   }

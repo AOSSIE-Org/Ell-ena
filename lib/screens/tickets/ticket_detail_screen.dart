@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class TicketDetailScreen extends StatefulWidget {
   final String ticketId;
@@ -79,7 +80,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading ticket details: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -137,7 +138,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting ticket: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -148,7 +149,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting ticket: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -174,7 +175,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to add comment: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -185,7 +186,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding comment: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -231,7 +232,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating ticket status: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -277,7 +278,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating ticket priority: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -308,7 +309,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to assign ticket: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -319,7 +320,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error assigning ticket: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );

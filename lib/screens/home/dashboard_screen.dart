@@ -6,6 +6,7 @@ import '../../services/supabase_service.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -150,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error switching team: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -165,7 +166,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error switching team: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );

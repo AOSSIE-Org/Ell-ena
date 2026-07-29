@@ -3,6 +3,7 @@ import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
 import 'ticket_detail_screen.dart';
 import 'create_ticket_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class TicketScreen extends StatefulWidget {
   static final GlobalKey<_TicketScreenState> globalKey =
@@ -93,7 +94,7 @@ class _TicketScreenState extends State<TicketScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating ticket status: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -116,7 +117,7 @@ class _TicketScreenState extends State<TicketScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating ticket approval: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -763,8 +764,13 @@ class _TicketCard extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
-                                            content: Text(result['error'] ??
-                                                'Failed to delete ticket'),
+                                            content: Text(
+                                              AppErrorHandler.messageFor(
+                                                result['error'],
+                                                fallback:
+                                                    'Failed to delete ticket',
+                                              ),
+                                            ),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
@@ -772,13 +778,7 @@ class _TicketCard extends StatelessWidget {
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
+                                      AppErrorHandler.showSnackBar(context, e);
                                     }
                                   }
                                 }

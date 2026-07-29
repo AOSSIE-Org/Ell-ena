@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   const CreateTaskScreen({super.key});
@@ -106,7 +107,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating task: ${result['error']}'),
+            content: Text(AppErrorHandler.messageFor(result['error'])),
             backgroundColor: Colors.red,
           ),
         );
@@ -120,7 +121,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating task: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );

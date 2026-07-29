@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   final String taskId;
@@ -103,7 +104,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating task status: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -138,7 +139,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating task approval: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -194,7 +195,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting task: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -205,7 +206,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting task: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -228,7 +229,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding comment: ${result['error']}'),
+            content: Text(AppErrorHandler.messageFor(result['error'])),
             backgroundColor: Colors.red,
           ),
         );
@@ -238,7 +239,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding comment: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );

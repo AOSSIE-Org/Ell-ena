@@ -6,6 +6,7 @@ import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
 import '../home/home_screen.dart';
 import '../auth/set_new_password_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class VerifyOTPScreen extends StatefulWidget {
   final String email;
@@ -136,14 +137,17 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           }
         } else {
           setState(() {
-            String errorMsg = result['error'] ?? 'Verification failed';
+            String errorMsg = AppErrorHandler.messageFor(
+              result['error'],
+              fallback: 'Verification failed',
+            );
 
-            // Make the error message more user-friendly
-            if (errorMsg.contains('expired') ||
-                errorMsg.contains('otp_expired')) {
+            // Make OTP failures more specific when we can detect them
+            final raw = (result['error'] ?? '').toString().toLowerCase();
+            if (raw.contains('expired') || raw.contains('otp_expired')) {
               errorMsg =
                   'Verification code has expired or invalid. Please request a new code.';
-            } else if (errorMsg.contains('invalid')) {
+            } else if (raw.contains('invalid')) {
               errorMsg = 'Invalid verification code. Please try again.';
             }
 
@@ -153,20 +157,15 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         }
       } catch (e) {
         setState(() {
-          String errorMsg = e.toString();
-
-          // Make the error message more user-friendly
-          if (errorMsg.contains('expired') ||
-              errorMsg.contains('otp_expired')) {
-            errorMsg =
+          final raw = e.toString().toLowerCase();
+          if (raw.contains('expired') || raw.contains('otp_expired')) {
+            _errorMessage =
                 'Verification code has expired. Please request a new code.';
-          } else if (errorMsg.contains('invalid')) {
-            errorMsg = 'Invalid verification code. Please try again.';
+          } else if (raw.contains('invalid')) {
+            _errorMessage = 'Invalid verification code. Please try again.';
           } else {
-            errorMsg = 'An error occurred. Please try again.';
+            _errorMessage = AppErrorHandler.messageFor(e);
           }
-
-          _errorMessage = errorMsg;
         });
         _showErrorSnackBar(_errorMessage!);
       } finally {
@@ -210,13 +209,16 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         );
       } else {
         setState(() {
-          String errorMsg = result['error'] ?? 'Failed to resend code';
+          String errorMsg = AppErrorHandler.messageFor(
+            result['error'],
+            fallback: 'Failed to resend code',
+          );
 
-          // Make the error message more user-friendly
-          if (errorMsg.contains('Rate limit')) {
+          final raw = (result['error'] ?? '').toString();
+          if (raw.contains('Rate limit')) {
             errorMsg = 'Too many attempts. Please try again later.';
-          } else if (errorMsg.contains('not found') ||
-              errorMsg.contains('Invalid email')) {
+          } else if (raw.contains('not found') ||
+              raw.contains('Invalid email')) {
             errorMsg = 'Email address not found or invalid.';
           }
 
@@ -226,21 +228,17 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       }
     } catch (e) {
       setState(() {
-        String errorMsg = e.toString();
-
-        // Make the error message more user-friendly
-        if (errorMsg.contains('Rate limit')) {
-          errorMsg = 'Too many attempts. Please try again later.';
-        } else if (errorMsg.contains('not found') ||
-            errorMsg.contains('Invalid email')) {
-          errorMsg = 'Email address not found or invalid.';
-        } else if (errorMsg.contains('Assertion failed')) {
-          errorMsg = 'Unable to resend code. Please go back and try again.';
+        final raw = e.toString();
+        if (raw.contains('Rate limit')) {
+          _errorMessage = 'Too many attempts. Please try again later.';
+        } else if (raw.contains('not found') || raw.contains('Invalid email')) {
+          _errorMessage = 'Email address not found or invalid.';
+        } else if (raw.contains('Assertion failed')) {
+          _errorMessage =
+              'Unable to resend code. Please go back and try again.';
         } else {
-          errorMsg = 'An error occurred. Please try again.';
+          _errorMessage = AppErrorHandler.messageFor(e);
         }
-
-        _errorMessage = errorMsg;
       });
       _showErrorSnackBar(_errorMessage!);
     } finally {

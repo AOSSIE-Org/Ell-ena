@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/supabase_service.dart';
 import '../../services/google_meet_service.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class CreateMeetingScreen extends StatefulWidget {
    CreateMeetingScreen({super.key,});
@@ -207,7 +208,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to create meeting: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -222,7 +223,7 @@ class _CreateMeetingScreenState extends State<CreateMeetingScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating meeting: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );

@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class MeetingInsightsScreen extends StatefulWidget {
   final String meetingId;
@@ -56,7 +57,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Failed to load meeting: $e'),
+              content: Text(AppErrorHandler.messageFor(e)),
               backgroundColor: Colors.red),
         );
       }
@@ -290,7 +291,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text(AppErrorHandler.messageFor(e)), backgroundColor: Colors.red),
       );
     }
   }

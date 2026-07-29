@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class CreateTicketScreen extends StatefulWidget {
   const CreateTicketScreen({super.key});
@@ -96,7 +97,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to create ticket: ${result['error']}'),
+              content: Text(AppErrorHandler.messageFor(result['error'])),
               backgroundColor: Colors.red,
             ),
           );
@@ -111,7 +112,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating ticket: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );

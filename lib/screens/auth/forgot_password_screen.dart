@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -58,18 +59,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (mounted) {
           // Show user-friendly error message
           setState(() {
-            String errorMsg = 'An error occurred. Please try again.';
-            
-            // Parse the error message to be more user-friendly
-            if (e.toString().contains('Invalid email')) {
-              errorMsg = 'Invalid email address';
-            } else if (e.toString().contains('Email not found')) {
-              errorMsg = 'Email address not found';
-            } else if (e.toString().contains('Rate limit')) {
-              errorMsg = 'Too many attempts. Please try again later.';
+            final raw = e.toString();
+            if (raw.contains('Invalid email')) {
+              _errorMessage = 'Invalid email address';
+            } else if (raw.contains('Email not found')) {
+              _errorMessage = 'Email address not found';
+            } else if (raw.contains('Rate limit')) {
+              _errorMessage = 'Too many attempts. Please try again later.';
+            } else {
+              _errorMessage = AppErrorHandler.messageFor(e);
             }
-            
-            _errorMessage = errorMsg;
           });
         }
       } finally {

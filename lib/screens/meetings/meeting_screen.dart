@@ -6,6 +6,7 @@ import '../../widgets/custom_widgets.dart';
 import 'create_meeting_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'meeting_insights_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class MeetingScreen extends StatefulWidget {
   static final GlobalKey<_MeetingScreenState> globalKey =
@@ -76,7 +77,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted && !result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting meeting: ${result['error']}'),
+            content: Text(AppErrorHandler.messageFor(result['error'])),
             backgroundColor: Colors.red,
           ),
         );
@@ -88,7 +89,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting meeting: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
@@ -118,7 +119,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error launching URL: $e'),
+            content: Text(AppErrorHandler.messageFor(e)),
             backgroundColor: Colors.red,
           ),
         );
