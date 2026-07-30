@@ -7,6 +7,7 @@ import '../home/home_screen.dart';
 import 'login_screen.dart';
 import 'verify_otp_screen.dart';
 import 'team_selection_dialog.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -84,9 +85,7 @@ class _SignupScreenState extends State<SignupScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -146,9 +145,7 @@ class _SignupScreenState extends State<SignupScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -180,22 +177,16 @@ class _SignupScreenState extends State<SignupScreen>
             NavigationService().navigateToReplacement(const HomeScreen());
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Google sign-in failed',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {

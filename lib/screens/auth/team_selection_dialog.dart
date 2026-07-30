@@ -3,6 +3,7 @@ import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
 import '../../widgets/custom_widgets.dart';
 import '../home/home_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class TeamSelectionDialog extends StatefulWidget {
   final String userEmail;
@@ -53,22 +54,16 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           Navigator.of(context).pop();
           NavigationService().navigateToReplacement(const HomeScreen());
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Failed to join team'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Failed to join team',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -95,22 +90,16 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
           // Show team ID dialog
           _showTeamIdDialog(result['teamId']);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Failed to create team'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Failed to create team',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {

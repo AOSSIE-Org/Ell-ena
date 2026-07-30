@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class TeamMembersScreen extends StatefulWidget {
   final String teamId;
@@ -46,12 +47,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading team members: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }

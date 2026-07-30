@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class AIService {
   static final AIService _instance = AIService._internal();
@@ -386,7 +387,7 @@ class AIService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(requestBody),
-      );
+      ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -425,16 +426,28 @@ class AIService {
         };
       } else {
         debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
+        final statusCode = response.statusCode;
+        final String content;
+        if (statusCode == 401 || statusCode == 403) {
+          content =
+              'AI service credentials are invalid or missing. Please check your API key configuration.';
+        } else {
+          content = AppErrorHandler.messageFor(
+            'Gemini API error',
+            statusCode: statusCode,
+            fallback: AppErrorHandler.serverMessage,
+          );
+        }
         return {
           'type': 'error',
-          'content': 'Sorry, I encountered an error while processing your request.',
+          'content': content,
         };
       }
     } catch (e) {
       debugPrint('Error generating chat response: $e');
       return {
         'type': 'error',
-        'content': 'Sorry, I encountered an error while processing your request.',
+        'content': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -524,7 +537,7 @@ class AIService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode(requestBody),
-      );
+      ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);

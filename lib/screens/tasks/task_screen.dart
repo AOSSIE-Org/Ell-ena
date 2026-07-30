@@ -3,6 +3,7 @@ import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
 import 'task_detail_screen.dart';
 import 'create_task_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class TaskScreen extends StatefulWidget {
   // Create a static key that can be used to access the state
@@ -105,12 +106,7 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task status: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating task status: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 
@@ -125,12 +121,7 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task approval: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating task approval: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 
@@ -748,8 +739,13 @@ class _TaskCard extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
-                                            content: Text(result['error'] ??
-                                                'Failed to delete task'),
+                                            content: Text(
+                                              AppErrorHandler.messageFor(
+                                                result['error'],
+                                                fallback:
+                                                    'Failed to delete task',
+                                              ),
+                                            ),
                                             backgroundColor: Colors.red,
                                           ),
                                         );
@@ -757,13 +753,7 @@ class _TaskCard extends StatelessWidget {
                                     }
                                   } catch (e) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
+                                      AppErrorHandler.showSnackBar(context, e);
                                     }
                                   }
                                 }

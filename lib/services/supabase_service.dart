@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -156,7 +157,7 @@ class SupabaseService {
       debugPrint('Error getting user teams: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
         'teams': [],
       };
     }
@@ -228,7 +229,7 @@ class SupabaseService {
       debugPrint('Error switching team: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -482,7 +483,7 @@ class SupabaseService {
       debugPrint('Error joining team: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -564,7 +565,7 @@ class SupabaseService {
           authSubscription?.cancel();
           return {
             'success': false,
-            'error': 'Authentication timed out',
+            'error': AppErrorHandler.timeoutMessage,
           };
         },
       );
@@ -572,7 +573,7 @@ class SupabaseService {
       debugPrint('Error signing in with Google: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -695,7 +696,7 @@ class SupabaseService {
       debugPrint('Error joining team with Google: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1000,7 +1001,7 @@ class SupabaseService {
           debugPrint('Error creating team after verification: $e');
           return {
             'success': false,
-            'error': e.toString(),
+            'error': AppErrorHandler.messageFor(e),
           };
         }
       } else if (type == 'signup_join' && userData.isNotEmpty) {
@@ -1037,7 +1038,7 @@ class SupabaseService {
           debugPrint('Error joining team after verification: $e');
           return {
             'success': false,
-            'error': e.toString(),
+            'error': AppErrorHandler.messageFor(e),
           };
         }
       } else if (type == 'reset_password') {
@@ -1055,7 +1056,7 @@ class SupabaseService {
       debugPrint('Error verifying OTP: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1101,7 +1102,7 @@ class SupabaseService {
       debugPrint('Error resending verification email: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1340,7 +1341,7 @@ class SupabaseService {
       debugPrint('Error creating task: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1376,7 +1377,7 @@ class SupabaseService {
       debugPrint('Error updating task status: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1423,7 +1424,7 @@ class SupabaseService {
       debugPrint('Error updating task approval: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1573,7 +1574,7 @@ class SupabaseService {
       debugPrint('Error adding task comment: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1625,7 +1626,7 @@ class SupabaseService {
       debugPrint('Error deleting task: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1830,7 +1831,7 @@ class SupabaseService {
       debugPrint('Error creating ticket: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1871,7 +1872,7 @@ class SupabaseService {
       debugPrint('Error updating ticket status: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1912,7 +1913,7 @@ class SupabaseService {
       debugPrint('Error updating ticket priority: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -1962,7 +1963,7 @@ class SupabaseService {
       debugPrint('Error updating ticket approval: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -2084,7 +2085,7 @@ class SupabaseService {
       debugPrint('Error adding ticket comment: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -2139,7 +2140,7 @@ class SupabaseService {
       debugPrint('Error deleting ticket: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -2180,7 +2181,7 @@ class SupabaseService {
       debugPrint('Error assigning ticket: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -2310,7 +2311,7 @@ class SupabaseService {
       debugPrint('Error creating meeting: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -2423,7 +2424,7 @@ class SupabaseService {
       debugPrint('Error updating meeting: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }
@@ -2459,7 +2460,7 @@ class SupabaseService {
       debugPrint('Error deleting meeting: $e');
       return {
         'success': false,
-        'error': e.toString(),
+        'error': AppErrorHandler.messageFor(e),
       };
     }
   }

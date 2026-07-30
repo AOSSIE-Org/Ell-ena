@@ -4,6 +4,7 @@ import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
 import 'login_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class SetNewPasswordScreen extends StatefulWidget {
   final String email;
@@ -67,7 +68,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
         }
       } catch (e) {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = AppErrorHandler.messageFor(e);
         });
       } finally {
         if (mounted) {

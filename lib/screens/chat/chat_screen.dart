@@ -7,6 +7,7 @@ import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class ChatScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
@@ -324,7 +325,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       setState(() {
         _messages.add(
           ChatMessage(
-            text: "Sorry, I encountered an error. Please try again later.",
+            text: AppErrorHandler.messageFor(e),
             isUser: false,
             timestamp: DateTime.now(),
           ),
@@ -516,7 +517,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return result;
     } catch (e) {
       debugPrint('Error creating task: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': AppErrorHandler.messageFor(e)};
     }
   }
 
@@ -573,7 +574,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return result;
     } catch (e) {
       debugPrint('Error creating ticket: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': AppErrorHandler.messageFor(e)};
     }
   }
 
@@ -610,7 +611,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return result;
     } catch (e) {
       debugPrint('Error creating meeting: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': AppErrorHandler.messageFor(e)};
     }
   }
 
@@ -720,7 +721,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       };
     } catch (e) {
       debugPrint('Error querying tasks: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': AppErrorHandler.messageFor(e)};
     }
   }
 
@@ -833,7 +834,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       };
     } catch (e) {
       debugPrint('Error querying tickets: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': AppErrorHandler.messageFor(e)};
     }
   }
 
@@ -1027,7 +1028,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       return result;
     } catch (e) {
       debugPrint('Error modifying item: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': AppErrorHandler.messageFor(e)};
     }
   }
 
@@ -1117,12 +1118,7 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       }
     } catch (e) {
       debugPrint('Error navigating to item: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Navigation error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 

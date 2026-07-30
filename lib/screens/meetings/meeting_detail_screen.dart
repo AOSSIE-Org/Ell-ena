@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class MeetingDetailScreen extends StatefulWidget {
   final String meetingId;
@@ -111,12 +112,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading meeting details: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -129,23 +125,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         if (result['success']) {
           Navigator.pop(context, true);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting meeting: ${result['error']}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
       debugPrint('Error deleting meeting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting meeting: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -228,12 +214,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
             _isLoading = false;
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error updating meeting: ${result['error']}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          AppErrorHandler.showSnackBar(context, result['error']);
         }
       }
     } catch (e) {
@@ -243,12 +224,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating meeting: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -291,17 +267,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               content: Text('Ticket created'), backgroundColor: Colors.green),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to create ticket: ${result['error']}'),
-              backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 
@@ -332,17 +302,11 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
               content: Text('Task created'), backgroundColor: Colors.green),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to create task: ${result['error']}'),
-              backgroundColor: Colors.red),
-        );
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      AppErrorHandler.showSnackBar(context, e);
     }
   }
 

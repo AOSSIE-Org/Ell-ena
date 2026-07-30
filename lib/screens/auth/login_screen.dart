@@ -8,6 +8,7 @@ import '../home/home_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import 'team_selection_dialog.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -94,14 +95,12 @@ class _LoginScreenState extends State<LoginScreen>
           backgroundColor: Colors.red,
         ),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connection error. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
+      AppErrorHandler.showSnackBar(
+        context,
+        e,
+        fallback: 'Unable to sign in. Please try again.',
       );
     } finally {
       if (mounted) {
@@ -133,22 +132,16 @@ class _LoginScreenState extends State<LoginScreen>
             NavigationService().navigateToReplacement(const HomeScreen());
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Google sign-in failed',
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     } finally {
       if (mounted) {

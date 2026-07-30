@@ -6,6 +6,7 @@ import '../../widgets/custom_widgets.dart';
 import 'create_meeting_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'meeting_insights_screen.dart';
+import 'package:ell_ena/utils/app_error_handler.dart';
 
 class MeetingScreen extends StatefulWidget {
   static final GlobalKey<_MeetingScreenState> globalKey =
@@ -73,25 +74,16 @@ class _MeetingScreenState extends State<MeetingScreen> {
     try {
       final result = await _supabaseService.deleteMeeting(meetingId);
 
-      if (mounted && !result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting meeting: ${result['error']}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      if (!mounted) return;
+      if (result['success'] == true) {
+        await _loadInitialData();
       } else {
-        _loadInitialData();
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       debugPrint('Error deleting meeting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting meeting: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
@@ -116,12 +108,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
     } catch (e) {
       debugPrint('Error launching URL: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error launching URL: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppErrorHandler.showSnackBar(context, e);
       }
     }
   }
