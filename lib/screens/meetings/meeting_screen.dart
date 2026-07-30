@@ -74,10 +74,11 @@ class _MeetingScreenState extends State<MeetingScreen> {
     try {
       final result = await _supabaseService.deleteMeeting(meetingId);
 
-      if (mounted && !result['success']) {
-        AppErrorHandler.showSnackBar(context, result['error']);
+      if (!mounted) return;
+      if (result['success'] == true) {
+        await _loadInitialData();
       } else {
-        _loadInitialData();
+        AppErrorHandler.showSnackBar(context, result['error']);
       }
     } catch (e) {
       debugPrint('Error deleting meeting: $e');

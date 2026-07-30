@@ -91,11 +91,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to update task status'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            null,
+            fallback: 'Failed to update task status',
           );
         }
       }

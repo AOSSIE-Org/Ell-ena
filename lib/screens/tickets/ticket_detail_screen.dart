@@ -65,11 +65,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load ticket details'),
-            backgroundColor: Colors.red,
-          ),
+        AppErrorHandler.showSnackBar(
+          context,
+          null,
+          fallback: 'Failed to load ticket details',
         );
       }
     } catch (e) {
@@ -193,12 +192,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('Failed to update ticket status: ${result['error']}'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Failed to update ticket status',
           );
         }
       }
@@ -234,12 +231,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content:
-                  Text('Failed to update ticket priority: ${result['error']}'),
-              backgroundColor: Colors.red,
-            ),
+          AppErrorHandler.showSnackBar(
+            context,
+            result['error'],
+            fallback: 'Failed to update ticket priority',
           );
         }
       }
