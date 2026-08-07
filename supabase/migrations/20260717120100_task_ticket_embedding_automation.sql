@@ -1,4 +1,4 @@
--- Week 11: NULL-sentinel + pg_cron for task/ticket embeddings
+-- NULL-sentinel + pg_cron for task/ticket embeddings
 -- (same architecture as process_meetings_missing_embeddings).
 
 CREATE OR REPLACE FUNCTION reset_task_description_embedding()
