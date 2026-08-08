@@ -1,4 +1,5 @@
-// Pure Dart utility class for formatting meeting summaries
+// Pure Dart utility class for formatting meeting summaries and RAG results
+import 'dart:convert';
 
 /// Helper class to format meeting summaries for better display in chat
 class MeetingFormatter {
@@ -97,5 +98,81 @@ class MeetingFormatter {
     }
     
     return buffer.toString();
+  }
+
+  /// Formats rag_search / search_rag_by_resp_id rows for the Gemini prompt.
+  /// Reuses meeting formatting when content is meeting summary JSON.
+  static String formatRagResults(List<Map<String, dynamic>> results) {
+    if (results.isEmpty) {
+      return "No relevant context found.";
+    }
+
+    final buffer = StringBuffer();
+
+    for (int i = 0; i < results.length; i++) {
+      final result = results[i];
+
+      if (i > 0) {
+        buffer.writeln('\n${'-' * 40}\n');
+      }
+
+      final entityType = result['entity_type']?.toString() ?? 'unknown';
+      final title = result['title']?.toString() ?? 'Untitled';
+      final content = result['content'];
+      final similarity = result['similarity'];
+
+      if (entityType == 'meeting') {
+        final summary = _tryParseMeetingSummary(content);
+        if (summary != null) {
+          buffer.write(formatMeetingSummary(
+            title: title,
+            date: 'Retrieved meeting',
+            summary: summary,
+          ));
+        } else {
+          buffer.writeln('📅 *Meeting: $title*');
+          if (content != null && content.toString().trim().isNotEmpty) {
+            buffer.writeln(content.toString());
+          }
+        }
+      } else if (entityType == 'task') {
+        buffer.writeln('✅ *Task: $title*');
+        if (content != null && content.toString().trim().isNotEmpty) {
+          buffer.writeln(content.toString());
+        }
+      } else if (entityType == 'ticket') {
+        buffer.writeln('🎫 *Ticket: $title*');
+        if (content != null && content.toString().trim().isNotEmpty) {
+          buffer.writeln(content.toString());
+        }
+      } else {
+        buffer.writeln('*$title* ($entityType)');
+        if (content != null && content.toString().trim().isNotEmpty) {
+          buffer.writeln(content.toString());
+        }
+      }
+
+      if (similarity != null) {
+        buffer.writeln('(similarity: $similarity)');
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  static Map<String, dynamic>? _tryParseMeetingSummary(dynamic content) {
+    if (content == null) return null;
+    if (content is Map<String, dynamic>) return content;
+    if (content is Map) return Map<String, dynamic>.from(content);
+    if (content is String && content.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(content);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 }
