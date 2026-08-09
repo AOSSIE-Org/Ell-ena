@@ -144,8 +144,8 @@ Ell-ena uses PostgreSQL (via Supabase) with strict Row-Level Security (RLS) and 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/Ell-ena.git
-   cd Ell-ena
+  git clone https://github.com/AOSSIE-Org/Ell-ena.git
+  cd Ell-ena
    ```
 
 2. Set up backend (Supabase)
