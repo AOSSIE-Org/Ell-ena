@@ -2,47 +2,58 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
+import 'package:ell_ena/models/rag_result.dart';
+import 'package:ell_ena/services/ai_context_builder.dart';
+import 'package:ell_ena/services/ai_prompt_builder.dart';
+import 'package:ell_ena/services/rag_retriever.dart';
 import 'package:ell_ena/services/supabase_service.dart';
-import 'package:ell_ena/services/meeting_formatter.dart';
 
 class AIService {
   static final AIService _instance = AIService._internal();
-  final String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  final String _apiUrl =
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   String? _apiKey;
   bool _isInitialized = false;
   late final SupabaseService _supabaseService;
-  
+
   factory AIService() {
     return _instance;
   }
-  
+
   AIService._internal() {
     _supabaseService = SupabaseService();
   }
-  
+
   bool get isInitialized => _isInitialized;
-  
+
+  /// Invoker-rights Supabase RPC (respects RLS). Used by [RagRetriever].
+  Future<dynamic> invokeRpc(
+    String functionName, {
+    Map<String, dynamic>? params,
+  }) {
+    return _supabaseService.client.rpc(functionName, params: params);
+  }
+
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     try {
       // Load API key from .env file
       await dotenv.load().catchError((e) {
         debugPrint('Error loading .env file: $e');
       });
-      
+
       _apiKey = dotenv.env['GEMINI_API_KEY'];
-      
+
       if (_apiKey == null || _apiKey!.isEmpty) {
         throw Exception('Missing Gemini API key. Please check your .env file.');
       }
-      
+
       // Initialize Supabase service if not already initialized
       if (!_supabaseService.isInitialized) {
         await _supabaseService.initialize();
       }
-      
+
       _isInitialized = true;
       debugPrint('AI Service initialized successfully');
     } catch (e) {
@@ -50,25 +61,23 @@ class AIService {
       rethrow;
     }
   }
-  
+
   // Function to generate a chat response
   Future<Map<String, dynamic>> generateChatResponse(
-    String userMessage, 
+    String userMessage,
     List<Map<String, String>> chatHistory,
     List<Map<String, dynamic>> teamMembers, {
-    List<Map<String, dynamic>> userTasks = const [],
-    List<Map<String, dynamic>> userTickets = const [],
+    String? ragContext,
+    bool retrieveContext = true,
   }) async {
     if (!_isInitialized) {
       await initialize();
     }
-    
-    // Semantic retrieval across meetings, tasks, and tickets (rag_search)
-    String ragContext = "";
-    final ragResults = await getRelevantRagResults(userMessage);
-    if (ragResults.isNotEmpty) {
-      ragContext = "\nRelevant workspace context:\n\n";
-      ragContext += MeetingFormatter.formatRagResults(ragResults);
+
+    var resolvedRagContext = ragContext ?? '';
+    if (retrieveContext) {
+      final outcome = await retrieveSemanticContext(userMessage);
+      resolvedRagContext = AiContextBuilder.buildWorkspaceContext(outcome);
     }
 
     try {
@@ -90,7 +99,8 @@ class AIService {
               },
               "due_date": {
                 "type": "string",
-                "description": "The due date of the task in ISO format (YYYY-MM-DD)"
+                "description":
+                    "The due date of the task in ISO format (YYYY-MM-DD)"
               },
               "assigned_to": {
                 "type": "string",
@@ -121,7 +131,15 @@ class AIService {
               },
               "category": {
                 "type": "string",
-                "enum": ["Bug", "Feature Request", "UI/UX", "Performance", "Documentation", "Security", "Other"],
+                "enum": [
+                  "Bug",
+                  "Feature Request",
+                  "UI/UX",
+                  "Performance",
+                  "Documentation",
+                  "Security",
+                  "Other"
+                ],
                 "description": "The category of the ticket"
               },
               "assigned_to": {
@@ -148,7 +166,8 @@ class AIService {
               },
               "meeting_date": {
                 "type": "string",
-                "description": "The date and time of the meeting in ISO format (YYYY-MM-DDTHH:MM:SS)"
+                "description":
+                    "The date and time of the meeting in ISO format (YYYY-MM-DDTHH:MM:SS)"
               },
               "meeting_url": {
                 "type": "string",
@@ -179,7 +198,8 @@ class AIService {
               },
               "assigned_to_team_member": {
                 "type": "string",
-                "description": "Filter tasks assigned to a specific team member (by name or ID)"
+                "description":
+                    "Filter tasks assigned to a specific team member (by name or ID)"
               }
             }
           }
@@ -206,7 +226,8 @@ class AIService {
               },
               "assigned_to_team_member": {
                 "type": "string",
-                "description": "Filter tickets assigned to a specific team member (by name or ID)"
+                "description":
+                    "Filter tickets assigned to a specific team member (by name or ID)"
               }
             }
           }
@@ -240,20 +261,24 @@ class AIService {
               },
               "due_date": {
                 "type": "string",
-                "description": "The new due date for a task (if changing) in ISO format (YYYY-MM-DD)"
+                "description":
+                    "The new due date for a task (if changing) in ISO format (YYYY-MM-DD)"
               },
               "priority": {
                 "type": "string",
                 "enum": ["low", "medium", "high", "critical"],
-                "description": "The new priority level for a ticket (if changing)"
+                "description":
+                    "The new priority level for a ticket (if changing)"
               },
               "meeting_date": {
                 "type": "string",
-                "description": "The new date and time for a meeting (if changing) in ISO format (YYYY-MM-DDTHH:MM:SS)"
+                "description":
+                    "The new date and time for a meeting (if changing) in ISO format (YYYY-MM-DDTHH:MM:SS)"
               },
               "assigned_to": {
                 "type": "string",
-                "description": "The user ID to reassign the item to (if changing)"
+                "description":
+                    "The user ID to reassign the item to (if changing)"
               }
             },
             "required": ["item_type", "item_id"]
@@ -261,91 +286,29 @@ class AIService {
         }
       ];
 
-      // Create the contents array with chat history
-      final List<Map<String, dynamic>> contents = [];
-      
-      // Create team member context for the model
-      String teamMemberContext = "Available team members:\n";
-      for (var member in teamMembers) {
-        teamMemberContext += "- ${member['full_name']} (${member['role']}): ${member['id']}\n";
-      }
-      
-      // Add system message as the first message with role "model"
-      contents.add({
-        "role": "model",
-        "parts": [
-          {
-            "text": "You are a helpful assistant for a team collaboration app called Ell-ena. You can help users create and manage tasks, tickets, and schedule meetings. When appropriate, call the relevant function to help users.\n\n" +
-                    "Current date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n\n" +
-                    "$teamMemberContext\n" +
-                    "$ragContext\n" +
-                    "Guidelines for tasks, tickets, and meetings:\n" +
-                    "1. Create descriptive, clear titles that summarize the purpose - be specific and professional (e.g., 'Bug Fixes Discussion' instead of just 'Meeting')\n" +
-                    "2. Always provide detailed descriptions with all relevant information, even if the user doesn't explicitly provide it\n" +
-                    "3. When users mention dates like 'tomorrow', 'next week', etc., convert them to proper ISO format (YYYY-MM-DD for tasks, YYYY-MM-DDTHH:MM:SS for meetings)\n" +
-                    "4. For tickets, choose the appropriate priority and category based on the request context\n" +
-                    "5. If the user doesn't specify who to assign the task/ticket to, leave it unassigned\n" +
-                    "6. If the user mentions a team member by name, assign it to that person - be attentive to names mentioned in the request\n" +
-                    "7. When users ask about tasks assigned to specific team members (e.g., 'tasks assigned to Aarav'), use query_tasks with assigned_to_team_member parameter\n" +
-                    "8. When users ask about their own tasks, use query_tasks with assigned_to_me=true\n" +
-                    "9. When users ask to modify existing items, use the modify_item function\n" +
-                    "10. Be proactive in suggesting appropriate actions based on user requests\n" +
-                    "11. For meetings, always set appropriate titles and descriptions based on the context, even if minimal information is provided\n" +
-                    "12. Be very attentive to team member names in requests to ensure proper assignment and querying"
-          }
-        ]
-      });
-      
-      // Add chat history
-      for (var message in chatHistory) {
-        String role = message["role"] ?? "user";
-        // Ensure role is either "user" or "model", not "system"
-        if (role != "user" && role != "model") {
-          role = "user";
-        }
-        
-        contents.add({
-          "role": role,
-          "parts": [
-            {
-              "text": message["content"] ?? ""
-            }
-          ]
-        });
-      }
-      
-      // Add the current user message
-      contents.add({
-        "role": "user",
-        "parts": [
-          {
-            "text": userMessage
-          }
-        ]
-      });
-      
+      final contents = AiPromptBuilder.buildContents(
+        userMessage: userMessage,
+        chatHistory: chatHistory,
+        teamMembers: teamMembers,
+        ragContext: resolvedRagContext,
+      );
+
       // Create the request body
       final Map<String, dynamic> requestBody = {
         "contents": contents,
         "tools": [
-          {
-            "functionDeclarations": functionDeclarations
-          }
+          {"functionDeclarations": functionDeclarations}
         ],
         "toolConfig": {
-          "functionCallingConfig": {
-            "mode": "AUTO"
-          }
+          "functionCallingConfig": {"mode": "AUTO"}
         },
-        "generationConfig": {
-          "temperature": 0.7,
-          "maxOutputTokens": 1024
-        }
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1024}
       };
-      
+
       // Log the request for debugging
-      debugPrint('Sending chat request to Gemini API: ${jsonEncode(requestBody)}');
-      
+      debugPrint(
+          'Sending chat request to Gemini API: ${jsonEncode(requestBody)}');
+
       // Make the API request
       final response = await http.post(
         Uri.parse('$_apiUrl?key=$_apiKey'),
@@ -354,22 +317,22 @@ class AIService {
         },
         body: jsonEncode(requestBody),
       );
-      
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        
+
         // Check if the response contains a function call
         final candidates = responseData['candidates'] as List<dynamic>;
         if (candidates.isNotEmpty) {
           final content = candidates[0]['content'];
           final parts = content['parts'] as List<dynamic>;
-          
+
           for (var part in parts) {
             if (part.containsKey('functionCall')) {
               final functionCall = part['functionCall'];
               final functionName = functionCall['name'];
               final arguments = functionCall['args'];
-              
+
               return {
                 'type': 'function_call',
                 'function_name': functionName,
@@ -378,34 +341,37 @@ class AIService {
               };
             }
           }
-          
+
           // If no function call is detected, return as regular message
           return {
             'type': 'message',
             'content': candidates[0]['content']['parts'][0]['text'] ?? '',
           };
         }
-        
+
         return {
           'type': 'error',
           'content': 'No response generated',
         };
       } else {
-        debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
+        debugPrint(
+            'Error from Gemini API: ${response.statusCode} ${response.body}');
         return {
           'type': 'error',
-          'content': 'Sorry, I encountered an error while processing your request.',
+          'content':
+              'Sorry, I encountered an error while processing your request.',
         };
       }
     } catch (e) {
       debugPrint('Error generating chat response: $e');
       return {
         'type': 'error',
-        'content': 'Sorry, I encountered an error while processing your request.',
+        'content':
+            'Sorry, I encountered an error while processing your request.',
       };
     }
   }
-  
+
   // Function to handle tool responses
   Future<String> handleToolResponse({
     required String functionName,
@@ -416,47 +382,43 @@ class AIService {
     if (!_isInitialized) {
       await initialize();
     }
-    
+
     try {
       // Parse the raw response for debugging purposes
       jsonDecode(rawResponse);
-      
+
       // Create the contents array for the follow-up request
       final List<Map<String, dynamic>> contents = [];
-      
+
       // Add a system message first to provide context
       contents.add({
         "role": "model",
         "parts": [
           {
-            "text": "You are a helpful assistant for a team collaboration app. You help users manage tasks, tickets, and meetings."
+            "text":
+                "You are a helpful assistant for a team collaboration app. You help users manage tasks, tickets, and meetings."
           }
         ]
       });
-      
+
       // Add a user message to establish context
       contents.add({
         "role": "user",
         "parts": [
-          {
-            "text": "I'd like to ${functionName.replaceAll('_', ' ')}"
-          }
+          {"text": "I'd like to ${functionName.replaceAll('_', ' ')}"}
         ]
       });
-      
+
       // Add the original model response with the function call
       contents.add({
         "role": "model",
         "parts": [
           {
-            "functionCall": {
-              "name": functionName,
-              "args": arguments
-            }
+            "functionCall": {"name": functionName, "args": arguments}
           }
         ]
       });
-      
+
       // Add the function response as a user turn
       contents.add({
         "role": "user",
@@ -464,26 +426,21 @@ class AIService {
           {
             "functionResponse": {
               "name": functionName,
-              "response": {
-                "content": result
-              }
+              "response": {"content": result}
             }
           }
         ]
       });
-      
+
       // Create the request body
       final Map<String, dynamic> requestBody = {
         "contents": contents,
-        "generationConfig": {
-          "temperature": 0.7,
-          "maxOutputTokens": 512
-        }
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 512}
       };
-      
+
       // Log the request for debugging
       debugPrint('Sending request to Gemini API: ${jsonEncode(requestBody)}');
-      
+
       // Make the API request
       final response = await http.post(
         Uri.parse('$_apiUrl?key=$_apiKey'),
@@ -492,16 +449,18 @@ class AIService {
         },
         body: jsonEncode(requestBody),
       );
-      
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final candidates = responseData['candidates'] as List<dynamic>;
         if (candidates.isNotEmpty) {
-          return candidates[0]['content']['parts'][0]['text'] ?? 'Function executed successfully.';
+          return candidates[0]['content']['parts'][0]['text'] ??
+              'Function executed successfully.';
         }
         return 'Function executed successfully.';
       } else {
-        debugPrint('Error from Gemini API: ${response.statusCode} ${response.body}');
+        debugPrint(
+            'Error from Gemini API: ${response.statusCode} ${response.body}');
         return 'Function executed successfully.';
       }
     } catch (e) {
@@ -509,9 +468,10 @@ class AIService {
       return 'Function executed successfully.';
     }
   }
-  
+
   // Function to get relevant meeting summaries for a query (vector search only)
-  Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) async {
+  Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(
+      String query) async {
     if (!_isInitialized) {
       await initialize();
     }
@@ -545,7 +505,8 @@ class AIService {
         final meetings = List<Map<String, dynamic>>.from(response);
 
         for (var meeting in meetings) {
-          print("Meeting: ${meeting['title']} - Date: ${meeting['meeting_date']}");
+          print(
+              "Meeting: ${meeting['title']} - Date: ${meeting['meeting_date']}");
           if (meeting.containsKey('similarity')) {
             print("Similarity: ${meeting['similarity']}");
           }
@@ -566,62 +527,38 @@ class AIService {
   }
 
   /// Unified semantic retrieval via queue_embedding → search_rag_by_resp_id.
-  Future<List<Map<String, dynamic>>> getRelevantRagResults(String query) async {
+  Future<RagRetrievalOutcome> retrieveSemanticContext(String query) async {
     if (!_isInitialized) {
       await initialize();
     }
+    return RagRetriever(rpc: invokeRpc).retrieve(query);
+  }
 
-    print("👉 getRelevantRagResults() called with query: $query");
-
-    try {
-      final respIdResponse = await _supabaseService.client.rpc(
-        'queue_embedding',
-        params: {
-          'query_text': query,
-        },
-      );
-
-      final respId = respIdResponse as int;
-      print("👉 Embedding queued with response ID: $respId");
-
-      final response = await _supabaseService.client.rpc(
-        'search_rag_by_resp_id',
-        params: {
-          'resp_id': respId,
-          'match_count': 5,
-        },
-      );
-
-      print("👉 Got rag search results using response ID: $respId");
-
-      if (response is List) {
-        final results = List<Map<String, dynamic>>.from(response);
-
-        for (var result in results) {
-          print(
-            "RAG: ${result['entity_type']} - ${result['title']} "
-            "(similarity: ${result['similarity']})",
-          );
-        }
-
-        return results;
-      }
-
-      print("👉 No relevant rag results found or invalid response format");
-      return [];
-    } catch (e, st) {
-      debugPrint('Error getting relevant rag results: $e\n$st');
-      return [];
-    }
+  /// Unified semantic retrieval via queue_embedding → search_rag_by_resp_id.
+  Future<List<Map<String, dynamic>>> getRelevantRagResults(String query) async {
+    final outcome = await retrieveSemanticContext(query);
+    return outcome.results.map((result) => result.toMap()).toList();
   }
 
   // Helper method to detect if a query is meeting-related
   // Kept for compatibility; chat context now uses getRelevantRagResults.
+  // ignore: unused_element
   bool _isMeetingRelatedQuery(String query) {
     final meetingKeywords = [
-      'meeting', 'meetings', 'call', 'discussion', 'talked about',
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about',
+      'meeting',
+      'meetings',
+      'call',
+      'discussion',
+      'talked about',
+      'said in',
+      'mentioned in',
+      'last meeting',
+      'previous meeting',
+      'summary',
+      'minutes',
+      'transcript',
+      'recording',
+      'spoke about',
     ];
 
     final queryLower = query.toLowerCase();
