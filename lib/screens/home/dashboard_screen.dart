@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/dashboard/dashboard_controller.dart';
 import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -7,20 +9,18 @@ import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  int _selectedTimeRange = 0; // 0: Week, 1: Month
   bool _isLoading = true;
   String? _userName;
-  String? _currentTeamId;
   String? _currentTeamName;
   List<Map<String, dynamic>> _userTeams = [];
   int _tasksTotal = 0;
@@ -57,6 +57,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _showTeamSwitcher() {
+    final selectedTeamId = ref.read(dashboardControllerProvider).selectedTeamId;
+
     showDialog(
       context: context,
       builder: (context) {
@@ -76,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               itemCount: _userTeams.length,
               itemBuilder: (context, index) {
                 final team = _userTeams[index];
-                final isCurrentTeam = team['id'] == _currentTeamId;
+                final isCurrentTeam = team['id'] == selectedTeamId;
 
                 final scheme = Theme.of(context).colorScheme;
                 return ListTile(
@@ -189,7 +191,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       // Set current team
       if (profile != null && profile['team_id'] != null) {
-        _currentTeamId = profile['team_id'];
+        ref
+            .read(dashboardControllerProvider.notifier)
+            .setSelectedTeam(profile['team_id'] as String);
         _currentTeamName = profile['teams']?['name'] ?? 'My Team';
       }
 
@@ -223,39 +227,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       _allTasks = tasks;
       final tickets = List<Map<String, dynamic>>.from(results[1] as List);
       final meetings = List<Map<String, dynamic>>.from(results[2] as List);
+      final now = DateTime.now();
 
       _tasksTotal = tasks.length;
       _tasksInProgress =
           tasks.where((t) => t['status'] == 'in_progress').length;
       _tasksCompleted = tasks.where((t) => t['status'] == 'completed').length;
 
-      // Build completion series for last 7 days
-      final now = DateTime.now();
-      final Map<int, int> dayIndexToCompleted = {
-        for (var i = 0; i < 7; i++) i: 0
-      };
-      for (final t in tasks) {
-        if (t['status'] == 'completed') {
-          final ts = (t['updated_at'] ?? t['created_at'])?.toString();
-          if (ts != null) {
-            final updated = DateTime.tryParse(ts);
-            if (updated != null) {
-              final diffDays = now
-                  .difference(
-                      DateTime(updated.year, updated.month, updated.day))
-                  .inDays;
-              if (diffDays >= 0 && diffDays < 7) {
-                final idx = 6 - diffDays; // earlier days on the left
-                dayIndexToCompleted[idx] = (dayIndexToCompleted[idx] ?? 0) + 1;
-              }
-            }
-          }
-        }
-      }
-      _taskCompletionSpots = List.generate(
-        7,
-        (i) => FlSpot(i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
-      );
+      _recomputeChartSpots();
 
       _ticketsOpen = tickets.where((t) => t['status'] == 'open').length;
       _ticketsInProgress =
@@ -728,6 +707,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildAnalyticsSection() {
     final colorScheme = Theme.of(context).colorScheme;
+    final timeRange = ref.watch(dashboardControllerProvider).timeRange;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -754,7 +735,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     .titleLarge
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
-              if (_selectedTimeRange == 1)
+              if (timeRange == 1)
                 Text(
                   DateFormat('MMMM yyyy').format(DateTime.now()),
                   style: TextStyle(
@@ -788,7 +769,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       style: TextStyle(color: Colors.grey.shade500),
                     ),
                   )
-                : _selectedTimeRange == 0
+                : timeRange == 0
                     // Bar Chart for Weekly view
                     ? BarChart(
                         BarChartData(
@@ -947,50 +928,49 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _timeRangeButton(String text, int index) {
-    final isSelected = _selectedTimeRange == index;
-    return GestureDetector(
-      //onTap: () => setState(() => _selectedTimeRange = index),
-      onTap: () {
-        setState(() {
-          _selectedTimeRange = index;
+  void _recomputeChartSpots() {
+    final timeRange = ref.read(dashboardControllerProvider).timeRange;
 
-          if (index == 0) {
-            // Week → reusing existing weekly logic
-            final now = DateTime.now();
-            final Map<int, int> dayIndexToCompleted = {
-              for (var i = 0; i < 7; i++) i: 0
-            };
+    if (timeRange == 0) {
+      final now = DateTime.now();
+      final Map<int, int> dayIndexToCompleted = {
+        for (var i = 0; i < 7; i++) i: 0,
+      };
 
-            for (final t in _allTasks) {
-              if (t['status'] == 'completed') {
-                final ts = (t['updated_at'] ?? t['created_at'])?.toString();
-                final updated = ts != null ? DateTime.tryParse(ts) : null;
-                if (updated == null) continue;
+      for (final t in _allTasks) {
+        if (t['status'] == 'completed') {
+          final ts = (t['updated_at'] ?? t['created_at'])?.toString();
+          final updated = ts != null ? DateTime.tryParse(ts) : null;
+          if (updated == null) continue;
 
-                final diffDays = now
-                    .difference(
-                        DateTime(updated.year, updated.month, updated.day))
-                    .inDays;
+          final diffDays = now
+              .difference(DateTime(updated.year, updated.month, updated.day))
+              .inDays;
 
-                if (diffDays >= 0 && diffDays < 7) {
-                  final idx = 6 - diffDays;
-                  dayIndexToCompleted[idx] =
-                      (dayIndexToCompleted[idx] ?? 0) + 1;
-                }
-              }
-            }
-
-            _taskCompletionSpots = List.generate(
-              7,
-              (i) => FlSpot(
-                  i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
-            );
-          } else {
-            // Month → current calendar month
-            _taskCompletionSpots = _buildCurrentMonthSpots(_allTasks);
+          if (diffDays >= 0 && diffDays < 7) {
+            final idx = 6 - diffDays;
+            dayIndexToCompleted[idx] = (dayIndexToCompleted[idx] ?? 0) + 1;
           }
-        });
+        }
+      }
+
+      _taskCompletionSpots = List.generate(
+        7,
+        (i) => FlSpot(i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
+      );
+      return;
+    }
+
+    _taskCompletionSpots = _buildCurrentMonthSpots(_allTasks);
+  }
+
+  Widget _timeRangeButton(String text, int index) {
+    final timeRange = ref.watch(dashboardControllerProvider).timeRange;
+    final isSelected = timeRange == index;
+    return GestureDetector(
+      onTap: () {
+        ref.read(dashboardControllerProvider.notifier).setTimeRange(index);
+        setState(_recomputeChartSpots);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
