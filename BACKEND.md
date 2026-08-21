@@ -216,7 +216,7 @@ Supabase provides built-in authentication. The project uses email-based authenti
 1. Click **Create Credentials** → **OAuth client ID**
 2. Application type: **Android**
 3. Name: `Ell-ena Android`
-4. Package name: `org.aossie.ell_ena`
+4. Package name: `org.aossie.ellena`
 5. Get SHA-1 certificate fingerprint:
    ```bash
    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android

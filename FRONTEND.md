@@ -206,17 +206,14 @@ You can use either Visual Studio Code (VS Code) or Android Studio for Flutter de
    ```
 
 3. **Set Up Environment Variables**:
-   - Copy the `.env.example` file to create a new `.env` file:
+   - Client config is compile-time via `--dart-define-from-file` (not a bundled `.env` asset).
+   - Copy the example file and fill in **client-safe** values only:
    ```
-   cp .env.example .env
+   cp dart_defines.example.json dart_defines.json
    ```
-   - Update the `.env` file with your Supabase credentials (as described in the BACKEND.md guide):
-   ```
-   SUPABASE_URL=<YOUR_SUPABASE_URL>
-   SUPABASE_ANON_KEY=<YOUR_SUPABASE_ANON_KEY>
-   GEMINI_API_KEY=<YOUR_GEMINI_API_KEY>
-   VEXA_API_KEY=<YOUR_VEXA_API_KEY>
-   ```
+   - Required keys: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GEMINI_API_KEY`, `OAUTH_REDIRECT_URL`
+   - Do **not** put `SUPABASE_SERVICE_ROLE_KEY` or `VEXA_API_KEY` in `dart_defines.json` (server-only).
+   - `dart_defines.json` is gitignored.
 
 ## Connecting to the Supabase Backend
 
@@ -227,7 +224,7 @@ The Ell-ena project is already configured to connect to Supabase. The connection
    - Your Supabase project should be up and running with all the required tables and functions.
 
 2. **Configure Environment Variables**:
-   - Ensure your `.env` file contains the correct Supabase URL and anon key.
+   - Ensure `dart_defines.json` contains the correct Supabase URL and anon key.
    - These values can be found in your Supabase dashboard under Settings > API.
 
 3. **Initialize Supabase**:
@@ -245,15 +242,15 @@ The Ell-ena project is already configured to connect to Supabase. The connection
 2. **Run the App**:
    - To run on all connected devices:
    ```
-   flutter run
+   flutter run --dart-define-from-file=dart_defines.json
    ```
    - To run on a specific device:
    ```
-   flutter run -d <device-id>
+   flutter run -d <device-id> --dart-define-from-file=dart_defines.json
    ```
    - To run in release mode (for better performance):
    ```
-   flutter run --release
+   flutter run --release --dart-define-from-file=dart_defines.json
    ```
 
 3. **Debug Mode Features**:
@@ -285,13 +282,13 @@ The Ell-ena project is already configured to connect to Supabase. The connection
 
 3. **Build the APK**:
    ```
-   flutter build apk --release
+   flutter build apk --release --dart-define-from-file=dart_defines.json
    ```
    - The APK will be available at `build/app/outputs/flutter-apk/app-release.apk`.
 
 4. **Build App Bundle**:
    ```
-   flutter build appbundle --release
+   flutter build appbundle --release --dart-define-from-file=dart_defines.json
    ```
    - The bundle will be available at `build/app/outputs/bundle/release/app-release.aab`.
 
