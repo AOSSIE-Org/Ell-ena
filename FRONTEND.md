@@ -212,7 +212,7 @@ You can use either Visual Studio Code (VS Code) or Android Studio for Flutter de
    cp dart_defines.example.json dart_defines.json
    ```
    - Required keys: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GEMINI_API_KEY`, `OAUTH_REDIRECT_URL`
-   - Do **not** put `SUPABASE_SERVICE_ROLE_KEY` or `VEXA_API_KEY` in `dart_defines.json` (server-only).
+   - Do **not** put `SUPABASE_SERVICE_ROLE_KEY` in `dart_defines.json` (server-only).
    - `dart_defines.json` is gitignored.
 
 ## Connecting to the Supabase Backend
