@@ -261,3 +261,7 @@ Reference designs for the project can be found here:
 **Note:** This project is part of **GSoC'25 under AOSSIE** and is actively under development.
 
 
+
+## Code of Conduct
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
