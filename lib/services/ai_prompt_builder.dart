@@ -91,7 +91,10 @@ class AiPromptBuilder {
 
     for (final message in chatHistory) {
       var role = message['role'] ?? 'user';
-      if (role != 'user' && role != 'model') {
+      // Gemini expects "model" for assistant turns; remap legacy "assistant".
+      if (role == 'assistant') {
+        role = 'model';
+      } else if (role != 'user' && role != 'model') {
         role = 'user';
       }
       contents.add({

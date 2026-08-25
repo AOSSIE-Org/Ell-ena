@@ -41,14 +41,15 @@ class AiContextBuilder {
       case RagEntityType.meeting:
         final summary = MeetingFormatter.tryParseMeetingSummary(result.content);
         if (summary != null) {
-          buffer.write(MeetingFormatter.formatMeetingSummary(
+          // Expanded JSON can exceed task/ticket limits; cap after format.
+          buffer.write(_truncate(MeetingFormatter.formatMeetingSummary(
             title: '${result.title}$idSuffix',
-            date: 'Retrieved meeting',
+            date: _meetingDateLabel(result),
             summary: summary,
-          ));
+          )));
         } else {
           buffer.writeln('Meeting: ${result.title}$idSuffix');
-          final text = _truncated(result.content);
+          final text = _truncate(result.content);
           if (text.isNotEmpty) {
             buffer.writeln(text);
           }
@@ -56,21 +57,21 @@ class AiContextBuilder {
         break;
       case RagEntityType.task:
         buffer.writeln('Task: ${result.title}$idSuffix');
-        final text = _truncated(result.content);
+        final text = _truncate(result.content);
         if (text.isNotEmpty) {
           buffer.writeln(text);
         }
         break;
       case RagEntityType.ticket:
         buffer.writeln('Ticket: ${result.title}$idSuffix');
-        final text = _truncated(result.content);
+        final text = _truncate(result.content);
         if (text.isNotEmpty) {
           buffer.writeln(text);
         }
         break;
       case RagEntityType.unknown:
         buffer.writeln('${result.title}$idSuffix');
-        final text = _truncated(result.content);
+        final text = _truncate(result.content);
         if (text.isNotEmpty) {
           buffer.writeln(text);
         }
@@ -94,11 +95,16 @@ class AiContextBuilder {
     return buffer.toString();
   }
 
+  /// Max rows included in tool follow-up payloads sent to Gemini.
+  static const int maxToolResults = 20;
+
   /// Compact tool payload so Gemini does not receive full database rows.
+  /// Caps to [maxToolResults] without mutating [tasks].
   static List<Map<String, dynamic>> summarizeTasks(
-    List<Map<String, dynamic>> tasks,
-  ) {
-    return tasks.map(summarizeTask).toList();
+    List<Map<String, dynamic>> tasks, {
+    int limit = maxToolResults,
+  }) {
+    return _capToolResults(tasks, limit).map(summarizeTask).toList();
   }
 
   static Map<String, dynamic> summarizeTask(Map<String, dynamic> task) {
@@ -114,10 +120,13 @@ class AiContextBuilder {
     };
   }
 
+  /// Compact tool payload so Gemini does not receive full database rows.
+  /// Caps to [maxToolResults] without mutating [tickets].
   static List<Map<String, dynamic>> summarizeTickets(
-    List<Map<String, dynamic>> tickets,
-  ) {
-    return tickets.map(summarizeTicket).toList();
+    List<Map<String, dynamic>> tickets, {
+    int limit = maxToolResults,
+  }) {
+    return _capToolResults(tickets, limit).map(summarizeTicket).toList();
   }
 
   static Map<String, dynamic> summarizeTicket(Map<String, dynamic> ticket) {
@@ -134,7 +143,28 @@ class AiContextBuilder {
     };
   }
 
-  static String _truncated(String? content) {
+  /// Returns at most [limit] leading items; never mutates [items].
+  static List<Map<String, dynamic>> _capToolResults(
+    List<Map<String, dynamic>> items,
+    int limit,
+  ) {
+    if (limit < 0) return const [];
+    if (items.length <= limit) return items;
+    return items.sublist(0, limit);
+  }
+
+  static String _meetingDateLabel(RagResult result) {
+    final date = result.meetingDate;
+    if (date == null) return 'Retrieved meeting';
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    final hh = date.hour.toString().padLeft(2, '0');
+    final mm = date.minute.toString().padLeft(2, '0');
+    return '$y-$m-$d at $hh:$mm';
+  }
+
+  static String _truncate(String? content) {
     if (content == null) return '';
     final trimmed = content.trim();
     if (trimmed.isEmpty) return '';

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ell_ena/models/rag_result.dart';
 import 'package:ell_ena/services/ai_context_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,6 +82,98 @@ void main() {
       expect(formatted, contains('…'));
     });
 
+    test('caps expanded meeting summary at maxContentChars', () {
+      final points = List.generate(
+        40,
+        (i) => 'Discussion point number $i with extra detail for length',
+      );
+      final payload = {
+        'overall_summary': 'A' * 400,
+        'key_discussion_points': points,
+        'important_decisions': ['Ship OAuth fix', 'Defer dark mode'],
+        'action_items': [
+          {
+            'item': 'Patch redirect',
+            'owner': 'Aarav',
+            'deadline': '2026-08-30',
+          },
+        ],
+      };
+      final jsonMeeting = RagResult(
+        entityType: RagEntityType.meeting,
+        entityId: 'meet-long',
+        title: 'Sprint planning',
+        meetingDate: DateTime.utc(2026, 8, 20, 14, 30),
+        content: jsonEncode(payload),
+      );
+
+      final formatted = AiContextBuilder.formatResult(jsonMeeting);
+
+      expect(formatted, contains('Sprint planning'));
+      expect(formatted, contains('id: meet-long'));
+      expect(formatted, contains('2026-08-20 at 14:30'));
+      expect(
+        formatted.length,
+        lessThanOrEqualTo(AiContextBuilder.maxContentChars + 1),
+      );
+      expect(formatted, endsWith('…'));
+    });
+
+    test('preserves hybrid ranking order in formatted context', () {
+      final first = const RagResult(
+        entityType: RagEntityType.ticket,
+        entityId: 't1',
+        title: 'First by score',
+        content: 'ticket body',
+        finalScore: 0.9,
+      );
+      final second = const RagResult(
+        entityType: RagEntityType.task,
+        entityId: 't2',
+        title: 'Second by score',
+        content: 'task body',
+        finalScore: 0.7,
+      );
+      final third = RagResult(
+        entityType: RagEntityType.meeting,
+        entityId: 't3',
+        title: 'Third by score',
+        content: '{"overall_summary":"short"}',
+        finalScore: 0.5,
+      );
+
+      final formatted = AiContextBuilder.formatResults([first, second, third]);
+
+      final i1 = formatted.indexOf('First by score');
+      final i2 = formatted.indexOf('Second by score');
+      final i3 = formatted.indexOf('Third by score');
+      expect(i1, lessThan(i2));
+      expect(i2, lessThan(i3));
+    });
+
+    test('task and ticket formatting still truncates content', () {
+      final long = 'y' * 800;
+      final task = AiContextBuilder.formatResult(RagResult(
+        entityType: RagEntityType.task,
+        entityId: 'task-cap',
+        title: 'Task title',
+        content: long,
+      ));
+      final ticket = AiContextBuilder.formatResult(RagResult(
+        entityType: RagEntityType.ticket,
+        entityId: 'tick-cap',
+        title: 'Ticket title',
+        content: long,
+      ));
+
+      expect(task, contains('Task: Task title'));
+      expect(ticket, contains('Ticket: Ticket title'));
+      expect(task, contains('…'));
+      expect(ticket, contains('…'));
+      expect(task.length, lessThan(long.length));
+      expect(ticket.length, lessThan(long.length));
+    });
+
     test('summarizes tool rows without dumping full database fields', () {
       final summarized = AiContextBuilder.summarizeTask({
         'id': 'task-1',
@@ -99,6 +193,80 @@ void main() {
       expect(summarized.containsKey('embedding'), isFalse);
       expect(summarized.containsKey('description'), isFalse);
       expect(summarized.containsKey('created_at'), isFalse);
+    });
+
+    test('summarizeTasks leaves lists of 20 or fewer unchanged in length', () {
+      final tasks = List.generate(
+        20,
+        (i) => {
+          'id': 'task-$i',
+          'title': 'Task $i',
+          'status': 'todo',
+          'due_date': null,
+          'assigned_to': null,
+        },
+      );
+
+      final summarized = AiContextBuilder.summarizeTasks(tasks);
+
+      expect(summarized, hasLength(20));
+      expect(summarized.first['id'], 'task-0');
+      expect(summarized.last['id'], 'task-19');
+    });
+
+    test('summarizeTasks caps lists longer than maxToolResults', () {
+      final tasks = List.generate(
+        35,
+        (i) => {
+          'id': 'task-$i',
+          'title': 'Task $i',
+          'status': 'todo',
+          'due_date': null,
+          'assigned_to': null,
+          'description': 'keep-me-$i',
+        },
+      );
+      final originalLength = tasks.length;
+      final firstDescription = tasks.first['description'];
+
+      final summarized = AiContextBuilder.summarizeTasks(tasks);
+
+      expect(summarized, hasLength(AiContextBuilder.maxToolResults));
+      expect(summarized.first['id'], 'task-0');
+      expect(summarized.last['id'], 'task-19');
+      expect(
+        summarized.any((row) => row['id'] == 'task-20'),
+        isFalse,
+      );
+      // Original list and row fields are not modified.
+      expect(tasks, hasLength(originalLength));
+      expect(tasks.first['description'], firstDescription);
+      expect(tasks[20]['id'], 'task-20');
+    });
+
+    test('summarizeTickets caps and preserves summary fields', () {
+      final tickets = List.generate(
+        25,
+        (i) => {
+          'id': 'tick-$i',
+          'title': 'Ticket $i',
+          'status': 'open',
+          'priority': 'medium',
+          'category': 'Bug',
+          'assigned_to': 'user-1',
+          'embedding': [0.1],
+          'assignee': {'full_name': 'Aarav'},
+        },
+      );
+
+      final summarized = AiContextBuilder.summarizeTickets(tickets);
+
+      expect(summarized, hasLength(AiContextBuilder.maxToolResults));
+      expect(summarized.first['title'], 'Ticket 0');
+      expect(summarized.first['priority'], 'medium');
+      expect(summarized.first['assigned_to_name'], 'Aarav');
+      expect(summarized.first.containsKey('embedding'), isFalse);
+      expect(tickets, hasLength(25));
     });
   });
 }

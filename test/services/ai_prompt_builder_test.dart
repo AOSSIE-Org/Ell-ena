@@ -29,8 +29,36 @@ void main() {
       expect(systemText, isNot(contains('Relevant workspace context')));
       expect(systemText, isNot(contains('Order office snacks')));
 
+      expect(contents[1]['role'], 'user');
       expect(contents[1]['parts'][0]['text'], 'Hello');
+      expect(contents[2]['role'], 'model');
+      expect(contents[2]['parts'][0]['text'], 'Hi, how can I help?');
+      expect(contents.last['role'], 'user');
       expect(contents.last['parts'][0]['text'], 'Create a task for tomorrow');
+    });
+
+    test('maps history roles to Gemini user/model and preserves order', () {
+      final contents = AiPromptBuilder.buildContents(
+        userMessage: 'Follow up',
+        chatHistory: [
+          {'role': 'user', 'content': 'Alpha'},
+          {'role': 'model', 'content': 'Beta'},
+          {'role': 'assistant', 'content': 'Gamma'},
+        ],
+        teamMembers: const [],
+        ragContext: '',
+        now: DateTime(2026, 8, 11),
+      );
+
+      // contents[0] is the system/model preamble
+      expect(contents[1]['role'], 'user');
+      expect(contents[1]['parts'][0]['text'], 'Alpha');
+      expect(contents[2]['role'], 'model');
+      expect(contents[2]['parts'][0]['text'], 'Beta');
+      expect(contents[3]['role'], 'model');
+      expect(contents[3]['parts'][0]['text'], 'Gamma');
+      expect(contents[4]['role'], 'user');
+      expect(contents[4]['parts'][0]['text'], 'Follow up');
     });
 
     test('injects only the provided targeted RAG context', () {

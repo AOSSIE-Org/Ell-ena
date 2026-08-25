@@ -82,7 +82,7 @@ class ChatController extends Notifier<ChatState> {
     return recent
         .map(
           (message) => {
-            'role': message.isUser ? 'user' : 'assistant',
+            'role': message.isUser ? 'user' : 'model',
             'content': message.text,
           },
         )

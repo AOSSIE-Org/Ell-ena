@@ -110,9 +110,65 @@ void main() {
 
       final history = notifier.historyForAi();
       expect(history, hasLength(1));
+      expect(history.single['role'], 'model');
       expect(history.single['content'], contains('Ell-ena'));
       expect(
         history.any((message) => message['content'] == 'What about auth?'),
+        isFalse,
+      );
+    });
+
+    test('historyForAi maps user→user and assistant→model in order', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(chatControllerProvider.notifier);
+
+      notifier.addMessage(
+        ChatMessage(
+          text: 'First user',
+          isUser: true,
+          timestamp: DateTime(2026, 8, 11, 10),
+        ),
+      );
+      notifier.addMessage(
+        ChatMessage(
+          text: 'First assistant',
+          isUser: false,
+          timestamp: DateTime(2026, 8, 11, 11),
+        ),
+      );
+      notifier.addMessage(
+        ChatMessage(
+          text: 'Second user',
+          isUser: true,
+          timestamp: DateTime(2026, 8, 11, 12),
+        ),
+      );
+      notifier.addMessage(
+        ChatMessage(
+          text: 'Second assistant',
+          isUser: false,
+          timestamp: DateTime(2026, 8, 11, 13),
+        ),
+      );
+      notifier.addMessage(
+        ChatMessage(
+          text: 'Current user turn',
+          isUser: true,
+          timestamp: DateTime(2026, 8, 11, 14),
+        ),
+      );
+
+      final history = notifier.historyForAi();
+
+      expect(history, [
+        {'role': 'user', 'content': 'First user'},
+        {'role': 'model', 'content': 'First assistant'},
+        {'role': 'user', 'content': 'Second user'},
+        {'role': 'model', 'content': 'Second assistant'},
+      ]);
+      expect(
+        history.any((m) => m['content'] == 'Current user turn'),
         isFalse,
       );
     });
