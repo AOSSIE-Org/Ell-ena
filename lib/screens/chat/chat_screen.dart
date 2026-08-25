@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:ell_ena/services/ai_service.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import '../../providers/user_profile_provider.dart';
+import '../../widgets/custom_widgets.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
@@ -283,7 +286,11 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
     setState(() {
       _messages.add(
-        ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
+        ChatMessage(
+          text: userMessage,
+          isUser: true,
+          timestamp: DateTime.now(),
+        ),
       );
       _isProcessing = true;
     });
@@ -1548,7 +1555,23 @@ class _ChatBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(BuildContext context, {required bool isUser}) {
+  Widget _buildAvatar(
+    BuildContext context, {
+    required bool isUser,
+  }) {
+    if (isUser) {
+      // context.select (not context.watch) so this bubble only rebuilds
+      // when avatarUrl specifically changes, not on every profile field
+      // change -- and reads it live, so old messages in the chat history
+      // pick up a new avatar immediately after it's changed, instead of
+      // showing whatever was current at send-time.
+      final avatarUrl = context
+          .select<UserProfileController, String?>((c) => c.avatarUrl);
+      if (avatarUrl != null && avatarUrl.isNotEmpty) {
+        return UserAvatar(avatarUrl: avatarUrl, name: 'You', radius: 18);
+      }
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: 36,
@@ -1720,7 +1743,6 @@ class ChatMessage {
   final bool isCard;
   final String? cardType;
   final Map<String, dynamic>? cardData;
-  final String? avatarUrl; // Add avatar URL for profile pictures
 
   ChatMessage({
     required this.text,
@@ -1729,7 +1751,6 @@ class ChatMessage {
     this.isCard = false,
     this.cardType,
     this.cardData,
-    this.avatarUrl,
   });
 }
 

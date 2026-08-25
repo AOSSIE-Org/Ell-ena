@@ -9,6 +9,7 @@ import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
 import 'providers/theme_provider.dart';
+import 'providers/user_profile_provider.dart';
 import 'theme/theme_controller.dart';
 import 'theme/app_themes.dart';
 
@@ -21,17 +22,28 @@ void main() async {
   } catch (e) {
     debugPrint('Error initializing services: $e');
   }
-  
+
   final themeController = await ThemeController.create();
+  final userProfileController = UserProfileController();
 
 runApp(
   WidgetsBindingObserverWidget(
     child: ProviderScope(
       overrides: [
         themeControllerProvider.overrideWith((ref) => themeController),
+        userProfileControllerProvider.overrideWith(
+          (ref) => userProfileController,
+        ),
       ],
-      child: ChangeNotifierProvider<ThemeController>.value(
-        value: themeController,
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ThemeController>.value(
+            value: themeController,
+          ),
+          ChangeNotifierProvider<UserProfileController>.value(
+            value: userProfileController,
+          ),
+        ],
         child: const MyApp(),
       ),
     ),

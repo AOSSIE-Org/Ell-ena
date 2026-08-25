@@ -199,6 +199,140 @@ class CustomLoading extends StatelessWidget {
   }
 }
 
+/// Deterministic background color derived from [name], shared by every
+/// initials-fallback avatar in the app so the same person always gets the
+/// same color regardless of which screen renders them.
+Color avatarColorForName(String name) {
+  const colors = [
+    Colors.blue,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.red,
+    Colors.teal,
+    Colors.indigo,
+    Colors.pink,
+  ];
+  return colors[name.hashCode.abs() % colors.length];
+}
+
+/// Up to two initials derived from [name] (first letter of the first and
+/// last word), used as the fallback avatar content when no avatarUrl is set.
+String avatarInitialsForName(String name) {
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) return '?';
+  final parts = trimmed.split(RegExp(r'\s+'));
+  final first = parts.first.isNotEmpty ? parts.first[0] : '';
+  final last = parts.length > 1 && parts.last.isNotEmpty ? parts.last[0] : '';
+  final initials = (first + last).toUpperCase();
+  return initials.isEmpty ? '?' : initials;
+}
+
+/// Circular avatar used anywhere the app renders a user -- the current user
+/// or another team member. Shows [avatarUrl] if set (with a loading spinner
+/// and a graceful fallback if the image fails to load), otherwise initials
+/// derived from [name] on a deterministic background color.
+class UserAvatar extends StatelessWidget {
+  final String? avatarUrl;
+  final String name;
+  final double radius;
+  final VoidCallback? onTap;
+
+  const UserAvatar({
+    Key? key,
+    required this.name,
+    this.avatarUrl,
+    this.radius = 20,
+    this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final diameter = radius * 2;
+    final color = avatarColorForName(name);
+    final fontSize = radius * 0.8;
+    final initials = avatarInitialsForName(name);
+
+    Widget avatar;
+    if (avatarUrl != null && avatarUrl!.isNotEmpty) {
+      avatar = ClipOval(
+        child: Image.network(
+          avatarUrl!,
+          width: diameter,
+          height: diameter,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              width: diameter,
+              height: diameter,
+              color: Theme.of(context).colorScheme.surfaceVariant,
+              alignment: Alignment.center,
+              child: SizedBox(
+                width: radius,
+                height: radius,
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) => _InitialsCircle(
+            diameter: diameter,
+            color: color,
+            initials: initials,
+            fontSize: fontSize,
+          ),
+        ),
+      );
+    } else {
+      avatar = _InitialsCircle(
+        diameter: diameter,
+        color: color,
+        initials: initials,
+        fontSize: fontSize,
+      );
+    }
+
+    if (onTap == null) return avatar;
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: avatar,
+    );
+  }
+}
+
+class _InitialsCircle extends StatelessWidget {
+  final double diameter;
+  final Color color;
+  final String initials;
+  final double fontSize;
+
+  const _InitialsCircle({
+    required this.diameter,
+    required this.color,
+    required this.initials,
+    required this.fontSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: diameter,
+      height: diameter,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: fontSize,
+        ),
+      ),
+    );
+  }
+}
+
 // Dashboard Loading Skeleton
 class DashboardLoadingSkeleton extends StatelessWidget {
   const DashboardLoadingSkeleton({Key? key}) : super(key: key);

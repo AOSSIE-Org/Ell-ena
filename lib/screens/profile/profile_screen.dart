@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
 import '../../theme/app_theme_mode.dart';
 import '../../theme/theme_controller.dart';
+import '../../widgets/custom_widgets.dart';
 import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
@@ -18,28 +20,35 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _supabaseService = SupabaseService();
   bool _isLoading = true;
-  Map<String, dynamic>? _userProfile;
+  // The current user's own profile (avatar, name, role, team) now lives in
+  // UserProfileController and is read reactively in build(). _userTeams is
+  // the list of ALL teams this user belongs to (for the team switcher) --
+  // that's not part of UserProfileController, which only holds the single
+  // currently-active profile row, so it's still fetched directly here.
   List<Map<String, dynamic>> _userTeams = [];
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    _loadUserTeams();
   }
 
-  Future<void> _loadUserProfile() async {
+  Future<void> _loadUserTeams({bool forceRefreshProfile = false}) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final profile = await _supabaseService.getCurrentUserProfile();
+      final profileController = context.read<UserProfileController>();
+      if (forceRefreshProfile || !profileController.isLoaded) {
+        await profileController.refresh(forceRefresh: forceRefreshProfile);
+      }
 
-      // Also load all teams associated with the user's email
-      if (profile != null && profile['email'] != null) {
+      // Load all teams associated with the user's email
+      final email = profileController.email;
+      if (email != null) {
         try {
-          final teamsResponse =
-              await _supabaseService.getUserTeams(profile['email']);
+          final teamsResponse = await _supabaseService.getUserTeams(email);
           if (teamsResponse['success'] == true &&
               teamsResponse['teams'] != null) {
             _userTeams =
@@ -52,7 +61,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (mounted) {
         setState(() {
-          _userProfile = profile;
           _isLoading = false;
         });
       }
@@ -69,6 +77,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  // Guards against navigating to Edit Profile before
+  // UserProfileController.refresh() (fired-and-forgotten in
+  // HomeScreen.initState()) has actually completed -- profile can still be
+  // null at that point (e.g. tapping Edit Profile immediately after login).
+  // Mirrors the same full-screen _isLoading pattern already used for
+  // _switchTeam: block briefly on a fresh refresh() rather than force-
+  // unwrapping data that may not have loaded yet.
+  Future<void> _openEditProfile() async {
+    var profile = context.read<UserProfileController>().profile;
+
+    if (profile == null) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      await context.read<UserProfileController>().refresh();
+
+      if (!mounted) return;
+
+      profile = context.read<UserProfileController>().profile;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (profile == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not load your profile. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    if (!mounted) return;
+
+    final loadedProfile = profile;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProfileScreen(
+          userProfile: loadedProfile,
+          onProfileUpdated: () {
+            // updateAvatarUrl() already pushed avatar changes into the
+            // shared controller directly; a forced refresh here also
+            // picks up full_name edits, which EditProfileScreen saves via
+            // SupabaseService.updateUserProfile() without touching the
+            // shared controller itself.
+            context.read<UserProfileController>().refresh(forceRefresh: true);
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _handleLogout() async {
@@ -149,11 +214,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    final String fullName = _userProfile?['full_name'] ?? 'User';
-    final String role = _userProfile?['role'] ?? 'member';
+    // Reactive: rebuilds automatically whenever the shared profile (e.g. the
+    // avatar) changes, including from EditProfileScreen on another screen.
+    final profileController = context.watch<UserProfileController>();
+    final String fullName = profileController.fullName ?? 'User';
+    final String role = profileController.role ?? 'member';
     final String roleDisplay = role == 'admin' ? 'Team Admin' : 'Team Member';
-    final String teamName = _userProfile?['teams']?['name'] ?? 'Your Team';
-    final String teamCode = _userProfile?['teams']?['team_code'] ?? '';
+    final String teamName =
+        profileController.profile?['teams']?['name'] ?? 'Your Team';
+    final String teamCode =
+        profileController.profile?['teams']?['team_code'] ?? '';
+    final String? avatarUrl = profileController.avatarUrl;
 
     return Scaffold(
       body: SafeArea(
@@ -216,11 +287,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                  child: UserAvatar(
+                                    avatarUrl: avatarUrl,
+                                    name: fullName,
+                                    radius: 50,
                                   ),
                                 ),
                                 // Role badge
@@ -312,7 +382,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               itemCount: _userTeams.length,
               itemBuilder: (context, index) {
                 final team = _userTeams[index];
-                final isCurrentTeam = team['id'] == _userProfile?['team_id'];
+                final isCurrentTeam =
+                    team['id'] == context.read<UserProfileController>().teamId;
 
                 final colorScheme = Theme.of(context).colorScheme;
                 return ListTile(
@@ -377,8 +448,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final result = await _supabaseService.switchTeam(teamId);
 
       if (result['success'] == true) {
-        // Reload profile with new team
-        await _loadUserProfile();
+        // Reload profile (forced, to bypass the cache) with the new team
+        await _loadUserTeams(forceRefreshProfile: true);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -629,9 +700,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSettingsSection() {
-    final bool isAdmin = _userProfile?['role'] == 'admin';
-    final String teamId = _userProfile?['teams']?['team_code'] ?? '';
-    final String teamName = _userProfile?['teams']?['name'] ?? 'Your Team';
+    final profileController = context.watch<UserProfileController>();
+    final bool isAdmin = profileController.role == 'admin';
+    final String teamId =
+        profileController.profile?['teams']?['team_code'] ?? '';
+    final String teamName =
+        profileController.profile?['teams']?['name'] ?? 'Your Team';
     final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
@@ -658,19 +732,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Edit Profile',
                 subtitle: 'Update your personal information',
                 iconColor: Colors.blue.shade400,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditProfileScreen(
-                        userProfile: _userProfile!,
-                        onProfileUpdated: () {
-                          _loadUserProfile();
-                        },
-                      ),
-                    ),
-                  );
-                },
+                onTap: _openEditProfile,
               ),
               const Divider(color: Colors.grey),
               _buildSettingItem(

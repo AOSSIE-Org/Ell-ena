@@ -74,6 +74,9 @@ dependencies:
   googleapis: ^13.1.0
   googleapis_auth: ^1.4.1
 
+  # Image picking (profile avatar upload)
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
