@@ -350,12 +350,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           result = {'success': false, 'error': 'Unknown function'};
       }
 
-      // Get a user-friendly response from the AI
+      // Get a user-friendly response from the AI (reuse this turn's RAG context).
       final responseMessage = await _aiService.handleToolResponse(
         functionName: functionName,
         arguments: arguments,
         rawResponse: rawResponse,
         result: result,
+        ragContext: ref.read(chatControllerProvider).aiContext,
       );
 
       _chat.addMessage(

@@ -39,10 +39,13 @@ void main() {
       expect(state.retrievalResults, hasLength(1));
       expect(state.aiContext, contains('OAuth redirect broken'));
       expect(state.aiContext, isNot(contains('Order office snacks')));
+      expect(state.aiContext, isNot(contains('tick-auth')));
+      expect(state.aiContext, isNot(contains('(id:')));
+      expect(state.retrievalResults.single.entityId, 'tick-auth');
       expect(state.retrievalError, isNull);
     });
 
-    test('stores empty retrieval without injecting workspace context',
+    test('stores empty retrieval with honest no-match context signal',
         () async {
       final container = ProviderContainer(
         overrides: [
@@ -65,10 +68,15 @@ void main() {
 
       expect(state.retrievalStatus, RagRetrievalStatus.empty);
       expect(state.retrievalResults, isEmpty);
-      expect(state.aiContext, isEmpty);
+      expect(
+        state.aiContext,
+        contains('No relevant workspace information was found'),
+      );
+      expect(state.aiContext, isNot(contains('queue_embedding')));
     });
 
-    test('stores a user-safe retrieval error and empty context', () async {
+    test('stores a user-safe retrieval error and unavailable context signal',
+        () async {
       final container = ProviderContainer(
         overrides: [
           ragRetrieverProvider.overrideWithValue(
@@ -89,9 +97,65 @@ void main() {
 
       expect(outcome.status, RagRetrievalStatus.error);
       expect(state.retrievalStatus, RagRetrievalStatus.error);
-      expect(state.aiContext, isEmpty);
+      expect(
+        state.aiContext,
+        contains('Workspace retrieval was unavailable'),
+      );
+      expect(state.aiContext, isNot(contains('secret')));
       expect(state.retrievalError, 'Could not search workspace context.');
       expect(state.retrievalError, isNot(contains('secret')));
+    });
+
+    test('replaces retrieval results when a new query completes', () async {
+      var call = 0;
+      final container = ProviderContainer(
+        overrides: [
+          ragRetrieverProvider.overrideWithValue(
+            RagRetriever(
+              rpc: (functionName, {params}) async {
+                if (functionName == 'queue_embedding') return ++call;
+                if (call == 1) {
+                  return [
+                    {
+                      'entity_type': 'task',
+                      'entity_id': 'task-a',
+                      'title': 'Query A task',
+                      'content': 'A',
+                      'similarity': 0.9,
+                    },
+                  ];
+                }
+                return [
+                  {
+                    'entity_type': 'ticket',
+                    'entity_id': 'tick-b',
+                    'title': 'Query B ticket',
+                    'content': 'B',
+                    'similarity': 0.91,
+                  },
+                ];
+              },
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(chatControllerProvider.notifier);
+      await notifier.retrieveForQuery('first');
+      expect(
+        container.read(chatControllerProvider).retrievalResults.single.title,
+        'Query A task',
+      );
+
+      await notifier.retrieveForQuery('second');
+      final state = container.read(chatControllerProvider);
+      expect(state.retrievalResults, hasLength(1));
+      expect(state.retrievalResults.single.title, 'Query B ticket');
+      expect(state.retrievalResults.single.entityId, 'tick-b');
+      expect(state.aiContext, contains('Query B ticket'));
+      expect(state.aiContext, isNot(contains('Query A task')));
+      expect(state.aiContext, isNot(contains('tick-b')));
     });
 
     test('historyForAi excludes the latest user turn', () {

@@ -378,6 +378,7 @@ class AIService {
     required Map<String, dynamic> arguments,
     required String rawResponse,
     required Map<String, dynamic> result,
+    String ragContext = '',
   }) async {
     if (!_isInitialized) {
       await initialize();
@@ -390,13 +391,14 @@ class AIService {
       // Create the contents array for the follow-up request
       final List<Map<String, dynamic>> contents = [];
 
-      // Add a system message first to provide context
+      // Reuse already-retrieved RAG context + grounding (no second retrieval).
       contents.add({
         "role": "model",
         "parts": [
           {
-            "text":
-                "You are a helpful assistant for a team collaboration app. You help users manage tasks, tickets, and meetings."
+            "text": AiPromptBuilder.buildToolFollowUpSystemText(
+              ragContext: ragContext,
+            ),
           }
         ]
       });

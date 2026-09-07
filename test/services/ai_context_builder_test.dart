@@ -10,6 +10,7 @@ void main() {
       entityType: RagEntityType.meeting,
       entityId: 'meet-auth',
       title: 'Auth discussion',
+      meetingDate: DateTime.utc(2026, 8, 11, 15, 0),
       content:
           '{"overall_summary":"Team agreed to fix OAuth redirect","key_discussion_points":["Google sign-in fails"]}',
     );
@@ -18,6 +19,8 @@ void main() {
       entityId: 'tick-auth',
       title: 'OAuth redirect broken',
       content: 'Users bounce after Google consent.',
+      status: 'open',
+      priority: 'high',
     );
     final unrelatedTask = const RagResult(
       entityType: RagEntityType.task,
@@ -26,18 +29,24 @@ void main() {
       content: 'Buy granola bars',
     );
 
-    test('converts retrieved results into targeted AI context', () {
+    test('converts retrieved results into targeted AI context without IDs', () {
       final outcome = RagRetrievalOutcome.success([authMeeting, authTicket]);
 
       final context = AiContextBuilder.buildWorkspaceContext(outcome);
 
       expect(context, contains('Relevant workspace context:'));
       expect(context, contains('Auth discussion'));
-      expect(context, contains('id: meet-auth'));
       expect(context, contains('OAuth redirect broken'));
-      expect(context, contains('id: tick-auth'));
       expect(context, contains('Team agreed to fix OAuth redirect'));
+      expect(context, contains('Status: Open'));
+      expect(context, contains('Priority: High'));
       expect(context, isNot(contains('similarity')));
+      expect(context, isNot(contains('(id:')));
+      expect(context, isNot(contains('meet-auth')));
+      expect(context, isNot(contains('tick-auth')));
+      // Entity IDs remain on the models for navigation/tools.
+      expect(authMeeting.entityId, 'meet-auth');
+      expect(authTicket.entityId, 'tick-auth');
     });
 
     test('does not include records that were not retrieved', () {
@@ -54,17 +63,45 @@ void main() {
       );
     });
 
-    test('returns empty context when retrieval is empty', () {
+    test('empty retrieval injects an honest no-match signal', () {
       const outcome = RagRetrievalOutcome.empty();
 
-      expect(AiContextBuilder.buildWorkspaceContext(outcome), isEmpty);
+      expect(
+        AiContextBuilder.buildWorkspaceContext(outcome),
+        AiContextBuilder.emptyRetrievalContext,
+      );
     });
 
-    test('returns empty context when retrieval errors', () {
+    test('failed retrieval injects an honest unavailable signal', () {
       const outcome =
           RagRetrievalOutcome.error('Could not search workspace context.');
 
-      expect(AiContextBuilder.buildWorkspaceContext(outcome), isEmpty);
+      final context = AiContextBuilder.buildWorkspaceContext(outcome);
+      expect(context, AiContextBuilder.failedRetrievalContext);
+      expect(context, isNot(contains('Could not search')));
+      expect(context, isNot(contains('secret')));
+    });
+
+    test('task context includes status and due date without UUID', () {
+      final result = RagResult(
+        entityType: RagEntityType.task,
+        entityId: 'c0b62de4-6cf3-4758-b254-4d65179f5846',
+        title: 'Authentication flow',
+        content: 'Implement Google OAuth login using Supabase Auth.',
+        status: 'in_progress',
+        dueDate: DateTime.utc(2026, 9, 10),
+      );
+
+      final formatted = AiContextBuilder.formatResult(result);
+
+      expect(formatted, contains('TASK'));
+      expect(formatted, contains('Title: Authentication flow'));
+      expect(formatted, contains('Status: In Progress'));
+      expect(formatted, contains('Due:'));
+      expect(formatted, contains('Description: Implement Google OAuth'));
+      expect(formatted, isNot(contains('(id:')));
+      expect(formatted, isNot(contains(result.entityId)));
+      expect(result.entityId, isNotEmpty);
     });
 
     test('truncates long descriptions', () {
@@ -80,9 +117,10 @@ void main() {
 
       expect(formatted.length, lessThan(longContent.length));
       expect(formatted, contains('…'));
+      expect(formatted, isNot(contains('long-1')));
     });
 
-    test('caps expanded meeting summary at maxContentChars', () {
+    test('caps expanded meeting summary and omits entity id', () {
       final points = List.generate(
         40,
         (i) => 'Discussion point number $i with extra detail for length',
@@ -109,14 +147,12 @@ void main() {
 
       final formatted = AiContextBuilder.formatResult(jsonMeeting);
 
-      expect(formatted, contains('Sprint planning'));
-      expect(formatted, contains('id: meet-long'));
+      expect(formatted, contains('Title: Sprint planning'));
       expect(formatted, contains('2026-08-20 at 14:30'));
-      expect(
-        formatted.length,
-        lessThanOrEqualTo(AiContextBuilder.maxContentChars + 1),
-      );
-      expect(formatted, endsWith('…'));
+      expect(formatted, contains('…'));
+      expect(formatted, isNot(contains('meet-long')));
+      expect(formatted, isNot(contains('(id:')));
+      expect(jsonMeeting.entityId, 'meet-long');
     });
 
     test('preserves hybrid ranking order in formatted context', () {
@@ -149,6 +185,7 @@ void main() {
       final i3 = formatted.indexOf('Third by score');
       expect(i1, lessThan(i2));
       expect(i2, lessThan(i3));
+      expect(formatted, isNot(contains('(id:')));
     });
 
     test('task and ticket formatting still truncates content', () {
@@ -166,12 +203,30 @@ void main() {
         content: long,
       ));
 
-      expect(task, contains('Task: Task title'));
-      expect(ticket, contains('Ticket: Ticket title'));
+      expect(task, contains('Title: Task title'));
+      expect(ticket, contains('Title: Ticket title'));
       expect(task, contains('…'));
       expect(ticket, contains('…'));
       expect(task.length, lessThan(long.length));
       expect(ticket.length, lessThan(long.length));
+      expect(task, isNot(contains('task-cap')));
+      expect(ticket, isNot(contains('tick-cap')));
+    });
+
+    test('team member context omits UUIDs from prose', () {
+      final context = AiContextBuilder.buildTeamMemberContext([
+        {'id': 'u-1', 'full_name': 'Aarav', 'role': 'admin'},
+      ]);
+
+      expect(context, contains('Aarav'));
+      expect(context, contains('admin'));
+      expect(context, isNot(contains('u-1')));
+    });
+
+    test('formatStatusLabel humanizes snake_case values', () {
+      expect(AiContextBuilder.formatStatusLabel('in_progress'), 'In Progress');
+      expect(AiContextBuilder.formatStatusLabel('open'), 'Open');
+      expect(AiContextBuilder.formatStatusLabel('high'), 'High');
     });
 
     test('summarizes tool rows without dumping full database fields', () {
@@ -238,7 +293,6 @@ void main() {
         summarized.any((row) => row['id'] == 'task-20'),
         isFalse,
       );
-      // Original list and row fields are not modified.
       expect(tasks, hasLength(originalLength));
       expect(tasks.first['description'], firstDescription);
       expect(tasks[20]['id'], 'task-20');

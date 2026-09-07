@@ -8,6 +8,16 @@ import 'package:ell_ena/services/ai_context_builder.dart';
 /// included. Targeted RAG context is appended only when [ragContext] is
 /// non-empty.
 class AiPromptBuilder {
+  /// Concise grounding shared by the main chat turn and tool follow-ups.
+  static const String workspaceGroundingRules =
+      'Workspace grounding:\n'
+      '- For facts about this team\'s workspace, prefer retrieved workspace context and tool results.\n'
+      '- Do not invent tasks, tickets, meetings, assignees, dates, statuses, priorities, decisions, or other workspace activity.\n'
+      '- If workspace context is missing, empty, unavailable, or clearly irrelevant, do not fabricate an answer — say you could not find enough information in the workspace.\n'
+      '- Ignore retrieved items that do not answer the question.\n'
+      '- If retrieved records conflict, acknowledge the conflict instead of silently choosing one.\n'
+      '- Never expose internal database IDs or UUIDs in user-facing responses unless the user explicitly asks for an ID.';
+
   static List<Map<String, dynamic>> buildContents({
     required String userMessage,
     required List<Map<String, String>> chatHistory,
@@ -28,6 +38,8 @@ class AiPromptBuilder {
       )
       ..writeln()
       ..writeln('Current date: $date')
+      ..writeln()
+      ..writeln(workspaceGroundingRules)
       ..writeln();
 
     if (teamMemberContext.isNotEmpty) {
@@ -79,7 +91,7 @@ class AiPromptBuilder {
         '12. Be very attentive to team member names in requests to ensure proper assignment and querying',
       )
       ..writeln(
-        '13. Use the relevant workspace context when it answers the user. If none is provided, answer from the conversation and tools — do not invent workspace records.',
+        '13. Use the relevant workspace context when it answers the user. Prefer tools for live lookups (assignees, lists). Never invent workspace records.',
       );
 
     contents.add({
@@ -113,5 +125,24 @@ class AiPromptBuilder {
     });
 
     return contents;
+  }
+
+  /// Compact system text for the post-tool Gemini turn (no second RAG).
+  static String buildToolFollowUpSystemText({String ragContext = ''}) {
+    final buffer = StringBuffer()
+      ..writeln(
+        'You are Ell-ena, a helpful assistant for a team collaboration app. '
+        'Summarize the tool result clearly for the user.',
+      )
+      ..writeln()
+      ..writeln(workspaceGroundingRules);
+
+    if (ragContext.trim().isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln(ragContext.trim());
+    }
+
+    return buffer.toString();
   }
 }

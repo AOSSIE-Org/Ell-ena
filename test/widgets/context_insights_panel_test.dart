@@ -227,8 +227,10 @@ void main() {
       );
 
       expect(find.text('Fix login'), findsOneWidget);
-      expect(find.textContaining('in_progress'), findsOneWidget);
+      expect(find.textContaining('In Progress'), findsOneWidget);
       expect(find.textContaining('Due'), findsOneWidget);
+      expect(find.textContaining('task-1'), findsNothing);
+      expect(find.textContaining('in_progress'), findsNothing);
     });
   });
 }

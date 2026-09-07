@@ -7,7 +7,8 @@ void main() {
       {'id': 'u-1', 'full_name': 'Aarav', 'role': 'admin'},
     ];
 
-    test('keeps team, date, history, and guidelines when RAG is empty', () {
+    test('keeps team, date, history, guidelines, and grounding when RAG empty',
+        () {
       final contents = AiPromptBuilder.buildContents(
         userMessage: 'Create a task for tomorrow',
         chatHistory: [
@@ -22,11 +23,20 @@ void main() {
       final systemText = contents.first['parts'][0]['text'] as String;
       expect(systemText, contains('Current date: 2026-08-11'));
       expect(systemText, contains('Aarav'));
-      expect(systemText, contains('u-1'));
+      expect(systemText, isNot(contains('u-1')));
       expect(
           systemText, contains('Guidelines for tasks, tickets, and meetings'));
       expect(systemText, contains('query_tasks'));
-      expect(systemText, isNot(contains('Relevant workspace context')));
+      expect(systemText, contains('Workspace grounding:'));
+      expect(systemText, contains('Do not invent'));
+      expect(
+        systemText,
+        contains('Never expose internal database IDs or UUIDs'),
+      );
+      expect(
+        systemText,
+        contains('could not find enough information'),
+      );
       expect(systemText, isNot(contains('Order office snacks')));
 
       expect(contents[1]['role'], 'user');
@@ -50,7 +60,6 @@ void main() {
         now: DateTime(2026, 8, 11),
       );
 
-      // contents[0] is the system/model preamble
       expect(contents[1]['role'], 'user');
       expect(contents[1]['parts'][0]['text'], 'Alpha');
       expect(contents[2]['role'], 'model');
@@ -61,9 +70,10 @@ void main() {
       expect(contents[4]['parts'][0]['text'], 'Follow up');
     });
 
-    test('injects only the provided targeted RAG context', () {
+    test('injects only the provided targeted RAG context without echoing IDs',
+        () {
       const ragContext =
-          'Relevant workspace context:\n\nTicket: OAuth redirect broken (id: tick-auth)\n';
+          'Relevant workspace context:\n\nTICKET\nTitle: OAuth redirect broken\nStatus: Open\n';
 
       final contents = AiPromptBuilder.buildContents(
         userMessage: 'What did we discuss about the authentication issue?',
@@ -75,8 +85,22 @@ void main() {
 
       final systemText = contents.first['parts'][0]['text'] as String;
       expect(systemText, contains('OAuth redirect broken'));
-      expect(systemText, contains('tick-auth'));
+      expect(systemText, contains('Workspace grounding:'));
+      expect(systemText, isNot(contains('tick-auth')));
+      expect(systemText, isNot(contains('(id:')));
       expect(systemText, isNot(contains('Order office snacks')));
+    });
+
+    test('tool follow-up system text keeps grounding and optional RAG', () {
+      final text = AiPromptBuilder.buildToolFollowUpSystemText(
+        ragContext:
+            'Relevant workspace context:\nNo relevant workspace information was found for this query.',
+      );
+
+      expect(text, contains('Workspace grounding:'));
+      expect(text, contains('Never expose internal database IDs'));
+      expect(text, contains('No relevant workspace information'));
+      expect(text, isNot(contains('queue_embedding')));
     });
   });
 }

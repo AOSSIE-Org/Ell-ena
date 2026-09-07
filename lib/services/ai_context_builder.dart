@@ -1,18 +1,35 @@
 import 'package:ell_ena/models/rag_result.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:intl/intl.dart';
 
 /// Builds deterministic, inspectable Gemini context from retrieval results.
 ///
 /// Only the provided [RagResult]s are included — callers must not pass
 /// full task/ticket/meeting lists.
+///
+/// [RagResult.entityId] is kept on the model for navigation/tools but is
+/// never written into natural-language context strings.
 class AiContextBuilder {
   static const int maxContentChars = 600;
 
-  /// Workspace block injected into the system prompt. Empty when there is
-  /// nothing safe/useful to add (empty or failed retrieval).
+  static const String emptyRetrievalContext =
+      'Relevant workspace context:\n'
+      'No relevant workspace information was found for this query.';
+
+  static const String failedRetrievalContext =
+      'Relevant workspace context:\n'
+      'Workspace retrieval was unavailable for this request.';
+
+  /// Workspace block injected into the system prompt.
+  ///
+  /// Always returns a non-empty signal so Gemini knows whether retrieval
+  /// succeeded, returned nothing useful, or failed.
   static String buildWorkspaceContext(RagRetrievalOutcome outcome) {
-    if (!outcome.hasResults) {
-      return '';
+    if (outcome.status == RagRetrievalStatus.error) {
+      return failedRetrievalContext;
+    }
+    if (outcome.status == RagRetrievalStatus.empty || !outcome.hasResults) {
+      return emptyRetrievalContext;
     }
     return 'Relevant workspace context:\n\n${formatResults(outcome.results)}';
   }
@@ -34,43 +51,67 @@ class AiContextBuilder {
 
   static String formatResult(RagResult result) {
     final buffer = StringBuffer();
-    final idSuffix =
-        result.entityId.isNotEmpty ? ' (id: ${result.entityId})' : '';
 
     switch (result.entityType) {
       case RagEntityType.meeting:
+        buffer.writeln('MEETING');
+        buffer.writeln('Title: ${result.title}');
+        final dateLabel = _meetingDateLabel(result);
+        if (dateLabel != 'Retrieved meeting') {
+          buffer.writeln('Date: $dateLabel');
+        }
         final summary = MeetingFormatter.tryParseMeetingSummary(result.content);
         if (summary != null) {
-          // Expanded JSON can exceed task/ticket limits; cap after format.
-          buffer.write(_truncate(MeetingFormatter.formatMeetingSummary(
-            title: '${result.title}$idSuffix',
-            date: _meetingDateLabel(result),
+          final formatted = MeetingFormatter.formatMeetingSummary(
+            title: result.title,
+            date: dateLabel,
             summary: summary,
-          )));
+          );
+          // Drop the formatter's header (title/date already printed) when possible.
+          final body = _meetingSummaryBody(formatted, result.title, dateLabel);
+          final text = _truncate(body.isNotEmpty ? body : formatted);
+          if (text.isNotEmpty) {
+            buffer.writeln('Summary:');
+            buffer.writeln(text);
+          }
         } else {
-          buffer.writeln('Meeting: ${result.title}$idSuffix');
           final text = _truncate(result.content);
           if (text.isNotEmpty) {
+            buffer.writeln('Summary:');
             buffer.writeln(text);
           }
         }
         break;
       case RagEntityType.task:
-        buffer.writeln('Task: ${result.title}$idSuffix');
+        buffer.writeln('TASK');
+        buffer.writeln('Title: ${result.title}');
+        if (result.status != null && result.status!.trim().isNotEmpty) {
+          buffer.writeln('Status: ${formatStatusLabel(result.status!)}');
+        }
+        if (result.dueDate != null) {
+          buffer.writeln('Due: ${_formatDueDate(result.dueDate!)}');
+        }
         final text = _truncate(result.content);
         if (text.isNotEmpty) {
-          buffer.writeln(text);
+          buffer.writeln('Description: $text');
         }
         break;
       case RagEntityType.ticket:
-        buffer.writeln('Ticket: ${result.title}$idSuffix');
+        buffer.writeln('TICKET');
+        buffer.writeln('Title: ${result.title}');
+        if (result.status != null && result.status!.trim().isNotEmpty) {
+          buffer.writeln('Status: ${formatStatusLabel(result.status!)}');
+        }
+        if (result.priority != null && result.priority!.trim().isNotEmpty) {
+          buffer.writeln('Priority: ${formatStatusLabel(result.priority!)}');
+        }
         final text = _truncate(result.content);
         if (text.isNotEmpty) {
-          buffer.writeln(text);
+          buffer.writeln('Description: $text');
         }
         break;
       case RagEntityType.unknown:
-        buffer.writeln('${result.title}$idSuffix');
+        buffer.writeln(result.title);
         final text = _truncate(result.content);
         if (text.isNotEmpty) {
           buffer.writeln(text);
@@ -79,6 +120,18 @@ class AiContextBuilder {
     }
 
     return buffer.toString();
+  }
+
+  /// Human-readable labels for status/priority (e.g. in_progress → In Progress).
+  static String formatStatusLabel(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed
+        .split(RegExp(r'[_\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) =>
+            '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+        .join(' ');
   }
 
   static String buildTeamMemberContext(List<Map<String, dynamic>> teamMembers) {
@@ -89,8 +142,8 @@ class AiContextBuilder {
     for (final member in teamMembers) {
       final name = member['full_name'] ?? 'Unknown';
       final role = member['role'] ?? 'member';
-      final id = member['id'] ?? '';
-      buffer.writeln('- $name ($role): $id');
+      // Names/roles only — do not put member UUIDs in natural-language context.
+      buffer.writeln('- $name ($role)');
     }
     return buffer.toString();
   }
@@ -100,6 +153,9 @@ class AiContextBuilder {
 
   /// Compact tool payload so Gemini does not receive full database rows.
   /// Caps to [maxToolResults] without mutating [tasks].
+  ///
+  /// Structured [id] fields remain for tool operations; the system prompt
+  /// instructs the model not to repeat them in prose.
   static List<Map<String, dynamic>> summarizeTasks(
     List<Map<String, dynamic>> tasks, {
     int limit = maxToolResults,
@@ -162,6 +218,35 @@ class AiContextBuilder {
     final hh = date.hour.toString().padLeft(2, '0');
     final mm = date.minute.toString().padLeft(2, '0');
     return '$y-$m-$d at $hh:$mm';
+  }
+
+  static String _formatDueDate(DateTime date) {
+    return DateFormat.yMMMMd().format(date.toLocal());
+  }
+
+  /// Prefer summary sections after the emoji header lines from [MeetingFormatter].
+  static String _meetingSummaryBody(
+    String formatted,
+    String title,
+    String dateLabel,
+  ) {
+    final lines = formatted.split('\n');
+    final kept = <String>[];
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) {
+        if (kept.isNotEmpty) kept.add('');
+        continue;
+      }
+      // Skip formatter header lines that duplicate Title/Date.
+      if (trimmed.contains(title) &&
+          (trimmed.startsWith('📅') || trimmed.startsWith('*'))) {
+        continue;
+      }
+      if (trimmed.startsWith('🕒')) continue;
+      kept.add(line);
+    }
+    return kept.join('\n').trim();
   }
 
   static String _truncate(String? content) {

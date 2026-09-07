@@ -5,9 +5,9 @@ import 'dart:math' as math;
 /// Authoritative ranking runs in Postgres; this class supports unit tests and
 /// client-side similarity-floor checks.
 class RagScoring {
-  static const double semanticWeight = 0.70;
-  static const double recencyWeight = 0.20;
-  static const double urgencyWeight = 0.10;
+  static const double semanticWeight = 0.90;
+  static const double recencyWeight = 0.08;
+  static const double urgencyWeight = 0.02;
   static const double halfLifeDays = 21.0;
   static const double defaultSimilarityThreshold = 0.30;
 

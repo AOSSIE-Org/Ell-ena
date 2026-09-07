@@ -192,6 +192,7 @@ If you encounter any issues or prefer to run the scripts manually, you can execu
    13_hnsw_embedding_indexes.sql
    14_rag_search.sql
    15_rag_hybrid_ranking.sql
+   16_rag_hybrid_weights_semantic_dominant.sql
    ```
 
 Each script creates specific tables, functions, or sets up row-level security policies.

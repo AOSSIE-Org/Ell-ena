@@ -1,8 +1,12 @@
 import 'package:ell_ena/models/rag_result.dart';
+import 'package:ell_ena/services/ai_context_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 /// One ranked RAG row for the chat insights sidebar.
+///
+/// Shows human-readable title/metadata only. [RagResult.entityId] is used by
+/// the parent for navigation and is never rendered as primary text.
 class RagResultTile extends StatelessWidget {
   final RagResult result;
   final VoidCallback? onTap;
@@ -76,18 +80,18 @@ class RagResultTile extends StatelessWidget {
     switch (result.entityType) {
       case RagEntityType.task:
         if (result.status != null && result.status!.isNotEmpty) {
-          parts.add(result.status!);
+          parts.add(AiContextBuilder.formatStatusLabel(result.status!));
         }
         if (result.dueDate != null) {
           parts.add('Due ${_formatDate(result.dueDate!)}');
         }
         break;
       case RagEntityType.ticket:
-        if (result.priority != null && result.priority!.isNotEmpty) {
-          parts.add(result.priority!);
-        }
         if (result.status != null && result.status!.isNotEmpty) {
-          parts.add(result.status!);
+          parts.add(AiContextBuilder.formatStatusLabel(result.status!));
+        }
+        if (result.priority != null && result.priority!.isNotEmpty) {
+          parts.add(AiContextBuilder.formatStatusLabel(result.priority!));
         }
         break;
       case RagEntityType.meeting:

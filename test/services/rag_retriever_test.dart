@@ -272,8 +272,73 @@ void main() {
     });
 
     test('semantic weight dominates final score', () {
+      expect(RagScoring.semanticWeight, 0.90);
+      expect(RagScoring.recencyWeight, 0.08);
+      expect(RagScoring.urgencyWeight, 0.02);
       expect(RagScoring.semanticWeight, greaterThan(RagScoring.recencyWeight));
       expect(RagScoring.semanticWeight, greaterThan(RagScoring.urgencyWeight));
+    });
+
+    test('live auth task outranks recent dashboard (E2E scores)', () {
+      // From production RAG: "What tasks do we have related to authentication?"
+      final authFlow = RagScoring.finalScore(
+        similarity: 0.6861,
+        recency: 0.2261,
+        urgency: 1.0,
+      );
+      final dashboardCaching = RagScoring.finalScore(
+        similarity: 0.5976,
+        recency: 0.9996,
+        urgency: 0.85,
+      );
+      expect(authFlow, greaterThan(dashboardCaching));
+    });
+
+    test('live login failure outranks recent dashboard loading (E2E scores)', () {
+      // From production RAG: "What problems are we having with authentication?"
+      final loginFailure = RagScoring.finalScore(
+        similarity: 0.6814,
+        recency: 0.2260,
+        urgency: 0.50,
+      );
+      final dashboardSlow = RagScoring.finalScore(
+        similarity: 0.5977,
+        recency: 0.9994,
+        urgency: 1.0,
+      );
+      expect(loginFailure, greaterThan(dashboardSlow));
+    });
+
+    test('near-tie: recent payment can still edge older auth at 0.90/0.08/0.02',
+        () {
+      // Documents residual gap from E2E; semantic lead ~0.056 is not enough
+      // to overcome near-max recency under these weights.
+      final authFlow = RagScoring.finalScore(
+        similarity: 0.6861,
+        recency: 0.2261,
+        urgency: 1.0,
+      );
+      final payment = RagScoring.finalScore(
+        similarity: 0.6298,
+        recency: 0.9993,
+        urgency: 0.85,
+      );
+      expect(payment, greaterThan(authFlow));
+      expect(payment - authFlow, lessThan(0.02));
+    });
+
+    test('close similarities: recency still breaks ties', () {
+      final older = RagScoring.finalScore(
+        similarity: 0.70,
+        recency: 0.30,
+        urgency: 0.30,
+      );
+      final newer = RagScoring.finalScore(
+        similarity: 0.70,
+        recency: 0.95,
+        urgency: 0.30,
+      );
+      expect(newer, greaterThan(older));
     });
 
     test('candidate and match count bounds', () {
