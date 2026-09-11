@@ -460,6 +460,14 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        CustomButton(
+          text: 'Back',
+          onPressed: () {
+            NavigationService().goBack();
+          },
+          isOutlined: true,
+        ),
       ],
     );
   }
