@@ -30,6 +30,15 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
     (index) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  // One extra FocusNode per box, purely to intercept backspace key events on
+  // an already-empty box (onChanged never fires for that -- there's no text
+  // change) via ancestor bubbling in the focus tree. Never requests focus
+  // itself (canRequestFocus: false), so it doesn't interfere with the real
+  // per-box FocusNodes above.
+  final List<FocusNode> _backspaceListenerNodes = List.generate(
+    6,
+    (index) => FocusNode(skipTraversal: true, canRequestFocus: false),
+  );
   Timer? _resendTimer;
   bool _showtimertext = false;
   bool _timerStarted = false;
@@ -50,6 +59,9 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
     for (var node in _focusNodes) {
       node.dispose();
     }
+    for (var node in _backspaceListenerNodes) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -62,6 +74,47 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         _otpcomplete = iscomplete;
       });
     }
+  }
+
+  // Handles both normal single-digit typing and a multi-digit paste. Paste
+  // reaches here as a single onChanged call with the full pasted string,
+  // since maxLengthEnforcement is set to none on the field below (default
+  // maxLength enforcement would silently truncate a paste to 1 char before
+  // onChanged ever sees it).
+  void _handleOtpChanged(int index, String value) {
+    if (value.length > 1) {
+      var target = index;
+      for (final digit in value.split('')) {
+        if (target > 5) break;
+        _controllers[target].text = digit;
+        target++;
+      }
+      final lastFilled = target > 5 ? 5 : target;
+      _focusNodes[lastFilled].requestFocus();
+      _controllers[lastFilled].selection = TextSelection.collapsed(
+        offset: _controllers[lastFilled].text.length,
+      );
+      _checkotpcomplete();
+      return;
+    }
+
+    if (value.isNotEmpty) {
+      if (index < 5) {
+        _focusNodes[index + 1].requestFocus();
+      } else {
+        _focusNodes[index].unfocus();
+      }
+    }
+    _checkotpcomplete();
+  }
+
+  // Backspace on an already-empty box: move focus to (and clear) the
+  // previous box, matching standard OTP-input UX.
+  void _handleBackspaceOnEmpty(int index) {
+    if (index == 0) return;
+    _focusNodes[index - 1].requestFocus();
+    _controllers[index - 1].clear();
+    _checkotpcomplete();
   }
   void _showErrorSnackBar(String message) {
   ScaffoldMessenger.of(context).clearSnackBars();
@@ -367,35 +420,39 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
             (index) => SizedBox(
               width: 50,
               height: 60,
-              child: TextField(
-                controller: _controllers[index],
-                focusNode: _focusNodes[index],
-                keyboardType: TextInputType.number,
-                maxLength: 1,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                onChanged: (value) {
-                  if (value.isNotEmpty) {
-                    if (index < 5) {
-                      _focusNodes[index + 1].requestFocus();
-                    } else {
-                      _focusNodes[index].unfocus();
-                      // _handleVerification();
-                    }
+              child: KeyboardListener(
+                focusNode: _backspaceListenerNodes[index],
+                onKeyEvent: (event) {
+                  if (event is KeyDownEvent &&
+                      event.logicalKey == LogicalKeyboardKey.backspace &&
+                      _controllers[index].text.isEmpty) {
+                    _handleBackspaceOnEmpty(index);
                   }
-                  _checkotpcomplete();
                 },
+                child: TextField(
+                  controller: _controllers[index],
+                  focusNode: _focusNodes[index],
+                  keyboardType: TextInputType.number,
+                  maxLength: 1,
+                  // Allow a full pasted string to reach onChanged instead of
+                  // being silently truncated to 1 char before it gets there.
+                  maxLengthEnforcement: MaxLengthEnforcement.none,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  onChanged: (value) => _handleOtpChanged(index, value),
+                ),
               ),
             ),
           ),
