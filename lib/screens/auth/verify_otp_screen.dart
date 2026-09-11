@@ -184,6 +184,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           userData: widget.userData,
         );
 
+        if (!mounted) return;
+
         if (result['success']) {
           // Handle successful verification based on verify type
           if (widget.verifyType == 'signup_create') {
@@ -218,6 +220,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           _showErrorSnackBar(_errorMessage!);
         }
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           String errorMsg = e.toString();
 
@@ -267,6 +270,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         type: widget.verifyType,
       );
 
+      if (!mounted) return;
+
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -291,6 +296,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         _showErrorSnackBar(_errorMessage!);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         String errorMsg = e.toString();
 
@@ -539,9 +545,11 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         const SizedBox(height: 16),
         CustomButton(
           text: 'Back',
-          onPressed: () {
-            NavigationService().goBack();
-          },
+          onPressed: _isLoading
+              ? null
+              : () {
+                  NavigationService().goBack();
+                },
           isOutlined: true,
         ),
       ],
