@@ -334,6 +334,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final resendDisabled = _isLoading || !_canresend;
     return AuthScreenWrapper(
       title: 'Verify Email',
       subtitle: 'Enter the 6-digit code sent to ${widget.email}',
@@ -449,11 +450,16 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             TextButton(
-              onPressed: _isLoading ? null : _resendCode,
+              onPressed: resendDisabled ? null : _resendCode,
               child: Text(
                 'Resend',
                 style: TextStyle(
-                  color: Colors.green.shade400,
+                  color: resendDisabled
+                      ? Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withOpacity(0.5)
+                      : Colors.green.shade400,
                   fontWeight: FontWeight.w600,
                 ),
               ),
