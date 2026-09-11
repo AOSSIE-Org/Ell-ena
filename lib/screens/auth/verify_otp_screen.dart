@@ -104,12 +104,25 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       } else {
         _focusNodes[index].unfocus();
       }
+    } else if (index > 0) {
+      // This box's own digit was just deleted -- onChanged firing with an
+      // empty value is a genuine text-change event, which every platform's
+      // text input (including mobile on-screen keyboards) is guaranteed to
+      // report, unlike a raw backspace KeyEvent on an ALREADY-empty field
+      // (handled below via KeyboardListener), which many mobile IMEs never
+      // emit at all. This is therefore the primary, cross-platform-reliable
+      // path for "backspace walks focus back through the code"; the
+      // KeyboardListener below only covers the narrower/rarer case of
+      // pressing backspace again on a box that was already empty, which
+      // still works via a real hardware keyboard.
+      _focusNodes[index - 1].requestFocus();
     }
     _checkotpcomplete();
   }
 
-  // Backspace on an already-empty box: move focus to (and clear) the
-  // previous box, matching standard OTP-input UX.
+  // Backspace on an already-empty box (hardware keyboard only -- see the
+  // comment in _handleOtpChanged for why mobile IME backspace can't rely on
+  // this path): move focus to (and clear) the previous box.
   void _handleBackspaceOnEmpty(int index) {
     if (index == 0) return;
     _focusNodes[index - 1].requestFocus();
