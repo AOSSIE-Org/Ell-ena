@@ -44,8 +44,6 @@ migrate_working_dir/
 
 # Environment / credentials
 .env
-.env.cloud
-.env.hosted
 firebase*.json
 *.keystore
 *.jks
