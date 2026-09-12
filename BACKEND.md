@@ -193,6 +193,9 @@ If you encounter any issues or prefer to run the scripts manually, you can execu
    14_rag_search.sql
    15_rag_hybrid_ranking.sql
    16_rag_hybrid_weights_semantic_dominant.sql
+   
+   # GitHub integration
+   17_github_integration_foundation.sql
    ```
 
 Each script creates specific tables, functions, or sets up row-level security policies.
@@ -360,6 +363,8 @@ The project requires the following environment variables. **Do NOT expose server
 - `SUPABASE_DB_URL`
 - `GEMINI_API_KEY`
 - `VEXA_API_KEY`
+- `GITHUB_TOKEN` (server-only; used by Edge Functions for GitHub API access)
+- `GITHUB_WEBHOOK_SECRET` (server-only; reserved for webhook signature verification)
 - `EDGE_INTERNAL_SECRET` (if used for internal auth gating)
 
 ### Setting secrets via Supabase CLI
@@ -369,6 +374,8 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 supabase secrets set SUPABASE_DB_URL=your-db-url
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 supabase secrets set VEXA_API_KEY=your-vexa-api-key
+supabase secrets set GITHUB_TOKEN=your-github-token
+supabase secrets set GITHUB_WEBHOOK_SECRET=your-webhook-secret
 supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 
 

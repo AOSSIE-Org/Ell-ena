@@ -39,8 +39,13 @@ migrate_working_dir/
 **/linux/flutter/generated_plugins.cmake
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 
+# Local toolchains (e.g. downloaded Deno for Edge Function tests)
+.tools/
+
 # Environment / credentials
 .env
+.env.cloud
+.env.hosted
 firebase*.json
 *.keystore
 *.jks
