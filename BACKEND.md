@@ -29,20 +29,20 @@ The Supabase CLI is essential for managing your Supabase projects locally and de
 
 1. If you don't have Scoop installed, install it first:
 
-   ```powershell
+   ```Powershell
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
    irm get.scoop.sh | iex
    ```
 
 2. Add the Supabase bucket and install the CLI:
 
-   ```powershell
+   ```Powershell
    scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
    scoop install supabase
    ```
 
 3. Verify the installation:
-   ```powershell
+   ```Powershell
    supabase --version
    ```
 
@@ -219,10 +219,37 @@ Supabase provides built-in authentication. The project uses email-based authenti
 4. Package name: `org.aossie.ell_ena`
 5. Get SHA-1 certificate fingerprint:
    ```bash
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   ```
+keytool -list -v \ -keystore ~/.android/debug.keystore \ -alias androiddebugkey \ -storepass android \ -keypass android
+```
 6. Paste the SHA-1 fingerprint
 7. Click **Create** and copy the Client ID
+
+**For Windows PowerShell:**
+> **Note:** `%USERPROFILE%` does not expand in PowerShell.
+> Use the full path instead.
+
+Step 1 - Create .android folder if it doesn't exist:
+```powershell
+mkdir C:\Users\YOUR_USERNAME\.android
+```
+
+Step 2 - Generate keystore:
+```powershell
+keytool -genkey -v `
+  -keystore C:\Users\YOUR_USERNAME\.android\debug.keystore `
+  -alias androiddebugkey `
+  -keyalg RSA -keysize 2048 -validity 10000 `
+  -storepass android -keypass android `
+  -dname "CN=Android Debug,O=Android,C=US"
+```
+Step 3 - Get SHA1 fingerprint:
+```powershell
+keytool -list -v `
+  -keystore C:\Users\YOUR_USERNAME\.android\debug.keystore `
+  -alias androiddebugkey `
+  -storepass android `
+  -keypass android
+```
 
 **For iOS:**
 
