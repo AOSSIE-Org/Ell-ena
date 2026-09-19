@@ -1765,6 +1765,7 @@ class SupabaseService {
     required String priority,
     required String category,
     String? assignedToUserId,
+    bool syncToGithub = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -1803,6 +1804,7 @@ class SupabaseService {
         'approval_status': 'pending',
         'team_id': teamId,
         'created_by': user.id,
+        'sync_to_github': syncToGithub,
       };
 
       if (assignedToUserId != null && assignedToUserId.isNotEmpty) {
@@ -1819,15 +1821,108 @@ class SupabaseService {
         };
       }
 
+      Map<String, dynamic> ticket =
+          Map<String, dynamic>.from(response[0] as Map);
+
+      // Request server-side GitHub issue creation when the user opted in.
+      // The Edge Function loads the ticket from the DB (client does not send
+      // title/repo/token). Failures are stored on the ticket; creation still
+      // succeeds.
+      if (syncToGithub && ticket['id'] != null) {
+        final syncResult =
+            await syncTicketToGithub(ticket['id'].toString());
+        if (syncResult['ticket'] is Map) {
+          ticket = Map<String, dynamic>.from(syncResult['ticket'] as Map);
+        }
+      }
+
       // Refresh tickets
       await getTickets();
 
       return {
         'success': true,
-        'ticket': response[0],
+        'ticket': ticket,
       };
     } catch (e) {
       debugPrint('Error creating ticket: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Invoke the github-sync Edge Function for a ticket (server loads ticket).
+  /// Does not expose GitHub credentials to the client.
+  Future<Map<String, dynamic>> syncTicketToGithub(String ticketId) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      Map<String, dynamic>? payload;
+      late final int statusCode;
+      Object? invokeError;
+
+      try {
+        final response = await _client.functions.invoke(
+          'github-sync',
+          body: {'ticket_id': ticketId},
+        );
+        statusCode = response.status;
+        final data = response.data;
+        if (data is Map) {
+          payload = Map<String, dynamic>.from(data);
+        }
+      } on FunctionException catch (e) {
+        statusCode = e.status;
+        invokeError = e;
+        if (e.details is Map) {
+          payload = Map<String, dynamic>.from(e.details as Map);
+        } else if (e.details is String) {
+          payload = {'error': e.details};
+        }
+      }
+
+      // Refresh ticket row so UI sees status / issue URL even after failures.
+      Map<String, dynamic>? ticket;
+      try {
+        final row = await _client
+            .from('tickets')
+            .select()
+            .eq('id', ticketId)
+            .maybeSingle();
+        if (row != null) {
+          ticket = Map<String, dynamic>.from(row);
+        }
+      } catch (e) {
+        debugPrint('Error refreshing ticket after github-sync: $e');
+      }
+
+      final ok = statusCode >= 200 && statusCode < 300;
+      return {
+        'success': ok,
+        'status': statusCode,
+        if (payload != null) 'response': payload,
+        if (ticket != null) 'ticket': ticket,
+        if (!ok)
+          'error': payload?['error']?.toString() ??
+              invokeError?.toString() ??
+              'GitHub synchronization failed',
+      };
+    } catch (e) {
+      debugPrint('Error invoking github-sync: $e');
       return {
         'success': false,
         'error': e.toString(),

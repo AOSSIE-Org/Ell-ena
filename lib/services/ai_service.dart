@@ -145,6 +145,11 @@ class AIService {
               "assigned_to": {
                 "type": "string",
                 "description": "The user ID to assign the ticket to"
+              },
+              "sync_to_github": {
+                "type": "boolean",
+                "description":
+                    "If true, create a GitHub issue for this ticket after it is saved. Default false."
               }
             },
             "required": ["title", "priority", "category"]

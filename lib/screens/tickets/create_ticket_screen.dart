@@ -18,6 +18,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   String _selectedCategory = 'Bug';
   List<Map<String, dynamic>> _teamMembers = [];
   String? _selectedAssignee;
+  bool _syncToGithub = false;
   bool _isLoading = true;
 
   @override
@@ -82,6 +83,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         priority: _selectedPriority,
         category: _selectedCategory,
         assignedToUserId: _selectedAssignee,
+        syncToGithub: _syncToGithub,
       );
 
       if (result['success']) {
@@ -360,6 +362,29 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                         isExpanded: true,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Create GitHub issue',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Sync this ticket to the configured GitHub repository',
+                      style: TextStyle(color: Colors.grey.shade400),
+                    ),
+                    value: _syncToGithub,
+                    activeThumbColor: Colors.green.shade400,
+                    onChanged: (value) {
+                      setState(() {
+                        _syncToGithub = value;
+                      });
+                    },
                   ),
                   const SizedBox(height: 32),
 

@@ -475,6 +475,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       final description = arguments['description'] as String?;
       final priority = arguments['priority'] as String;
       final category = arguments['category'] as String;
+      final syncToGithub = arguments['sync_to_github'] == true;
 
       // Get assigned user ID if provided
       String? assignedToUserId;
@@ -511,6 +512,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         priority: priority,
         category: category,
         assignedToUserId: assignedToUserId,
+        syncToGithub: syncToGithub,
       );
 
       return result;
