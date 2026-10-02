@@ -372,6 +372,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 textAlign: TextAlign.center,
+                textAlignVertical: TextAlignVertical.center,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -380,6 +381,11 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 4,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
