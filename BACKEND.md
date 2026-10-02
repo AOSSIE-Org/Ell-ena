@@ -196,6 +196,7 @@ If you encounter any issues or prefer to run the scripts manually, you can execu
    
    # GitHub integration
    17_github_integration_foundation.sql
+   19_github_webhook_task_linking.sql
    ```
 
 Each script creates specific tables, functions, or sets up row-level security policies.
@@ -401,6 +402,59 @@ supabase functions deploy search-meetings
 supabase functions deploy start-bot
 supabase functions deploy summarize-transcription
 ````
+
+## GitHub webhook
+
+When a pull request is merged, GitHub sends a webhook to the `github-webhook` Edge Function. The function first checks that the request was really sent by GitHub. It does this by comparing the `X-Hub-Signature-256` header with a signature it calculates from the raw body and `GITHUB_WEBHOOK_SECRET`. Only after that check passes does it use the service-role key to update the database.
+
+A task can optionally point at one ticket through `ticket_id`. One ticket can have several tasks. The task and the ticket must belong to the same team; the database rejects the link if they do not. A task with no ticket is left alone when a webhook arrives.
+
+The pull request description must mention the GitHub issue with `Closes`, `Fixes`, or `Resolves`, for example `Fixes #123`. Ell-ena finds the ticket only when the issue number and the repository both match: `tickets.gh_issue_id`, `tickets.gh_repo`, and the server setting `GITHUB_REPO`. It then marks the linked tasks completed, and saves the pull request URL in `gh_pr_url` and the merge time in `completed_at`. Tasks that were already completed keep the completion details they already have.
+
+### Secrets
+
+```bash
+supabase secrets set GITHUB_WEBHOOK_SECRET=your-webhook-secret
+supabase secrets set GITHUB_REPO=owner/repository
+supabase secrets set GITHUB_TOKEN=your-github-token
+```
+
+`GITHUB_WEBHOOK_SECRET`, `GITHUB_TOKEN`, and the service-role key stay on the server.
+
+### Deploy
+
+JWT verification is disabled for this function only, because GitHub does not send a Supabase user JWT. The HMAC check is still required.
+
+```bash
+supabase functions deploy github-webhook --no-verify-jwt
+```
+
+### GitHub configuration
+
+In the repository settings, add a webhook:
+
+- Payload URL: `https://<project-ref>.supabase.co/functions/v1/github-webhook`
+- Content type: `application/json`
+- Secret: the same value as `GITHUB_WEBHOOK_SECRET`
+- Events: **Pull requests** only
+- SSL verification: enabled
+
+### Manual test
+
+1. Create a ticket with **Create GitHub issue** and confirm `gh_issue_id` and `gh_repo` are set.
+2. Create a task and choose that ticket. Leave a second task unlinked.
+3. Open a pull request whose body contains `Fixes #<issue number>` and merge it.
+4. Confirm the linked task is `completed`, `gh_pr_url` is the pull request URL, and `completed_at` matches the merge time.
+5. Confirm the unlinked task is unchanged.
+6. Redeliver the same webhook. The linked task's completion fields stay as they were.
+
+### Limits
+
+- Only the single repository in `GITHUB_REPO` is accepted.
+- Issue references without `Closes`, `Fixes`, or `Resolves` are ignored.
+- A qualified reference to another repository does not match.
+- There is no GitHub OAuth or per-user GitHub account.
+- The webhook does not edit GitHub issues or create tasks.
 
 ## Troubleshooting
 

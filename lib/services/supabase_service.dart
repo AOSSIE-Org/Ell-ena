@@ -1277,6 +1277,7 @@ class SupabaseService {
     String? description,
     DateTime? dueDate,
     String? assignedToUserId,
+    String? ticketId,
   }) async {
     try {
       if (!_isInitialized) {
@@ -1321,6 +1322,12 @@ class SupabaseService {
 
       if (dueDate != null) {
         taskData['due_date'] = dueDate.toIso8601String();
+      }
+
+      // Optional. Null leaves the task unlinked. The database rejects a ticket
+      // from another team.
+      if (ticketId != null && ticketId.trim().isNotEmpty) {
+        taskData['ticket_id'] = ticketId.trim();
       }
 
       final response = await _client.from('tasks').insert(taskData).select();
@@ -1374,6 +1381,44 @@ class SupabaseService {
       };
     } catch (e) {
       debugPrint('Error updating task status: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Set or clear the optional ticket linked to a task.
+  /// Pass null to remove the association.
+  Future<Map<String, dynamic>> updateTaskTicket({
+    required String taskId,
+    String? ticketId,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      await _client.from('tasks').update({
+        'ticket_id': ticketId == null || ticketId.trim().isEmpty
+            ? null
+            : ticketId.trim(),
+      }).eq('id', taskId);
+
+      return {'success': true};
+    } catch (e) {
+      debugPrint('Error updating task ticket: $e');
       return {
         'success': false,
         'error': e.toString(),
@@ -1502,10 +1547,24 @@ class SupabaseService {
         });
       }
 
+      Map<String, dynamic>? linkedTicket;
+      final linkedTicketId = taskResponse['ticket_id']?.toString();
+      if (linkedTicketId != null && linkedTicketId.isNotEmpty) {
+        final ticketResponse = await _client
+            .from('tickets')
+            .select('id, ticket_number, title, team_id')
+            .eq('id', linkedTicketId)
+            .maybeSingle();
+        if (ticketResponse != null) {
+          linkedTicket = ticketResponse;
+        }
+      }
+
       Map<String, dynamic> taskWithDetails = {
         ...taskResponse,
         'creator': creator,
         'assignee': assignee,
+        'ticket': linkedTicket,
       };
 
       return {
