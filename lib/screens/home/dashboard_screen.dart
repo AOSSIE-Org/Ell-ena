@@ -600,14 +600,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Today\'s Overview',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Today\'s Overview',
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -641,49 +643,59 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
           const SizedBox(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildOverviewItem(
-                _tasksTotal.toString(),
-                'Total Tasks',
-                Icons.task_alt,
-                Colors.green.shade400,
+              Expanded(
+                child: _buildOverviewItem(
+                  _tasksTotal.toString(),
+                  'Total Tasks',
+                  Icons.task_alt,
+                  Colors.green.shade400,
+                ),
               ),
-              _buildOverviewItem(
-                _tasksInProgress.toString(),
-                'In Progress',
-                Icons.pending_actions,
-                Colors.orange.shade400,
+              Expanded(
+                child: _buildOverviewItem(
+                  _tasksInProgress.toString(),
+                  'In Progress',
+                  Icons.pending_actions,
+                  Colors.orange.shade400,
+                ),
               ),
-              _buildOverviewItem(
-                _tasksCompleted.toString(),
-                'Completed',
-                Icons.check_circle_outline,
-                Colors.blue.shade400,
+              Expanded(
+                child: _buildOverviewItem(
+                  _tasksCompleted.toString(),
+                  'Completed',
+                  Icons.check_circle_outline,
+                  Colors.blue.shade400,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildOverviewItem(
-                _ticketsOpen.toString(),
-                'Open Tickets',
-                Icons.bug_report,
-                Colors.red.shade400,
+              Expanded(
+                child: _buildOverviewItem(
+                  _ticketsOpen.toString(),
+                  'Open Tickets',
+                  Icons.bug_report,
+                  Colors.red.shade400,
+                ),
               ),
-              _buildOverviewItem(
-                _ticketsInProgress.toString(),
-                'Tickets In Progress',
-                Icons.hourglass_bottom,
-                Colors.amber.shade400,
+              Expanded(
+                child: _buildOverviewItem(
+                  _ticketsInProgress.toString(),
+                  'Tickets In Progress',
+                  Icons.hourglass_bottom,
+                  Colors.amber.shade400,
+                ),
               ),
-              _buildOverviewItem(
-                _ticketsResolved.toString(),
-                'Resolved',
-                Icons.verified,
-                Colors.teal.shade300,
+              Expanded(
+                child: _buildOverviewItem(
+                  _ticketsResolved.toString(),
+                  'Resolved',
+                  Icons.verified,
+                  Colors.teal.shade300,
+                ),
               ),
             ],
           ),
@@ -720,6 +732,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
         ),
       ],

@@ -61,7 +61,7 @@ dependencies:
   http: ^1.2.1
 
   # Icons
-  font_awesome_flutter: ^10.8.0
+  font_awesome_flutter: ^11.0.0
 
   pdf: ^3.11.3
   path_provider: ^2.1.4
@@ -77,6 +77,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  mocktail: ^1.0.4
 
   # Launcher icons
   flutter_launcher_icons: ^0.13.1

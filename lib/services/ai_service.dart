@@ -24,6 +24,12 @@ class AIService {
     _supabaseService = SupabaseService();
   }
 
+  /// Separate instance for tests. Does not read `.env` or the app singleton.
+  @visibleForTesting
+  AIService.forTesting(SupabaseService supabaseService)
+      : _supabaseService = supabaseService,
+        _isInitialized = true;
+
   bool get isInitialized => _isInitialized;
 
   /// Invoker-rights Supabase RPC (respects RLS). Used by [RagRetriever].

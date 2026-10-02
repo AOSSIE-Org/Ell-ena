@@ -294,7 +294,8 @@ void main() {
       expect(authFlow, greaterThan(dashboardCaching));
     });
 
-    test('live login failure outranks recent dashboard loading (E2E scores)', () {
+    test('live login failure outranks recent dashboard loading (E2E scores)',
+        () {
       // From production RAG: "What problems are we having with authentication?"
       final loginFailure = RagScoring.finalScore(
         similarity: 0.6814,

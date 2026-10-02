@@ -39,6 +39,10 @@ class SupabaseService {
 
   SupabaseService._internal();
 
+  /// Separate instance for tests. Production code keeps using [SupabaseService].
+  @visibleForTesting
+  SupabaseService.withClient(this._client) : _isInitialized = true;
+
   bool get isInitialized => _isInitialized;
 
   List<Map<String, dynamic>> get teamMembersCache => _teamMembersCache;
@@ -1185,8 +1189,6 @@ class SupabaseService {
     }
   }
 
-
-
   // Get tasks for the current user's team
   Future<List<Map<String, dynamic>>> _doGetTasks({
     bool filterByAssignment = false,
@@ -1888,8 +1890,7 @@ class SupabaseService {
       // title/repo/token). Failures are stored on the ticket; creation still
       // succeeds.
       if (syncToGithub && ticket['id'] != null) {
-        final syncResult =
-            await syncTicketToGithub(ticket['id'].toString());
+        final syncResult = await syncTicketToGithub(ticket['id'].toString());
         if (syncResult['ticket'] is Map) {
           ticket = Map<String, dynamic>.from(syncResult['ticket'] as Map);
         }
@@ -2388,7 +2389,6 @@ class SupabaseService {
       if (!_disposed && !_meetingsStreamController.isClosed) {
         _meetingsStreamController.add(processedMeetings);
       }
-
 
       return processedMeetings;
     } catch (e) {
