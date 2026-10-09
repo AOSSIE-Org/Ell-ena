@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/custom_widgets.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/navigation_service.dart';
 import '../workspace/workspace_screen.dart';
 import '../calendar/calendar_screen.dart';
@@ -45,6 +47,16 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Initialize screens
     _initializeScreens();
+
+    // Load the current user's profile (avatar, name, role, team) into the
+    // shared controller. This is the single convergence point for every
+    // "user is now entering the authenticated app" path -- splash screen
+    // (existing session), and login/signup/OTP-verify/team-selection all
+    // navigate here directly, bypassing splash. Fire-and-forget: every
+    // screen that reads this reactively via context.watch<UserProfileController>()
+    // rebuilds automatically once this completes, so nothing needs to
+    // block on it here.
+    context.read<UserProfileController>().refresh();
 
     // Handle initial arguments if provided
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -879,6 +880,136 @@ class SupabaseService {
     } catch (e) {
       debugPrint('Error updating profile: $e');
       return false;
+    }
+  }
+
+  // Upload/replace the current user's avatar image.
+  // Storage path is fixed as '<user_id>/avatar.jpg' so each new upload
+  // overwrites the previous one at the same path (upsert: true), matching
+  // the path convention documented in
+  // supabase/migrations/20251021110000_avatar_url_and_storage.sql and
+  // avoiding orphaned old avatar files accumulating in storage.
+  //
+  // Takes raw bytes rather than a dart:io File: File-based upload
+  // (StorageFileApi.upload) is not supported on Flutter Web, since
+  // dart:io's File has no real filesystem backing there. uploadBinary()
+  // works identically across web, mobile, and desktop.
+  Future<Map<String, dynamic>> uploadAvatar(Uint8List imageBytes) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      final path = '${user.id}/avatar.jpg';
+
+      await _client.storage.from('avatars').uploadBinary(
+            path,
+            imageBytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
+
+      final publicUrl = _client.storage.from('avatars').getPublicUrl(path);
+
+      // The storage path is fixed per user, so the public URL is identical
+      // across uploads -- Image.network (and browser caching generally)
+      // caches by URL, so without a cache-busting suffix a re-uploaded
+      // avatar could keep showing the previous cached image. Append one
+      // here so every downstream consumer (DB, result map, UI) sees and
+      // uses the same versioned URL.
+      final versionedUrl =
+          '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+
+      final profileUpdated =
+          await updateUserProfile({'avatar_url': versionedUrl});
+      if (!profileUpdated) {
+        return {
+          'success': false,
+          'error': 'Avatar uploaded but failed to update profile',
+        };
+      }
+
+      return {
+        'success': true,
+        'avatar_url': versionedUrl,
+      };
+    } catch (e) {
+      debugPrint('Error uploading avatar: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  // Remove the current user's avatar: deletes the storage object (if any)
+  // and clears avatar_url on the user's profile.
+  Future<Map<String, dynamic>> removeAvatar() async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      final path = '${user.id}/avatar.jpg';
+
+      try {
+        await _client.storage.from('avatars').remove([path]);
+      } on StorageException catch (e) {
+        // Only treat a genuine "object not found" as idempotent/OK (e.g.
+        // the user never uploaded an avatar, or it was already removed).
+        // Any other StorageException (permissions, network, etc.) is a
+        // real failure -- avatar_url must NOT be cleared in that case, or
+        // the app would think there's no avatar while the file is still
+        // sitting in (and publicly accessible from) storage.
+        final isNotFound = e.statusCode == '404' ||
+            (e.error?.toLowerCase() == 'not_found') ||
+            e.message.toLowerCase().contains('not found');
+        if (!isNotFound) {
+          return {
+            'success': false,
+            'error': 'Failed to remove avatar file: ${e.message}',
+          };
+        }
+        debugPrint('Avatar object already absent, continuing: ${e.message}');
+      }
+
+      final profileUpdated =
+          await updateUserProfile({'avatar_url': null});
+      if (!profileUpdated) {
+        return {
+          'success': false,
+          'error': 'Failed to clear avatar on profile',
+        };
+      }
+
+      return {'success': true};
+    } catch (e) {
+      debugPrint('Error removing avatar: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
     }
   }
 

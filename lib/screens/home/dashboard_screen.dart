@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/supabase_service.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
@@ -181,15 +183,20 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       final supa = SupabaseService();
 
-      // Get user profile with team information
-      final profile = await supa.getCurrentUserProfile(forceRefresh: true);
+      // Get the current user's profile (avatar/name/team) from the shared
+      // controller -- forced, so a just-completed team switch is reflected
+      // immediately -- instead of an independent fetch, so this stays in
+      // sync with any other screen that updates it (e.g. Edit Profile).
+      final profileController = context.read<UserProfileController>();
+      await profileController.refresh(forceRefresh: true);
+      final profile = profileController.profile;
 
       // Set username
-      _userName = (profile?['full_name'] as String?)?.trim();
+      _userName = profileController.fullName?.trim();
 
       // Set current team
       if (profile != null && profile['team_id'] != null) {
-        _currentTeamId = profile['team_id'];
+        _currentTeamId = profileController.teamId;
         _currentTeamName = profile['teams']?['name'] ?? 'My Team';
       }
 
@@ -382,6 +389,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         body: DashboardLoadingSkeleton(),
       );
     }
+    // Reactive: rebuilds when the shared avatar/name changes elsewhere
+    // (e.g. after an avatar upload on Edit Profile).
+    final avatarUrl = context.watch<UserProfileController>().avatarUrl;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(
@@ -442,10 +453,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       width: 2,
                                     ),
                                   ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 28,
+                                  child: UserAvatar(
+                                    avatarUrl: avatarUrl,
+                                    name: _userName ?? '?',
+                                    radius: 24,
                                   ),
                                 ),
                                 const SizedBox(width: 16),
