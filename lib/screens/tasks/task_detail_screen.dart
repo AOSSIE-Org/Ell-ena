@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/task_ticket_link.dart';
 import '../../widgets/custom_widgets.dart';
 
 class TaskDetailScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Map<String, dynamic>? _taskDetails;
   List<Map<String, dynamic>> _comments = [];
   bool _isAdmin = false;
+  List<Map<String, dynamic>> _tickets = [];
   final _commentController = TextEditingController();
 
   @override
@@ -24,6 +26,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     super.initState();
     _loadTaskDetails();
     _checkUserRole();
+    _loadTickets();
   }
 
   @override
@@ -38,6 +41,39 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       setState(() {
         _isAdmin = userProfile?['role'] == 'admin';
       });
+    }
+  }
+
+  Future<void> _loadTickets() async {
+    try {
+      final tickets = await _supabaseService.getTickets();
+      if (mounted) {
+        setState(() {
+          _tickets = tickets;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading tickets: $e');
+    }
+  }
+
+  Future<void> _updateLinkedTicket(String? ticketId) async {
+    final result = await _supabaseService.updateTaskTicket(
+      taskId: widget.taskId,
+      ticketId: TaskTicketLink.normalizeId(ticketId),
+    );
+    if (!mounted) return;
+    if (result['success'] == true) {
+      await _loadTaskDetails();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['error']?.toString() ?? 'Failed to update linked ticket',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -507,6 +543,57 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Linked ticket',
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Builder(builder: (context) {
+                          final linkedId =
+                              _taskDetails!['ticket_id']?.toString();
+                          final options = <Map<String, dynamic>>[
+                            ..._tickets,
+                          ];
+                          final known = options.any(
+                            (ticket) => ticket['id']?.toString() == linkedId,
+                          );
+                          final current = _taskDetails!['ticket'];
+                          if (linkedId != null &&
+                              !known &&
+                              current is Map<String, dynamic>) {
+                            options.insert(0, current);
+                          }
+                          return DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: options.any((ticket) =>
+                                      ticket['id']?.toString() == linkedId)
+                                  ? linkedId
+                                  : null,
+                              items: [
+                                const DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('No linked ticket'),
+                                ),
+                                ...options.map((ticket) {
+                                  return DropdownMenuItem<String?>(
+                                    value: ticket['id']?.toString(),
+                                    child: Text(
+                                      TaskTicketLink.labelFor(ticket),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }),
+                              ],
+                              onChanged: _updateLinkedTicket,
+                            ),
+                          );
+                        }),
                         if (assigneeName != 'Unassigned') ...[
                           const SizedBox(height: 8),
                           Row(

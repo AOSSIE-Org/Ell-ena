@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/task_ticket_link.dart';
 
 class CreateTaskScreen extends StatefulWidget {
   const CreateTaskScreen({super.key});
@@ -16,7 +17,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   bool _isLoading = false;
   DateTime? _selectedDueDate;
   String? _selectedAssigneeId;
+  String? _selectedTicketId;
   List<Map<String, dynamic>> _teamMembers = [];
+  List<Map<String, dynamic>> _tickets = [];
 
   @override
   void initState() {
@@ -37,6 +40,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     });
 
     try {
+      final tickets = await _supabaseService.getTickets();
+      if (mounted) {
+        setState(() {
+          _tickets = tickets;
+        });
+      }
+
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null &&
           userProfile['teams'] != null &&
@@ -95,6 +105,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         description: _descriptionController.text.trim(),
         dueDate: _selectedDueDate,
         assignedToUserId: _selectedAssigneeId,
+        ticketId: TaskTicketLink.normalizeId(_selectedTicketId),
       );
 
       if (result['success'] && mounted) {
@@ -361,6 +372,53 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           onChanged: (value) {
                             setState(() {
                               _selectedAssigneeId = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Text(
+                      'Linked ticket',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          value: _selectedTicketId,
+                          hint: const Text('No linked ticket'),
+                          items: [
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('No linked ticket'),
+                            ),
+                            ..._tickets.map((ticket) {
+                              return DropdownMenuItem<String?>(
+                                value: ticket['id']?.toString(),
+                                child: Text(
+                                  TaskTicketLink.labelFor(ticket),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedTicketId = value;
                             });
                           },
                         ),
