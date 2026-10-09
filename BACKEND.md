@@ -370,7 +370,7 @@ The project requires the following environment variables. **Do NOT expose server
 
 ### Setting secrets via Supabase CLI
 
-````bash
+```bash
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 supabase secrets set SUPABASE_DB_URL=your-db-url
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
@@ -382,6 +382,7 @@ supabase secrets set EDGE_INTERNAL_SECRET=your-internal-secret
 
 # Local Testing the functions (optional)
 supabase functions serve --allow-env --env-file .env
+```
 
 
 
@@ -401,7 +402,7 @@ supabase functions deploy get-embedding
 supabase functions deploy search-meetings
 supabase functions deploy start-bot
 supabase functions deploy summarize-transcription
-````
+```
 
 ## GitHub webhook
 
