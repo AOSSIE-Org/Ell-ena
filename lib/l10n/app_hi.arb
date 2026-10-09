@@ -1,0 +1,21 @@
+{
+  "@@locale": "hi",
+  "appTitle": "Ell-ena",
+  "login": "साइन इन",
+  "signUp": "साइन अप",
+  "logout": "लॉग आउट",
+  "logoutTitle": "लॉग आउट करें?",
+  "logoutMessage": "अपने खाते तक पहुँचने के लिए आपको दोबारा लॉग इन करना होगा।",
+  "dashboard": "डैशबोर्ड",
+  "tasks": "कार्य",
+  "tickets": "टिकट",
+  "meetings": "मीटिंग",
+  "settings": "सेटिंग्स",
+  "cancel": "रद्द करें",
+  "save": "सहेजें",
+  "loading": "लोड हो रहा है...",
+  "search": "खोजें",
+  "language": "भाषा",
+  "languageName": "{localeCode, select, en{अंग्रेज़ी} hi{हिन्दी} other{{localeCode}}}",
+  "selectLanguage": "भाषा चुनें"
+}
