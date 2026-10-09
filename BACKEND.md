@@ -404,6 +404,51 @@ supabase functions deploy start-bot
 supabase functions deploy summarize-transcription
 ```
 
+## Troubleshooting
+
+### Common Issues and Solutions
+
+1. **CLI Authentication Issues**
+
+   - Run `supabase login` again to refresh your authentication.
+
+2. **Database Migration Errors**
+
+   - Check for syntax errors in your SQL files.
+   - Ensure you're running migrations in the correct order.
+
+3. **Edge Function Deployment Failures**
+
+   - Verify that your function code is valid.
+   - Check for any missing dependencies.
+   - Ensure your Supabase project has the necessary permissions.
+
+4. **Connection Issues**
+   - Verify your environment variables are correctly set.
+   - Check if your IP is allowed in the Supabase dashboard.
+
+### Getting Help
+
+If you encounter issues not covered in this guide:
+
+->>> Join the conversation on the AOSSIE Ell-ena Discord channel!
+
+1. Check the [Supabase Documentation](https://supabase.com/docs)
+2. Visit the [Supabase GitHub Repository](https://github.com/supabase/supabase)
+3. Join the [Supabase Discord Community](https://discord.supabase.com)
+
+## Next Steps
+
+After setting up your backend:
+
+1. Connect your frontend application using the Supabase client.
+2. Set up continuous integration for automated deployments.
+3. Configure monitoring and alerts for your production environment.
+
+---
+
+This guide should help you get started with the Ell-ena backend.
+
 ## GitHub webhook
 
 When a pull request is merged, GitHub sends a webhook to the `github-webhook` Edge Function. The function first checks that the request was really sent by GitHub. It does this by comparing the `X-Hub-Signature-256` header with a signature it calculates from the raw body and `GITHUB_WEBHOOK_SECRET`. Only after that check passes does it use the service-role key to update the database.
@@ -457,47 +502,3 @@ In the repository settings, add a webhook:
 - There is no GitHub OAuth or per-user GitHub account.
 - The webhook does not edit GitHub issues or create tasks.
 
-## Troubleshooting
-
-### Common Issues and Solutions
-
-1. **CLI Authentication Issues**
-
-   - Run `supabase login` again to refresh your authentication.
-
-2. **Database Migration Errors**
-
-   - Check for syntax errors in your SQL files.
-   - Ensure you're running migrations in the correct order.
-
-3. **Edge Function Deployment Failures**
-
-   - Verify that your function code is valid.
-   - Check for any missing dependencies.
-   - Ensure your Supabase project has the necessary permissions.
-
-4. **Connection Issues**
-   - Verify your environment variables are correctly set.
-   - Check if your IP is allowed in the Supabase dashboard.
-
-### Getting Help
-
-If you encounter issues not covered in this guide:
-
-->>> Join the conversation on the AOSSIE Ell-ena Discord channel!
-
-1. Check the [Supabase Documentation](https://supabase.com/docs)
-2. Visit the [Supabase GitHub Repository](https://github.com/supabase/supabase)
-3. Join the [Supabase Discord Community](https://discord.supabase.com)
-
-## Next Steps
-
-After setting up your backend:
-
-1. Connect your frontend application using the Supabase client.
-2. Set up continuous integration for automated deployments.
-3. Configure monitoring and alerts for your production environment.
-
----
-
-This guide should help you get started with the Ell-ena backend.
