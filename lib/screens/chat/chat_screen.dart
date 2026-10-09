@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ell_ena/core/responsive/responsive_layout.dart';
+import 'package:ell_ena/models/chat_message.dart';
+import 'package:ell_ena/models/rag_result.dart';
+import 'package:ell_ena/providers/chat/chat_controller.dart';
+import 'package:ell_ena/services/ai_context_builder.dart';
 import 'package:ell_ena/services/ai_service.dart';
 import 'package:ell_ena/services/supabase_service.dart';
+import 'package:ell_ena/widgets/chat/context_insights_panel.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../tasks/task_detail_screen.dart';
@@ -8,33 +15,30 @@ import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? arguments;
 
   const ChatScreen({super.key, this.arguments});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [];
-  bool _isProcessing = false;
   bool _isListening = false; // toggles mic icon state
   late AnimationController _waveformController;
   late final stt.SpeechToText _speech;
   bool _speechAvailable = false;
 
-  // Services
-  final AIService _aiService = AIService();
   final SupabaseService _supabaseService = SupabaseService();
 
-  // Team members for assignment
-  List<Map<String, dynamic>> _teamMembers = [];
-  List<Map<String, dynamic>> _userTasks = [];
-  List<Map<String, dynamic>> _userTickets = [];
+  AIService get _aiService => ref.read(aiServiceProvider);
+  ChatController get _chat => ref.read(chatControllerProvider.notifier);
+  List<Map<String, dynamic>> get _teamMembers =>
+      ref.read(chatControllerProvider).teamMembers;
 
   @override
   void initState() {
@@ -106,21 +110,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         final userProfile = await _supabaseService.getCurrentUserProfile();
         if (userProfile != null && userProfile['team_id'] != null) {
           await _loadTeamMembers(userProfile['team_id']);
-
-          await _loadUserTasksAndTickets();
         }
       }
 
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text:
-                "Hello! I'm Ell-ena, your AI assistant. How can I help you today?",
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-      });
+      _chat.addWelcomeIfEmpty();
     } catch (e) {
       debugPrint('Error initializing services: $e');
     }
@@ -130,30 +123,10 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     try {
       final members = await _supabaseService.getTeamMembers(teamId);
       if (mounted) {
-        setState(() {
-          _teamMembers = members;
-        });
+        _chat.setTeamMembers(members);
       }
     } catch (e) {
       debugPrint('Error loading team members: $e');
-    }
-  }
-
-  Future<void> _loadUserTasksAndTickets() async {
-    try {
-      final tasks = await _supabaseService.getTasks(filterByAssignment: true);
-
-      final tickets =
-          await _supabaseService.getTickets(filterByAssignment: true);
-
-      if (mounted) {
-        setState(() {
-          _userTasks = tasks;
-          _userTickets = tickets;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading user tasks and tickets: $e');
     }
   }
 
@@ -276,29 +249,28 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
-    if (_isProcessing) return;
+    if (ref.read(chatControllerProvider).isProcessing) return;
 
     final userMessage = _messageController.text;
     _messageController.clear();
 
-    setState(() {
-      _messages.add(
-        ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
-      );
-      _isProcessing = true;
-    });
+    _chat.addMessage(
+      ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
+    );
+    _chat.setProcessing(true);
 
     _scrollToBottom();
 
     try {
-      final chatHistory = _getChatHistoryForAI();
+      await _chat.retrieveForQuery(userMessage);
+      final chatState = ref.read(chatControllerProvider);
 
       final response = await _aiService.generateChatResponse(
         userMessage,
-        chatHistory,
-        _teamMembers,
-        userTasks: _userTasks,
-        userTickets: _userTickets,
+        _chat.historyForAi(),
+        chatState.teamMembers,
+        ragContext: chatState.aiContext,
+        retrieveContext: false,
       );
 
       if (response['type'] == 'function_call') {
@@ -308,45 +280,29 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           response['raw_response'],
         );
       } else {
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              text: response['content'],
-              isUser: false,
-              timestamp: DateTime.now(),
-            ),
-          );
-          _isProcessing = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error sending message: $e');
-      setState(() {
-        _messages.add(
+        _chat.addMessage(
           ChatMessage(
-            text: "Sorry, I encountered an error. Please try again later.",
+            text: response['content'] ??
+                "Sorry, I encountered an error. Please try again later.",
             isUser: false,
             timestamp: DateTime.now(),
           ),
         );
-        _isProcessing = false;
-      });
+        _chat.setProcessing(false);
+      }
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      _chat.addMessage(
+        ChatMessage(
+          text: "Sorry, I encountered an error. Please try again later.",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+      _chat.setProcessing(false);
     }
 
     _scrollToBottom();
-  }
-
-  List<Map<String, String>> _getChatHistoryForAI() {
-    final recentMessages = _messages.length > 10
-        ? _messages.sublist(_messages.length - 10)
-        : _messages;
-
-    return recentMessages.map((message) {
-      return {
-        "role": message.isUser ? "user" : "assistant",
-        "content": message.text,
-      };
-    }).toList();
   }
 
   Future<void> _handleFunctionCall(
@@ -354,15 +310,13 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     Map<String, dynamic> arguments,
     String rawResponse,
   ) async {
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          text: "I'll help you with that. Let me process your request...",
-          isUser: false,
-          timestamp: DateTime.now(),
-        ),
-      );
-    });
+    _chat.addMessage(
+      ChatMessage(
+        text: "I'll help you with that. Let me process your request...",
+        isUser: false,
+        timestamp: DateTime.now(),
+      ),
+    );
 
     _scrollToBottom();
 
@@ -396,61 +350,50 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           result = {'success': false, 'error': 'Unknown function'};
       }
 
-      // Get a user-friendly response from the AI
+      // Get a user-friendly response from the AI (reuse this turn's RAG context).
       final responseMessage = await _aiService.handleToolResponse(
         functionName: functionName,
         arguments: arguments,
         rawResponse: rawResponse,
         result: result,
+        ragContext: ref.read(chatControllerProvider).aiContext,
       );
 
-      // Add the response to the chat
-      setState(() {
-        _messages.add(
+      _chat.addMessage(
+        ChatMessage(
+          text: responseMessage,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      if (result['success'] == true &&
+          (functionName == 'create_task' ||
+              functionName == 'create_ticket' ||
+              functionName == 'create_meeting')) {
+        _chat.addMessage(
           ChatMessage(
-            text: responseMessage,
+            text: _getCardText(functionName, arguments, result),
             isUser: false,
             timestamp: DateTime.now(),
+            isCard: true,
+            cardType: _getCardType(functionName),
+            cardData: result,
           ),
         );
-
-        // Add card if successful for creation functions
-        if (result['success'] == true &&
-            (functionName == 'create_task' ||
-                functionName == 'create_ticket' ||
-                functionName == 'create_meeting')) {
-          _messages.add(
-            ChatMessage(
-              text: _getCardText(functionName, arguments, result),
-              isUser: false,
-              timestamp: DateTime.now(),
-              isCard: true,
-              cardType: _getCardType(functionName),
-              cardData: result,
-            ),
-          );
-        }
-
-        _isProcessing = false;
-      });
-
-      // Refresh tasks and tickets if we just queried them
-      if (functionName == 'query_tasks' || functionName == 'query_tickets') {
-        _loadUserTasksAndTickets();
       }
+
+      _chat.setProcessing(false);
     } catch (e) {
       debugPrint('Error handling function call: $e');
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text:
-                "Sorry, I encountered an error while processing your request.",
-            isUser: false,
-            timestamp: DateTime.now(),
-          ),
-        );
-        _isProcessing = false;
-      });
+      _chat.addMessage(
+        ChatMessage(
+          text: "Sorry, I encountered an error while processing your request.",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+      _chat.setProcessing(false);
     }
 
     _scrollToBottom();
@@ -706,21 +649,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
 
-      // Update local cache
-      if (mounted) {
-        setState(() {
-          _userTasks = tasks;
-        });
-      }
-
       return {
         'success': true,
-        'tasks': tasks,
+        'tasks': AiContextBuilder.summarizeTasks(tasks),
         'count': tasks.length,
       };
     } catch (e) {
       debugPrint('Error querying tasks: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': 'Unable to query tasks.'};
     }
   }
 
@@ -819,21 +755,14 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
 
-      // Update local cache
-      if (mounted) {
-        setState(() {
-          _userTickets = tickets;
-        });
-      }
-
       return {
         'success': true,
-        'tickets': tickets,
+        'tickets': AiContextBuilder.summarizeTickets(tickets),
         'count': tickets.length,
       };
     } catch (e) {
       debugPrint('Error querying tickets: $e');
-      return {'success': false, 'error': e.toString()};
+      return {'success': false, 'error': 'Unable to query tickets.'};
     }
   }
 
@@ -1020,10 +949,6 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
           return {'success': false, 'error': 'Invalid item type'};
       }
 
-      if (result['success'] == true) {
-        _loadUserTasksAndTickets();
-      }
-
       return result;
     } catch (e) {
       debugPrint('Error modifying item: $e');
@@ -1069,6 +994,68 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
         );
       }
     });
+  }
+
+  void _navigateToRagResult(RagResult result) {
+    if (result.entityId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open this item. Details missing.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    switch (result.entityType) {
+      case RagEntityType.task:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskDetailScreen(taskId: result.entityId),
+          ),
+        );
+        break;
+      case RagEntityType.ticket:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TicketDetailScreen(ticketId: result.entityId),
+          ),
+        );
+        break;
+      case RagEntityType.meeting:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                MeetingDetailScreen(meetingId: result.entityId),
+          ),
+        );
+        break;
+      case RagEntityType.unknown:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open this item.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        break;
+    }
+  }
+
+  void _showMobileInsightsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.55,
+          child: ContextInsightsPanel(onResultTap: _navigateToRagResult),
+        );
+      },
+    );
   }
 
   void _navigateToItem(ChatMessage message) {
@@ -1173,205 +1160,249 @@ class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final chatState = ref.watch(chatControllerProvider);
+    final messages = chatState.messages;
+    final isProcessing = chatState.isProcessing;
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.shadow.withOpacity(0.2),
-                  offset: const Offset(0, 2),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.smart_toy, color: Colors.green),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Chat with Ell-ena',
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Your AI Assistant',
-                        style: TextStyle(
-                            color: colorScheme.onSurfaceVariant, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.info_outline,
-                      color: Colors.green,
-                      size: 20,
-                    ),
-                  ),
-                ],
+      body: ResponsiveLayout(
+        mobile: _buildChatColumn(
+          messages: messages,
+          isProcessing: isProcessing,
+          colorScheme: colorScheme,
+          showInsightsAction: true,
+        ),
+        desktop: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _buildChatColumn(
+                messages: messages,
+                isProcessing: isProcessing,
+                colorScheme: colorScheme,
+                showInsightsAction: false,
               ),
             ),
-          ),
-          Expanded(
-            child: _messages.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Start a conversation with Ell-ena',
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length + (_isProcessing ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (_isProcessing && index == _messages.length) {
-                        // Show typing indicator
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surfaceVariant,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: LoadingAnimationWidget.staggeredDotsWave(
-                              color: Colors.green,
-                              size: 24,
-                            ),
-                          ),
-                        );
-                      }
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: 320,
+              child: ContextInsightsPanel(onResultTap: _navigateToRagResult),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                      final message = _messages[index];
-                      if (message.isCard == true) {
-                        return _ItemCard(
-                          message: message,
-                          onViewItem: () => _navigateToItem(message),
-                        );
-                      }
-                      return _ChatBubble(message: message);
-                    },
-                  ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+  Widget _buildChatColumn({
+    required List<ChatMessage> messages,
+    required bool isProcessing,
+    required ColorScheme colorScheme,
+    required bool showInsightsAction,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.shadow.withOpacity(0.2),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
               ),
-            ),
+            ],
+          ),
+          child: SafeArea(
+            bottom: false,
             child: Row(
               children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceVariant,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      style: TextStyle(color: colorScheme.onSurface),
-                      decoration: InputDecoration(
-                        hintText: 'Type your message...',
-                        hintStyle:
-                            TextStyle(color: colorScheme.onSurfaceVariant),
-                        border: InputBorder.none,
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
                 Container(
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.green,
+                    color: Colors.green.withOpacity(0.2),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
-                  child: IconButton(
-                    onPressed: _toggleListening,
-                    icon: Icon(_isListening ? Icons.stop : Icons.mic),
-                    color: Colors.white,
-                  ),
+                  child: const Icon(Icons.smart_toy, color: Colors.green),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Chat with Ell-ena',
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
+                    ),
+                    Text(
+                      'Your AI Assistant',
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant, fontSize: 14),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                if (showInsightsAction)
+                  IconButton(
+                    tooltip: 'Context',
+                    onPressed: _showMobileInsightsSheet,
+                    icon: Icon(
+                      Icons.insights_outlined,
+                      color: Colors.green.shade400,
+                    ),
                   ),
-                  child: IconButton(
-                    onPressed: _isProcessing ? null : _sendMessage,
-                    icon: const Icon(Icons.send),
-                    color: Colors.white,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.info_outline,
+                    color: Colors.green,
+                    size: 20,
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: messages.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline,
+                        size: 64,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Start a conversation with Ell-ena',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length + (isProcessing ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (isProcessing && index == messages.length) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: LoadingAnimationWidget.staggeredDotsWave(
+                            color: Colors.green,
+                            size: 24,
+                          ),
+                        ),
+                      );
+                    }
+
+                    final message = messages[index];
+                    if (message.isCard == true) {
+                      return _ItemCard(
+                        message: message,
+                        onViewItem: () => _navigateToItem(message),
+                      );
+                    }
+                    return _ChatBubble(message: message);
+                  },
+                ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    style: TextStyle(color: colorScheme.onSurface),
+                    decoration: InputDecoration(
+                      hintText: 'Type your message...',
+                      hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                      border: InputBorder.none,
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: _toggleListening,
+                  icon: Icon(_isListening ? Icons.stop : Icons.mic),
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  onPressed: isProcessing ? null : _sendMessage,
+                  icon: const Icon(Icons.send),
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1711,26 +1742,6 @@ class _ItemCard extends StatelessWidget {
       return '';
     }
   }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-  final bool isCard;
-  final String? cardType;
-  final Map<String, dynamic>? cardData;
-  final String? avatarUrl; // Add avatar URL for profile pictures
-
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-    this.isCard = false,
-    this.cardType,
-    this.cardData,
-    this.avatarUrl,
-  });
 }
 
 // Extension to capitalize first letter of a string
