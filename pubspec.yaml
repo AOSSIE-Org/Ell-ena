@@ -45,6 +45,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
   freezed_annotation: ^2.4.4
+  go_router: ^14.8.1
 
   # Local storage
   shared_preferences: ^2.5.3

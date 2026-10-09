@@ -3,7 +3,6 @@ import 'dart:async';
 import 'onboarding/onboarding_screen.dart';
 import '../services/navigation_service.dart';
 import '../services/supabase_service.dart';
-import 'home/home_screen.dart';
 import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -51,17 +50,9 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (currentUser != null) {
         if (args != null && args is Map<String, dynamic>) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => HomeScreen(arguments: args),
-            ),
-          );
+          NavigationService().goHome(arguments: args);
         } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const HomeScreen(),
-            ),
-          );
+          NavigationService().goHome();
         }
       } else {
         Navigator.of(context).pushReplacement(
