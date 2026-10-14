@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/github_sync_ui.dart';
 import '../../widgets/custom_widgets.dart';
 
 class TicketDetailScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   bool _isLoading = true;
   bool _isAdmin = false;
+  bool _isGithubSyncing = false;
   Map<String, dynamic>? _ticket;
   List<Map<String, dynamic>> _comments = [];
 
@@ -283,6 +286,188 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         );
       }
     }
+  }
+
+  Future<void> _openGithubIssue(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error opening GitHub issue: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open GitHub issue'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _retryGithubSync() async {
+    if (_isGithubSyncing) return;
+    setState(() {
+      _isGithubSyncing = true;
+    });
+
+    try {
+      final result = await _supabaseService.syncTicketToGithub(widget.ticketId);
+      if (result['ticket'] is Map) {
+        setState(() {
+          _ticket = Map<String, dynamic>.from(result['ticket'] as Map);
+        });
+      } else {
+        await _loadTicketDetails();
+      }
+
+      if (!mounted) return;
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('GitHub sync updated'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['error']?.toString() ?? 'GitHub synchronization failed',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error retrying GitHub sync: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error syncing to GitHub: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGithubSyncing = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildGithubSyncSection() {
+    final syncToGithub = _ticket!['sync_to_github'] == true;
+    final status = _ticket!['github_sync_status'] as String?;
+    final issueUrl = _ticket!['gh_issue_url'] as String?;
+    final issueId = _ticket!['gh_issue_id'];
+    final errorText =
+        GithubSyncUi.userErrorMessage(_ticket!['github_sync_error'] as String?);
+    final rawError = _ticket!['github_sync_error'] as String?;
+    final ambiguous = rawError != null &&
+        rawError.contains('[ambiguous_create]');
+
+    if (!GithubSyncUi.shouldShowSection(
+      syncToGithub: syncToGithub,
+      status: status,
+      issueUrl: issueUrl,
+    )) {
+      return const SizedBox.shrink();
+    }
+
+    Color chipColor;
+    switch (status) {
+      case 'synced':
+        chipColor = Colors.green.shade400;
+        break;
+      case 'pending':
+        chipColor = Colors.orange.shade400;
+        break;
+      case 'failed':
+        chipColor = Colors.red.shade400;
+        break;
+      default:
+        chipColor = Colors.grey.shade400;
+    }
+
+    final canRetry = syncToGithub &&
+        issueId == null &&
+        status == 'failed' &&
+        !ambiguous;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Divider(color: Theme.of(context).dividerColor),
+        const SizedBox(height: 12),
+        Text(
+          'GitHub',
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: chipColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            GithubSyncUi.statusLabel(status),
+            style: TextStyle(
+              color: chipColor,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        if (status == 'synced' &&
+            issueUrl != null &&
+            issueUrl.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _openGithubIssue(issueUrl),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(
+              issueId != null ? 'View on GitHub (#$issueId)' : 'View on GitHub',
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.green.shade300,
+            ),
+          ),
+        ],
+        if (status == 'failed' && errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            errorText,
+            style: TextStyle(
+              color: Colors.red.shade200,
+              fontSize: 13,
+            ),
+          ),
+        ],
+        if (canRetry) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _isGithubSyncing ? null : _retryGithubSync,
+            child: _isGithubSyncing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Retry GitHub sync'),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _assignTicket(String userId) async {
@@ -753,6 +938,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             fontSize: 16,
                           ),
                         ),
+                        _buildGithubSyncSection(),
                         const SizedBox(height: 16),
                         Divider(color: Theme.of(context).dividerColor),
                         const SizedBox(height: 16),

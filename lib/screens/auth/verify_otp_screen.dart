@@ -406,7 +406,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           // padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
               
-            color:Color(0xFF1B3043),
+            color: const Color(0xFF277FBD).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10)
           ),
           child: Center(

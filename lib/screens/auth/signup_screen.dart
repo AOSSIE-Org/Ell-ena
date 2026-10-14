@@ -164,6 +164,9 @@ class _SignupScreenState extends State<SignupScreen>
       final result = await _supabaseService.signInWithGoogle();
 
       if (mounted) {
+        if (result['pendingRedirect'] == true) {
+          return;
+        }
         if (result['success'] == true) {
           if (result['isNewUser'] == true) {
             // New user - show team selection dialog
@@ -425,15 +428,15 @@ class _SignupScreenState extends State<SignupScreen>
         Center(
           child: OutlinedButton.icon(
             onPressed: _isLoading ? null : _handleGoogleSignIn,
-            icon: const FaIcon(
+            icon: FaIcon(
               FontAwesomeIcons.google,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 20,
             ),
-            label: const Text(
+            label: Text(
               'Sign up with Google',
               style: TextStyle(
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),

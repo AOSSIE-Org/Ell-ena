@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -117,6 +118,9 @@ class _LoginScreenState extends State<LoginScreen>
       final result = await _supabaseService.signInWithGoogle();
 
       if (mounted) {
+        if (result['pendingRedirect'] == true) {
+          return;
+        }
         if (result['success'] == true) {
           if (result['isNewUser'] == true) {
             // New user - show team selection dialog
@@ -159,6 +163,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AuthScreenWrapper(
       title: 'Welcome Back',
       subtitle: 'Sign in to continue with Ell-ena',
@@ -221,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 24),
                   CustomButton(
-                    text: 'Sign In',
+                    text: l10n.login,
                     onPressed: _isLoading ? null : _handleLogin,
                     isLoading: _isLoading,
                   ),
@@ -252,16 +257,16 @@ class _LoginScreenState extends State<LoginScreen>
                   // Google Sign-In Button
                   OutlinedButton.icon(
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    icon: const FaIcon(
+                    icon: FaIcon(
                       FontAwesomeIcons.google,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 20,
                     ),
-                    label: const Text(
+                    label: Text(
                       'Sign in with Google',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -292,7 +297,7 @@ class _LoginScreenState extends State<LoginScreen>
                           NavigationService().navigateTo(const SignupScreen());
                         },
                         child: Text(
-                          'Sign Up',
+                          l10n.signUp,
                           style: TextStyle(
                             color: Colors.green.shade400,
                             fontWeight: FontWeight.w600,
