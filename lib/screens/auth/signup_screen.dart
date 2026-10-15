@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -53,6 +54,7 @@ class _SignupScreenState extends State<SignupScreen>
   // Handle team creation
   Future<void> _handleCreateTeam() async {
     if (!_createTeamFormKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() => _isLoading = true);
 
@@ -64,8 +66,8 @@ class _SignupScreenState extends State<SignupScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent. Please check your inbox.'),
+          SnackBar(
+            content: Text(l10n.authVerificationEmailSent),
             backgroundColor: Colors.green,
           ),
         );
@@ -98,6 +100,7 @@ class _SignupScreenState extends State<SignupScreen>
   // Handle joining a team
   Future<void> _handleJoinTeam() async {
     if (!_joinTeamFormKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() => _isLoading = true);
 
@@ -109,8 +112,8 @@ class _SignupScreenState extends State<SignupScreen>
       if (!teamExists) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Team ID not found. Please check and try again.'),
+            SnackBar(
+              content: Text(l10n.authTeamIdNotFound),
               backgroundColor: Colors.red,
             ),
           );
@@ -126,8 +129,8 @@ class _SignupScreenState extends State<SignupScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification email sent. Please check your inbox.'),
+          SnackBar(
+            content: Text(l10n.authVerificationEmailSent),
             backgroundColor: Colors.green,
           ),
         );
@@ -158,12 +161,16 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   Future<void> _handleGoogleSignIn() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _isLoading = true);
 
     try {
       final result = await _supabaseService.signInWithGoogle();
 
       if (mounted) {
+        if (result['pendingRedirect'] == true) {
+          return;
+        }
         if (result['success'] == true) {
           if (result['isNewUser'] == true) {
             // New user - show team selection dialog
@@ -182,7 +189,7 @@ class _SignupScreenState extends State<SignupScreen>
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
+              content: Text(result['error'] ?? l10n.authGoogleSignInFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -192,7 +199,7 @@ class _SignupScreenState extends State<SignupScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(l10n.authErrorWithDetails(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -205,6 +212,7 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   Widget _buildJoinTeamForm() {
+    final l10n = AppLocalizations.of(context);
     return Form(
       key: _joinTeamFormKey,
       child: Column(
@@ -212,14 +220,14 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 12), // Spacing for floating label
           CustomTextField(
             controller: _teamIdController,
-            label: 'Team ID',
+            label: l10n.authTeamIdLabel,
             icon: Icons.people_outline,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter team ID';
+                return l10n.authEnterTeamId;
               }
               if (value.length != 6) {
-                return 'Team ID must be 6 characters';
+                return l10n.authTeamIdLength;
               }
               return null;
             },
@@ -227,11 +235,11 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _nameController,
-            label: 'Full Name',
+            label: l10n.authFullNameLabel,
             icon: Icons.person_outline,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your name';
+                return l10n.authEnterName;
               }
               return null;
             },
@@ -239,14 +247,14 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _emailController,
-            label: 'Email',
+            label: l10n.authEmailLabel,
             icon: Icons.email_outlined,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your email';
+                return l10n.authEnterEmail;
               }
               if (!value.contains('@')) {
-                return 'Please enter a valid email';
+                return l10n.authEnterValidEmail;
               }
               return null;
             },
@@ -254,15 +262,15 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _passwordController,
-            label: 'Password',
+            label: l10n.authPasswordLabel,
             icon: Icons.lock_outline,
             isPassword: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your password';
+                return l10n.authEnterPassword;
               }
               if (value.length < 6) {
-                return 'Password must be at least 6 characters';
+                return l10n.authPasswordTooShort;
               }
               return null;
             },
@@ -270,15 +278,15 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _confirmPasswordController,
-            label: 'Confirm Password',
+            label: l10n.authConfirmPasswordLabel,
             icon: Icons.lock_outline,
             isPassword: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please confirm your password';
+                return l10n.authConfirmPasswordPrompt;
               }
               if (value != _passwordController.text) {
-                return 'Passwords do not match';
+                return l10n.authPasswordsDoNotMatch;
               }
               return null;
             },
@@ -289,6 +297,7 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   Widget _buildCreateTeamForm() {
+    final l10n = AppLocalizations.of(context);
     return Form(
       key: _createTeamFormKey,
       child: Column(
@@ -296,11 +305,11 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 12), // Spacing for floating label
           CustomTextField(
             controller: _teamNameController,
-            label: 'Team Name',
+            label: l10n.authTeamNameLabel,
             icon: Icons.group,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter team name';
+                return l10n.authEnterTeamName;
               }
               return null;
             },
@@ -308,11 +317,11 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _nameController,
-            label: 'Admin Name',
+            label: l10n.authAdminNameLabel,
             icon: Icons.person_outline,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter admin name';
+                return l10n.authEnterAdminName;
               }
               return null;
             },
@@ -320,14 +329,14 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _emailController,
-            label: 'Admin Email',
+            label: l10n.authAdminEmailLabel,
             icon: Icons.email_outlined,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter admin email';
+                return l10n.authEnterAdminEmail;
               }
               if (!value.contains('@')) {
-                return 'Please enter a valid email';
+                return l10n.authEnterValidEmail;
               }
               return null;
             },
@@ -335,15 +344,15 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _passwordController,
-            label: 'Password',
+            label: l10n.authPasswordLabel,
             icon: Icons.lock_outline,
             isPassword: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please enter your password';
+                return l10n.authEnterPassword;
               }
               if (value.length < 6) {
-                return 'Password must be at least 6 characters';
+                return l10n.authPasswordTooShort;
               }
               return null;
             },
@@ -351,15 +360,15 @@ class _SignupScreenState extends State<SignupScreen>
           const SizedBox(height: 16),
           CustomTextField(
             controller: _confirmPasswordController,
-            label: 'Confirm Password',
+            label: l10n.authConfirmPasswordLabel,
             icon: Icons.lock_outline,
             isPassword: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Please confirm your password';
+                return l10n.authConfirmPasswordPrompt;
               }
               if (value != _passwordController.text) {
-                return 'Passwords do not match';
+                return l10n.authPasswordsDoNotMatch;
               }
               return null;
             },
@@ -371,15 +380,16 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AuthScreenWrapper(
-      title: 'Create Account',
-      subtitle: 'Join Ell-ena to get started',
+      title: l10n.authCreateAccount,
+      subtitle: l10n.authSignUpSubtitle,
       children: [
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Join the Team'),
-            Tab(text: 'Create the Team'),
+          tabs: [
+            Tab(text: l10n.authJoinTheTeamTab),
+            Tab(text: l10n.authCreateTheTeamTab),
           ],
           labelColor: Colors.green.shade400,
           unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -394,7 +404,9 @@ class _SignupScreenState extends State<SignupScreen>
             : _buildCreateTeamForm(),
         const SizedBox(height: 24),
         CustomButton(
-          text: _tabController.index == 0 ? 'Join Team' : 'Create Team',
+          text: _tabController.index == 0
+              ? l10n.authJoinTeam
+              : l10n.authCreateTeam,
           onPressed: _isLoading
               ? null
               : (_tabController.index == 0
@@ -410,7 +422,7 @@ class _SignupScreenState extends State<SignupScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'OR',
+                l10n.authOr,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -425,15 +437,15 @@ class _SignupScreenState extends State<SignupScreen>
         Center(
           child: OutlinedButton.icon(
             onPressed: _isLoading ? null : _handleGoogleSignIn,
-            icon: const FaIcon(
+            icon: FaIcon(
               FontAwesomeIcons.google,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 20,
             ),
-            label: const Text(
-              'Sign up with Google',
+            label: Text(
+              l10n.authSignUpWithGoogle,
               style: TextStyle(
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -453,7 +465,7 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         const SizedBox(height: 16),
         CustomButton(
-          text: 'Already have an account? Sign In',
+          text: l10n.authAlreadyHaveAccount,
           onPressed: () {
             NavigationService().navigateToReplacement(
               const LoginScreen(),
