@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
 
 class TeamMembersScreen extends StatefulWidget {
@@ -48,7 +49,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading team members: $e'),
+            content: Text(
+                AppLocalizations.of(context).profileErrorLoadingMembers('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -78,7 +80,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('${widget.teamName} Members'),
+        title: Text(AppLocalizations.of(context)
+            .profileTeamMembersTitle(widget.teamName)),
         backgroundColor: Colors.green.shade800,
       ),
       body: _isLoading
@@ -91,6 +94,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
 
   Widget _buildEmptyState() {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -102,7 +106,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No team members found',
+            l10n.profileNoMembersFound,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -111,7 +115,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Your team doesn\'t have any members yet',
+            l10n.profileNoMembersYet,
             style: TextStyle(
               fontSize: 14,
               color: colorScheme.onSurfaceVariant,
@@ -123,12 +127,13 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
   }
 
   Widget _buildMembersList() {
+    final l10n = AppLocalizations.of(context);
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _teamMembers.length,
       itemBuilder: (context, index) {
         final member = _teamMembers[index];
-        final name = member['full_name'] ?? 'Unknown';
+        final name = member['full_name'] ?? l10n.profileUnknownMember;
         final email = member['email'] ?? '';
         final role = member['role'] ?? 'member';
         final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : '?';
@@ -185,7 +190,9 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    role == 'admin' ? 'Admin' : 'Member',
+                    role == 'admin'
+                        ? l10n.profileRoleAdmin
+                        : l10n.profileRoleMember,
                     style: TextStyle(
                       color: role == 'admin'
                           ? Colors.orange.shade400
