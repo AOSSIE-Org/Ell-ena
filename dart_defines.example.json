@@ -1,0 +1,6 @@
+{
+  "SUPABASE_URL": "https://YOUR_PROJECT.supabase.co",
+  "SUPABASE_ANON_KEY": "YOUR_SUPABASE_ANON_KEY",
+  "GEMINI_API_KEY": "YOUR_GEMINI_API_KEY",
+  "OAUTH_REDIRECT_URL": "io.supabase.ellena://login-callback/"
+}

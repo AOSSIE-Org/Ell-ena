@@ -41,6 +41,11 @@ migrate_working_dir/
 
 # Environment / credentials
 .env
+.env.*
+!.env.example
+dart_defines.json
+key.properties
+android/key.properties
 firebase*.json
 *.keystore
 *.jks

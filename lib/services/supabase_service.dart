@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+
+import 'package:ell_ena/config/app_config.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -49,17 +51,10 @@ class SupabaseService {
     if (_isInitialized) return;
 
     try {
-      await dotenv.load().catchError((e) {
-        debugPrint('Error loading .env file: $e');
-      });
+      AppConfig.ensureClientConfig();
 
-      final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-      final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-
-      if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-        throw Exception(
-            'Missing required Supabase configuration. Please check your .env file.');
-      }
+      final supabaseUrl = AppConfig.supabaseUrl;
+      final supabaseAnonKey = AppConfig.supabaseAnonKey;
 
       await Supabase.initialize(
         url: supabaseUrl,
@@ -514,8 +509,7 @@ class SupabaseService {
         };
       }
 
-      final redirectUrl = dotenv.env['OAUTH_REDIRECT_URL'] ??
-          'io.supabase.ellena://login-callback';
+      final redirectUrl = AppConfig.oauthRedirectUrl;
 
       // Create a completer to wait for auth state change
       final completer = Completer<Map<String, dynamic>>();

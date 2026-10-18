@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
+import 'package:ell_ena/config/app_config.dart';
 import 'package:ell_ena/services/supabase_service.dart';
 import 'package:ell_ena/services/meeting_formatter.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'dart:convert';
 
 class AIService {
   static final AIService _instance = AIService._internal();
@@ -27,16 +27,8 @@ class AIService {
     if (_isInitialized) return;
     
     try {
-      // Load API key from .env file
-      await dotenv.load().catchError((e) {
-        debugPrint('Error loading .env file: $e');
-      });
-      
-      _apiKey = dotenv.env['GEMINI_API_KEY'];
-      
-      if (_apiKey == null || _apiKey!.isEmpty) {
-        throw Exception('Missing Gemini API key. Please check your .env file.');
-      }
+      AppConfig.ensureClientConfig();
+      _apiKey = AppConfig.geminiApiKey;
       
       // Initialize Supabase service if not already initialized
       if (!_supabaseService.isInitialized) {

@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
    sdk: '>=2.17.0 <4.0.0'
@@ -38,7 +38,6 @@ dependencies:
 
   # Supabase
   supabase_flutter: ^2.3.4
-  flutter_dotenv: ^5.2.1
 
   # State management
   provider: ^6.1.2
@@ -58,7 +57,7 @@ dependencies:
   http: ^1.2.1
 
   # Icons
-  font_awesome_flutter: ^10.8.0
+  font_awesome_flutter: ^11.0.0
 
   pdf: ^3.11.3
   path_provider: ^2.1.4
@@ -97,7 +96,6 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - .env
     - ELL-ena-logo/png/
     - ELL-ena-logo/svg/
   # assets:

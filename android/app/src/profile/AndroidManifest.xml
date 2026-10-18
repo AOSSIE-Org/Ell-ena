@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.aossie.ell_ena">
+    package="org.aossie.ellena">
     <!-- Flutter needs internet permission to communicate with the running application
          to provide hot reload and other development features.
     -->
