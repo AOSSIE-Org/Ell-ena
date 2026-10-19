@@ -7,12 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../tasks/create_task_screen.dart';
 import '../tickets/create_ticket_screen.dart';
 import '../meetings/create_meeting_screen.dart';
+import '../../widgets/adaptive_create_flow.dart';
 import '../../services/supabase_service.dart';
+import '../../shell/shell_refreshable.dart';
 import '../../widgets/custom_widgets.dart';
 import '../meetings/meeting_detail_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../chat/chat_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -21,7 +24,8 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    implements ShellRefreshable {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -111,6 +115,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   // Load events from cache or network
+  /// Skips the 5-minute cache: an explicit refresh should show fresh data.
+  @override
+  Future<void> refreshFromShell() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _events.clear();
+    });
+    try {
+      await _loadEventsFromNetwork();
+      await _saveEventsToCache();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _loadEventsWithCache() async {
     try {
       if (!mounted) return;
@@ -254,7 +278,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         _events[dateOnly]!.add(CalendarEvent(
-          title: task['title'] ?? 'Untitled Task',
+          title: task['title'],
           startTime: const TimeOfDay(hour: 23, minute: 0),
           endTime: const TimeOfDay(hour: 23, minute: 59),
           type: EventType.task,
@@ -303,7 +327,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         _events[dateOnly]!.add(CalendarEvent(
-          title: ticket['title'] ?? 'Untitled Ticket',
+          title: ticket['title'],
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
           endTime:
               TimeOfDay.fromDateTime(createdAt.add(const Duration(hours: 1))),
@@ -344,7 +368,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         // For meetings, assume 1 hour duration
         _events[dateOnly]!.add(CalendarEvent(
-          title: meeting['title'] ?? 'Untitled Meeting',
+          title: meeting['title'],
           startTime: TimeOfDay.fromDateTime(meetingDate),
           endTime:
               TimeOfDay.fromDateTime(meetingDate.add(const Duration(hours: 1))),
@@ -573,7 +597,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                event.title,
+                event.title ?? _untitledLabel(event.type),
                 style: TextStyle(
                   color: event.type.color,
                   fontSize: 12,
@@ -596,6 +620,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
+  }
+
+  String _untitledLabel(EventType type) {
+    final l10n = AppLocalizations.of(context);
+    switch (type) {
+      case EventType.meeting:
+        return l10n.calendarUntitledMeeting;
+      case EventType.task:
+        return l10n.calendarUntitledTask;
+      case EventType.ticket:
+        return l10n.calendarUntitledTicket;
+    }
   }
 
   Future<void> _handleEventTap(CalendarEvent event) async {
@@ -646,7 +682,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
-          'Create at ${selectedTime.format(context)}',
+          AppLocalizations.of(context)
+              .calendarCreateAt(selectedTime.format(context)),
           style: Theme.of(context)
               .textTheme
               .titleLarge
@@ -656,28 +693,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildDialogOption(
-              'Schedule a Meeting',
+              AppLocalizations.of(context).calendarScheduleMeeting,
               Icons.people,
               Colors.blue,
               () => _handleCreate(EventType.meeting, selectedTime),
             ),
             const SizedBox(height: 8),
             _buildDialogOption(
-              'Create a Task',
+              AppLocalizations.of(context).calendarCreateTask,
               Icons.task,
               Colors.green,
               () => _handleCreate(EventType.task, selectedTime),
             ),
             const SizedBox(height: 8),
             _buildDialogOption(
-              'Create a Ticket',
+              AppLocalizations.of(context).calendarCreateTicket,
               Icons.confirmation_number,
               Colors.orange,
               () => _handleCreate(EventType.ticket, selectedTime),
             ),
             const SizedBox(height: 8),
             _buildDialogOption(
-              'Create with Ell-ena AI',
+              AppLocalizations.of(context).calendarCreateWithAi,
               Icons.smart_toy,
               Colors.purple,
               () => _handleCreateWithAI(selectedTime),
@@ -737,31 +774,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     switch (type) {
       case EventType.meeting:
-        result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CreateMeetingScreen(),
-          ),
-        );
+        result = await openCreateFlow(context, CreateMeetingScreen());
         break;
       case EventType.task:
-        result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CreateTaskScreen(),
-          ),
-        );
+        result = await openCreateFlow(context, CreateTaskScreen());
         break;
       case EventType.ticket:
-        result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CreateTicketScreen(),
-          ),
-        );
+        result = await openCreateFlow(context, CreateTicketScreen());
         break;
     }
 
@@ -803,7 +822,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 }
 
 class CalendarEvent {
-  final String title;
+  final String? title;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final EventType type;

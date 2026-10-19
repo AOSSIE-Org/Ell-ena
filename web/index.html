@@ -28,12 +28,60 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
 
   <title>Ell-ena</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Shown while Flutter downloads. No logo: SplashScreen's intro animation
+       is the first time the logo appears. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #F0F0F0; }
+    html.dark, html.dark body { background: #1A1A1A; }
+    #launch-screen {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: inherit;
+      transition: opacity 200ms ease-out;
+    }
+    #launch-screen span {
+      width: 8px; height: 8px; margin: 0 8px; border-radius: 50%;
+      background: #66BB6A;
+      animation: launch-pulse 1.2s ease-in-out infinite;
+    }
+    #launch-screen span:nth-child(2) { animation-delay: 0.2s; }
+    #launch-screen span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes launch-pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+  </style>
+  <script>
+    // Mirror ThemeController: the saved choice wins, otherwise follow the OS.
+    (function () {
+      var mode = null;
+      try {
+        mode = JSON.parse(localStorage.getItem('flutter.app_theme_mode'));
+      } catch (e) {}
+      var dark = mode === 'dark' ||
+        (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
+    })();
+  </script>
 </head>
 <body>
+  <div id="launch-screen" role="progressbar" aria-label="Loading Ell-ena">
+    <span></span><span></span><span></span>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var launch = document.getElementById('launch-screen');
+      if (!launch) return;
+      launch.style.opacity = '0';
+      setTimeout(function () { launch.remove(); }, 200);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

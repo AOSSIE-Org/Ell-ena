@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
@@ -56,7 +57,8 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Failed to load meeting: $e'),
+              content:
+                  Text(AppLocalizations.of(context).meetingFailedToLoad('$e')),
               backgroundColor: Colors.red),
         );
       }
@@ -65,21 +67,22 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Text('Meeting Insights'),
+        title: Text(l10n.meetingInsightsTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Transcription'),
-            Tab(text: 'AI Summary'),
+          tabs: [
+            Tab(text: l10n.meetingTranscription),
+            Tab(text: l10n.meetingAiSummary),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'Download PDF',
+            tooltip: l10n.meetingDownloadPdf,
             icon: const Icon(Icons.download),
             onPressed: _downloadCurrentTabAsPdf,
           )
@@ -98,6 +101,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
   }
 
   Future<void> _downloadCurrentTabAsPdf() async {
+    final l10n = AppLocalizations.of(context);
     try {
       final idx = _tabController.index;
       final isTranscript = idx == 0;
@@ -269,7 +273,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('Saved to ${file.path}'),
+                  content: Text(l10n.meetingSavedTo(file.path)),
                   backgroundColor: Colors.green),
             );
             return;
@@ -284,23 +288,26 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Saved to ${fallbackFile.path}'),
+            content: Text(l10n.meetingSavedTo(fallbackFile.path)),
             backgroundColor: Colors.green),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(l10n.meetingPdfError('$e')),
+            backgroundColor: Colors.red),
       );
     }
   }
 
   Widget _buildTranscriptView() {
+    final l10n = AppLocalizations.of(context);
     final segments = _meeting?['final_transcription'];
     if (segments == null || segments is! List || segments.isEmpty) {
       return Center(
         child: Text(
-          'No transcription available',
+          l10n.meetingNoTranscription,
           style: TextStyle(color: Colors.grey.shade400),
         ),
       );
@@ -311,7 +318,7 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final Map seg = Map<String, dynamic>.from(segments[index] as Map);
-        final speaker = (seg['speaker']?.toString() ?? 'Speaker');
+        final speaker = (seg['speaker']?.toString() ?? l10n.meetingSpeaker);
         final text = (seg['text']?.toString() ?? '');
         return Container(
           padding: const EdgeInsets.all(12),
@@ -358,11 +365,12 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
   }
 
   Widget _buildSummaryView() {
+    final l10n = AppLocalizations.of(context);
     final summary = _meeting?['meeting_summary_json'];
     if (summary == null || summary is! Map || summary.isEmpty) {
       return Center(
         child: Text(
-          'No AI summary generated yet',
+          l10n.meetingNoAiSummary,
           style: TextStyle(color: Colors.grey.shade400),
         ),
       );
@@ -426,7 +434,8 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
                               fontWeight: FontWeight.bold)),
                       const SizedBox(height: 2),
                       Text(
-                        'Owner: ${map['owner'] ?? '—'}   •   Deadline: ${map['deadline'] ?? 'N/A'}',
+                        l10n.meetingOwnerDeadline('${map['owner'] ?? '—'}',
+                            '${map['deadline'] ?? l10n.meetingNotApplicable}'),
                         style: TextStyle(
                             color: Colors.grey.shade400, fontSize: 12),
                       ),
@@ -450,17 +459,17 @@ class _MeetingInsightsScreenState extends State<MeetingInsightsScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        ...section('Key Discussion Points', [bullets(keyPoints)]),
-        ...section('Important Decisions', [bullets(decisions)]),
-        ...section('Action Items', [actionItems(actions)]),
-        ...section('Meeting Highlights', [bullets(highlights)]),
-        ...section('Follow-up Tasks', [
+        ...section(l10n.meetingKeyDiscussionPoints, [bullets(keyPoints)]),
+        ...section(l10n.meetingImportantDecisions, [bullets(decisions)]),
+        ...section(l10n.meetingActionItems, [actionItems(actions)]),
+        ...section(l10n.meetingHighlights, [bullets(highlights)]),
+        ...section(l10n.meetingFollowUpTasks, [
           actionItems(followUps
               .map((e) =>
                   {'item': e['task'], 'owner': '', 'deadline': e['deadline']})
               .toList())
         ]),
-        Text('Overall Summary',
+        Text(l10n.meetingOverallSummary,
             style: Theme.of(context)
                 .textTheme
                 .titleMedium
