@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
 import '../../widgets/custom_widgets.dart';
+import '../../l10n/app_localizations.dart';
 import '../home/home_screen.dart';
 
 class TeamSelectionDialog extends StatefulWidget {
@@ -37,6 +38,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
 
   Future<void> _handleJoinTeam() async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() => _isLoading = true);
 
@@ -55,7 +57,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Failed to join team'),
+              content: Text(result['error'] ?? l10n.authFailedToJoinTeam),
               backgroundColor: Colors.red,
             ),
           );
@@ -65,7 +67,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(l10n.authErrorWithDetails(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -79,6 +81,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
 
   Future<void> _handleCreateTeam() async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() => _isLoading = true);
 
@@ -97,7 +100,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Failed to create team'),
+              content: Text(result['error'] ?? l10n.authFailedToCreateTeam),
               backgroundColor: Colors.red,
             ),
           );
@@ -107,7 +110,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(l10n.authErrorWithDetails(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -124,17 +127,18 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context);
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Team Created Successfully!',
+            l10n.authTeamCreatedTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Your Team ID is:',
+                l10n.authYourTeamIdIs,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
@@ -158,7 +162,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Share this ID with your team members so they can join your team.',
+                l10n.authShareTeamId,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
@@ -173,7 +177,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                 NavigationService().navigateToReplacement(const HomeScreen());
               },
               child: Text(
-                'Continue',
+                l10n.authContinue,
                 style: TextStyle(color: Colors.green.shade400),
               ),
             ),
@@ -185,12 +189,13 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: false,
       child: AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Complete Your Setup',
+          l10n.authCompleteSetup,
           style: Theme.of(context).textTheme.titleLarge,
         ),
         content: SingleChildScrollView(
@@ -198,7 +203,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Choose how you want to proceed:',
+                l10n.authChooseHowToProceed,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
@@ -208,7 +213,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                 children: [
                   Expanded(
                     child: _OptionCard(
-                      title: 'Join Team',
+                      title: l10n.authJoinTeam,
                       icon: Icons.group_add,
                       isSelected: _isJoiningTeam,
                       onTap: () => setState(() => _isJoiningTeam = true),
@@ -217,7 +222,7 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _OptionCard(
-                      title: 'Create Team',
+                      title: l10n.authCreateTeam,
                       icon: Icons.add_business,
                       isSelected: !_isJoiningTeam,
                       onTap: () => setState(() => _isJoiningTeam = false),
@@ -233,11 +238,11 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                   children: [
                     CustomTextField(
                       controller: _userNameController,
-                      label: 'Your Name',
+                      label: l10n.authYourNameLabel,
                       icon: Icons.person_outline,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
+                          return l10n.authEnterName;
                         }
                         return null;
                       },
@@ -246,11 +251,11 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                     if (_isJoiningTeam)
                       CustomTextField(
                         controller: _teamCodeController,
-                        label: 'Team Code',
+                        label: l10n.authTeamCodeLabel,
                         icon: Icons.qr_code,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter team code';
+                            return l10n.authEnterTeamCode;
                           }
                           return null;
                         },
@@ -258,11 +263,11 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                     else
                       CustomTextField(
                         controller: _teamNameController,
-                        label: 'Team Name',
+                        label: l10n.authTeamNameLabel,
                         icon: Icons.business,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter team name';
+                            return l10n.authEnterTeamName;
                           }
                           return null;
                         },
@@ -285,7 +290,9 @@ class _TeamSelectionDialogState extends State<TeamSelectionDialog> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    _isJoiningTeam ? 'Join Team' : 'Create Team',
+                    _isJoiningTeam
+                        ? l10n.authJoinTeam
+                        : l10n.authCreateTeam,
                     style: TextStyle(color: Colors.green.shade400),
                   ),
           ),

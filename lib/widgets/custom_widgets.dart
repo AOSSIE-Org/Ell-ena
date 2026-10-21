@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import '../shell/app_shell.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'dart:math';
@@ -12,7 +14,7 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final Function(String)? onChanged;
   final bool enabled;
-  
+
   final String? label;
   final IconData? icon;
   final bool? isPassword;
@@ -37,7 +39,7 @@ class CustomTextField extends StatelessWidget {
     final String effectiveHintText = hintText;
     final IconData? effectivePrefixIcon = icon ?? prefixIcon;
     final bool effectiveObscureText = isPassword ?? obscureText;
-    
+
     return TextFormField(
       controller: controller,
       obscureText: effectiveObscureText,
@@ -49,10 +51,13 @@ class CustomTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: effectiveHintText,
         labelText: label,
-        labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        labelStyle:
+            TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        hintStyle:
+            TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         prefixIcon: effectivePrefixIcon != null
-            ? Icon(effectivePrefixIcon, color: Theme.of(context).colorScheme.onSurfaceVariant)
+            ? Icon(effectivePrefixIcon,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)
             : null,
         filled: true,
         fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
@@ -101,32 +106,32 @@ class CustomButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor:
               isOutlined ? Colors.transparent : Colors.green.shade400,
-          foregroundColor: Colors.white,
+          foregroundColor: isOutlined
+              ? Theme.of(context).colorScheme.onSurface
+              : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side:
-                isOutlined
-                    ? BorderSide(color: Colors.green.shade400)
-                    : BorderSide.none,
+            side: isOutlined
+                ? BorderSide(color: Colors.green.shade400)
+                : BorderSide.none,
           ),
         ),
-        child:
-            isLoading
-                ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-                : Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
                 ),
+              )
+            : Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
@@ -137,17 +142,26 @@ class AuthScreenWrapper extends StatelessWidget {
   final String subtitle;
   final List<Widget> children;
 
+  /// Shows the form in a centred card on wide screens. Only the login and
+  /// sign-up screens set this.
+  final bool centerOnWideScreens;
+
   const AuthScreenWrapper({
     Key? key,
     required this.title,
     required this.subtitle,
     required this.children,
+    this.centerOnWideScreens = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    if (centerOnWideScreens && AppShell.isDesktop(context)) {
+      return _buildWide(context);
+    }
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -157,20 +171,70 @@ class AuthScreenWrapper extends StatelessWidget {
               const SizedBox(height: 40),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 30),
               ...children,
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Wide screens: the form in a card centred on the page.
+  Widget _buildWide(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(48),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Container(
+              padding: const EdgeInsets.all(40),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  ...children,
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -207,8 +271,10 @@ class DashboardLoadingSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
-    final baseColor = isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
-    final highlightColor = isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final baseColor =
+        isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final highlightColor =
+        isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
     final cardColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
     final textColor = scheme.onSurface;
     final subTextColor = scheme.onSurfaceVariant;
@@ -263,7 +329,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Main content
           Expanded(
             child: SingleChildScrollView(
@@ -273,17 +339,19 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                 children: [
                   // Stats row
                   Row(
-                    children: List.generate(3, (index) => 
-                      Expanded(
+                    children: List.generate(
+                      3,
+                      (index) => Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                          child: _buildStatCard(cardColor, textColor, subTextColor),
+                          child: _buildStatCard(
+                              cardColor, textColor, subTextColor),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Tasks section
                   Text(
                     'Recent Tasks',
@@ -294,10 +362,13 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...List.generate(3, (index) => _buildTaskItem(cardColor, textColor, subTextColor)),
-                  
+                  ...List.generate(
+                      3,
+                      (index) =>
+                          _buildTaskItem(cardColor, textColor, subTextColor)),
+
                   const SizedBox(height: 24),
-                  
+
                   // Calendar section
                   Text(
                     'Upcoming Events',
@@ -309,9 +380,9 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildCalendarWidget(cardColor, textColor, subTextColor),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Activity section
                   Text(
                     'Team Activity',
@@ -322,7 +393,10 @@ class DashboardLoadingSkeleton extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...List.generate(2, (index) => _buildActivityItem(cardColor, textColor, subTextColor, baseColor)),
+                  ...List.generate(
+                      2,
+                      (index) => _buildActivityItem(
+                          cardColor, textColor, subTextColor, baseColor)),
                 ],
               ),
             ),
@@ -331,7 +405,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildStatCard(Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       height: 80,
@@ -365,7 +439,7 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildTaskItem(Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -426,8 +500,9 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildCalendarWidget(Color cardColor, Color textColor, Color subTextColor) {
+
+  Widget _buildCalendarWidget(
+      Color cardColor, Color textColor, Color subTextColor) {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(16),
@@ -519,8 +594,9 @@ class DashboardLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildActivityItem(Color cardColor, Color textColor, Color subTextColor, Color avatarColor) {
+
+  Widget _buildActivityItem(
+      Color cardColor, Color textColor, Color subTextColor, Color avatarColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -578,10 +654,13 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
-    final baseColor = isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
-    final highlightColor = isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final baseColor =
+        isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final highlightColor =
+        isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
     final cardColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
-    final headerBgColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
+    final headerBgColor =
+        isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0);
     final textColor = scheme.onSurface;
     final subTextColor = scheme.onSurfaceVariant;
 
@@ -618,7 +697,8 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -642,7 +722,8 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                 const SizedBox(height: 16),
                 // Search bar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: headerBgColor,
                     borderRadius: BorderRadius.circular(12),
@@ -652,7 +733,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                       Icon(Icons.search, color: subTextColor),
                       const SizedBox(width: 8),
                       Text(
-                        'Search',
+                        AppLocalizations.of(context).search,
                         style: TextStyle(
                           color: subTextColor,
                         ),
@@ -664,7 +745,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Tabs
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -677,14 +758,15 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Content
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: 5,
               itemBuilder: (context, index) {
-                return _buildWorkspaceItem(cardColor, textColor, subTextColor, baseColor);
+                return _buildWorkspaceItem(
+                    cardColor, textColor, subTextColor, baseColor);
               },
             ),
           ),
@@ -692,8 +774,9 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildTab(String title, bool isSelected, Color cardColor, Color subTextColor) {
+
+  Widget _buildTab(
+      String title, bool isSelected, Color cardColor, Color subTextColor) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -713,8 +796,9 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildWorkspaceItem(Color cardColor, Color textColor, Color subTextColor, Color avatarColor) {
+
+  Widget _buildWorkspaceItem(
+      Color cardColor, Color textColor, Color subTextColor, Color avatarColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -808,10 +892,13 @@ class CalendarLoadingSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isDark = scheme.brightness == Brightness.dark;
-    final baseColor = isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
-    final highlightColor = isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
+    final baseColor =
+        isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE0E0E0);
+    final highlightColor =
+        isDark ? const Color(0xFF3D3D3D) : const Color(0xFFF5F5F5);
     final cardColor = isDark ? const Color(0xFF2D2D2D) : Colors.white;
-    final navBtnColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFEEEEEE);
+    final navBtnColor =
+        isDark ? const Color(0xFF1A1A1A) : const Color(0xFFEEEEEE);
     final textColor = scheme.onSurface;
     final subTextColor = scheme.onSurfaceVariant;
 
@@ -856,7 +943,8 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                             color: navBtnColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.arrow_back, size: 16, color: textColor),
+                          child: Icon(Icons.arrow_back,
+                              size: 16, color: textColor),
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -865,14 +953,15 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                             color: navBtnColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.arrow_forward, size: 16, color: textColor),
+                          child: Icon(Icons.arrow_forward,
+                              size: 16, color: textColor),
                         ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Weekday headers
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -887,7 +976,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Calendar grid (4 weeks)
                 for (int week = 0; week < 4; week++)
                   Padding(
@@ -898,14 +987,16 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                         // Highlight a random day to simulate selected day
                         final isSelected = week == 1 && day == 3;
                         final hasEvents = (week + day) % 3 == 0;
-                        
+
                         return Column(
                           children: [
                             Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: isSelected ? Colors.green.withOpacity(0.2) : Colors.transparent,
+                                color: isSelected
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.transparent,
                                 shape: BoxShape.circle,
                               ),
                               alignment: Alignment.center,
@@ -913,7 +1004,9 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                                 '${week * 7 + day + 1}',
                                 style: TextStyle(
                                   color: isSelected ? Colors.green : textColor,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -935,7 +1028,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Time scale and events
           Expanded(
             child: ListView.builder(
@@ -944,7 +1037,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
               itemBuilder: (context, index) {
                 final hour = 9 + index;
                 final hasEvent = index % 2 == 0;
-                
+
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -956,12 +1049,15 @@ class CalendarLoadingSkeleton extends StatelessWidget {
                         style: TextStyle(color: subTextColor),
                       ),
                     ),
-                    
+
                     // Event container
                     Expanded(
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16, left: 8),
-                        child: hasEvent ? _buildEventItem(cardColor, textColor, subTextColor) : const SizedBox(height: 40),
+                        child: hasEvent
+                            ? _buildEventItem(
+                                cardColor, textColor, subTextColor)
+                            : const SizedBox(height: 40),
                       ),
                     ),
                   ],
@@ -973,14 +1069,14 @@ class CalendarLoadingSkeleton extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildEventItem(Color cardColor, Color textColor, Color subTextColor) {
     final eventTypes = ['Meeting', 'Task', 'Ticket'];
     final eventType = eventTypes[Random().nextInt(eventTypes.length)];
-    
+
     Color eventColor;
     IconData eventIcon;
-    
+
     switch (eventType) {
       case 'Meeting':
         eventColor = Colors.blue;
@@ -994,7 +1090,7 @@ class CalendarLoadingSkeleton extends StatelessWidget {
         eventColor = Colors.orange;
         eventIcon = Icons.confirmation_number;
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
