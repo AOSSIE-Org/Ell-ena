@@ -1,7 +1,7 @@
 # Ell-ena
 
 <p align="center">
-  <img src="ELL-ena-logo/svg/ell-ena%20black.svg" alt="Ell-ena logo" width="180"/>
+  <img src="ELL-ena-logo/svg/ellena_logo.svg" alt="Ell-ena logo" width="220"/>
 </p>
 
 **Ell-ena** is your AI-powered teammate that makes managing work effortless. From automatically creating tickets to capturing every detail in meeting transcriptions, Ell-ena keeps the full context of your projects at its fingertips—so nothing ever falls through the cracks.  

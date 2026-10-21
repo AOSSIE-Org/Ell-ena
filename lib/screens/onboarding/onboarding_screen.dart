@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../auth/auth.dart';
@@ -14,24 +15,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingSlide> _slides = [
-    OnboardingSlide(
-      title: 'All-in-One Task Management',
-      description:
-          'Create tickets, to-dos, and transcribe meetings—all in one place.',
-      icon: Icons.task_alt,
-    ),
-    OnboardingSlide(
-      title: 'AI-Powered Assistant',
-      description: 'Just chat with Ell-ena and let AI do the heavy lifting.',
-      icon: Icons.chat_bubble_outline,
-    ),
-    OnboardingSlide(
-      title: 'Smart Context',
-      description: 'Smarter you with AI-powered context awareness.',
-      icon: Icons.psychology_outlined,
-    ),
-  ];
+  late List<OnboardingSlide> _slides;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final l10n = AppLocalizations.of(context);
+    _slides = [
+      OnboardingSlide(
+        title: l10n.onboardingTaskManagementTitle,
+        description: l10n.onboardingTaskManagementDescription,
+        icon: Icons.task_alt,
+      ),
+      OnboardingSlide(
+        title: l10n.onboardingAssistantTitle,
+        description: l10n.onboardingAssistantDescription,
+        icon: Icons.chat_bubble_outline,
+      ),
+      OnboardingSlide(
+        title: l10n.onboardingContextTitle,
+        description: l10n.onboardingContextDescription,
+        icon: Icons.psychology_outlined,
+      ),
+    ];
+  }
 
   @override
   void dispose() {
@@ -52,6 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -152,13 +160,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 24),
                   CustomButton(
                     text: _currentPage == _slides.length - 1
-                        ? 'Get Started'
-                        : 'Next',
+                        ? l10n.onboardingGetStarted
+                        : l10n.onboardingNext,
                     onPressed: _handleNext,
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
-                    text: 'Skip',
+                    text: l10n.onboardingSkip,
                     onPressed: () {
                       NavigationService().navigateToReplacement(
                         const LoginScreen(),
