@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -104,6 +105,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   Future<void> _handleVerification() async {
     String otp = _controllers.map((c) => c.text).join();
     if (otp.length == 6) {
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -136,15 +138,14 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           }
         } else {
           setState(() {
-            String errorMsg = result['error'] ?? 'Verification failed';
+            String errorMsg = result['error'] ?? l10n.authVerificationFailed;
 
             // Make the error message more user-friendly
             if (errorMsg.contains('expired') ||
                 errorMsg.contains('otp_expired')) {
-              errorMsg =
-                  'Verification code has expired or invalid. Please request a new code.';
+              errorMsg = l10n.authCodeExpiredOrInvalid;
             } else if (errorMsg.contains('invalid')) {
-              errorMsg = 'Invalid verification code. Please try again.';
+              errorMsg = l10n.authInvalidCode;
             }
 
             _errorMessage = errorMsg;
@@ -158,12 +159,11 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           // Make the error message more user-friendly
           if (errorMsg.contains('expired') ||
               errorMsg.contains('otp_expired')) {
-            errorMsg =
-                'Verification code has expired. Please request a new code.';
+            errorMsg = l10n.authCodeExpired;
           } else if (errorMsg.contains('invalid')) {
-            errorMsg = 'Invalid verification code. Please try again.';
+            errorMsg = l10n.authInvalidCode;
           } else {
-            errorMsg = 'An error occurred. Please try again.';
+            errorMsg = l10n.authGenericError;
           }
 
           _errorMessage = errorMsg;
@@ -188,6 +188,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context);
     _startResendTimer();
     setState(() {
       _isLoading = true;
@@ -203,21 +204,21 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
 
       if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification code resent successfully. Please check your inbox and spam folder.'),
+          SnackBar(
+            content: Text(l10n.authCodeResent),
             backgroundColor: Colors.green,
           ),
         );
       } else {
         setState(() {
-          String errorMsg = result['error'] ?? 'Failed to resend code';
+          String errorMsg = result['error'] ?? l10n.authResendFailed;
 
           // Make the error message more user-friendly
           if (errorMsg.contains('Rate limit')) {
-            errorMsg = 'Too many attempts. Please try again later.';
+            errorMsg = l10n.authTooManyAttempts;
           } else if (errorMsg.contains('not found') ||
               errorMsg.contains('Invalid email')) {
-            errorMsg = 'Email address not found or invalid.';
+            errorMsg = l10n.authEmailNotFoundOrInvalid;
           }
 
           _errorMessage = errorMsg;
@@ -230,14 +231,14 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
 
         // Make the error message more user-friendly
         if (errorMsg.contains('Rate limit')) {
-          errorMsg = 'Too many attempts. Please try again later.';
+          errorMsg = l10n.authTooManyAttempts;
         } else if (errorMsg.contains('not found') ||
             errorMsg.contains('Invalid email')) {
-          errorMsg = 'Email address not found or invalid.';
+          errorMsg = l10n.authEmailNotFoundOrInvalid;
         } else if (errorMsg.contains('Assertion failed')) {
-          errorMsg = 'Unable to resend code. Please go back and try again.';
+          errorMsg = l10n.authUnableToResend;
         } else {
-          errorMsg = 'An error occurred. Please try again.';
+          errorMsg = l10n.authGenericError;
         }
 
         _errorMessage = errorMsg;
@@ -258,17 +259,18 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        final l10n = AppLocalizations.of(context);
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Team Created Successfully!',
+            l10n.authTeamCreatedTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Your Team ID is:',
+                l10n.authYourTeamIdIs,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
@@ -294,11 +296,12 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.copy, color: Colors.green),
+                      tooltip: l10n.authCopyTeamId,
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: teamId));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Team ID copied to clipboard'),
+                          SnackBar(
+                            content: Text(l10n.authTeamIdCopied),
                             backgroundColor: Colors.green,
                           ),
                         );
@@ -309,7 +312,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Share this ID with your team members so they can join your team.',
+                l10n.authShareTeamId,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
@@ -322,7 +325,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 NavigationService().navigateToReplacement(const HomeScreen());
               },
               child: Text(
-                'Continue',
+                l10n.authContinue,
                 style: TextStyle(color: Colors.green.shade400),
               ),
             ),
@@ -334,9 +337,10 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AuthScreenWrapper(
-      title: 'Verify Email',
-      subtitle: 'Enter the 6-digit code sent to ${widget.email}',
+      title: l10n.authVerifyEmailTitle,
+      subtitle: l10n.authVerifyEmailSubtitle(widget.email),
       children: [
         
         // if (_errorMessage != null)
@@ -352,7 +356,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-              'Resend code in 00:${_resendseconds.toString().padLeft(2, '0')}',
+              l10n.authResendCodeIn(
+                  '00:${_resendseconds.toString().padLeft(2, '0')}'),
               style: TextStyle(
                   color: Colors.red.shade400, fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
@@ -406,7 +411,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           // padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
               
-            color:Color(0xFF1B3043),
+            color: const Color(0xFF277FBD).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10)
           ),
           child: Center(
@@ -419,7 +424,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                   Expanded(
 
                     child: Text(
-                      "Check your spam/junk folder if you don't\n see the email.",
+                      l10n.authCheckSpamFolder,
                       softWrap: true,
                       style:TextStyle(
                         color: Color(0xFF277FBD),
@@ -435,7 +440,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
         ),
         const SizedBox(height: 32),
         CustomButton(
-          text: 'Verify Code',
+          text: l10n.authVerifyCode,
           onPressed: (!_otpcomplete || _isLoading) ? null : _handleVerification,
           isLoading: _isLoading,
         ),
@@ -444,14 +449,14 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Didn\'t receive the code? ',
+              l10n.authDidNotReceiveCode,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             TextButton(
               onPressed: _isLoading ? null : _resendCode,
               child: Text(
-                'Resend',
+                l10n.authResend,
                 style: TextStyle(
                   color: Colors.green.shade400,
                   fontWeight: FontWeight.w600,

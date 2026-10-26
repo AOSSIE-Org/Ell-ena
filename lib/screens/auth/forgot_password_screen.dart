@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -26,6 +27,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _handleResetPassword() async {
     if (_formKey.currentState!.validate()) {
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -40,8 +42,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (mounted) {
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reset code sent to your email'),
+            SnackBar(
+              content: Text(l10n.authResetCodeSent),
               backgroundColor: Colors.green,
             ),
           );
@@ -58,15 +60,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         if (mounted) {
           // Show user-friendly error message
           setState(() {
-            String errorMsg = 'An error occurred. Please try again.';
+            String errorMsg = l10n.authGenericError;
             
             // Parse the error message to be more user-friendly
             if (e.toString().contains('Invalid email')) {
-              errorMsg = 'Invalid email address';
+              errorMsg = l10n.authInvalidEmailAddress;
             } else if (e.toString().contains('Email not found')) {
-              errorMsg = 'Email address not found';
+              errorMsg = l10n.authEmailNotFound;
             } else if (e.toString().contains('Rate limit')) {
-              errorMsg = 'Too many attempts. Please try again later.';
+              errorMsg = l10n.authTooManyAttempts;
             }
             
             _errorMessage = errorMsg;
@@ -82,9 +84,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AuthScreenWrapper(
-      title: 'Reset Password',
-      subtitle: 'Enter your email to receive a reset code',
+      title: l10n.authResetPasswordTitle,
+      subtitle: l10n.authResetPasswordSubtitle,
       children: [
         if (_errorMessage != null)
           Padding(
@@ -100,28 +103,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           child: Column(
             children: [
               CustomTextField(
-                label: 'Email',
+                label: l10n.authEmailLabel,
                 icon: Icons.email_outlined,
                 controller: _emailController,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
+                    return l10n.authEnterEmail;
                   }
                   if (!value.contains('@')) {
-                    return 'Please enter a valid email';
+                    return l10n.authEnterValidEmail;
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 24),
               CustomButton(
-                text: 'Send Reset Code',
+                text: l10n.authSendResetCode,
                 onPressed: _isLoading ? null : _handleResetPassword,
                 isLoading: _isLoading,
               ),
               const SizedBox(height: 16),
               CustomButton(
-                text: 'Back to Login',
+                text: l10n.authBackToLogin,
                 onPressed: () {
                   NavigationService().goBack();
                 },

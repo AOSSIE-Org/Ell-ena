@@ -18,8 +18,50 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Your AI-powered Task Assistant">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Ell-ena is an AI-powered teammate that turns chats and meetings into tasks, tickets and summaries, so your team never loses context.">
+  <meta name="keywords" content="Ell-ena, AI assistant, task management, ticket tracking, meeting transcription, meeting summaries, AOSSIE">
+  <meta name="author" content="AOSSIE">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#4CAF50">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/AOSSIE-Org/SocialShareButton@v1.0.4/src/social-share-button.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/support-us-button@2.2.1/dist/style.css">
+  <!-- Ell-ena green in place of the support panel's gold and black. -->
+  <style>
+    #ellena-support-root button {
+      background-color: #66BB6A; color: #FFFFFF;
+    }
+    #ellena-support-root button:hover {
+      background-color: #43A047; color: #FFFFFF;
+      box-shadow: 0 10px 20px rgba(102, 187, 106, 0.25);
+    }
+    #ellena-support-root a:hover { color: #66BB6A; }
+  </style>
+
+  <!--
+    Absolute preview URLs need the public site origin. Replace PROJECT_HOST,
+    then uncomment. If the site is not served from the domain root, include
+    the base path and leave off the trailing slash.
+    <link rel="canonical" href="https://PROJECT_HOST/">
+    <meta property="og:url" content="https://PROJECT_HOST/">
+    <meta property="og:image" content="https://PROJECT_HOST/icons/Icon-512.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:image:alt" content="Ell-ena logo">
+    <meta name="twitter:image" content="https://PROJECT_HOST/icons/Icon-512.png">
+    <meta name="twitter:image:alt" content="Ell-ena logo">
+  -->
+
+  <!-- Link previews (Discord, LinkedIn, Facebook). -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Ell-ena">
+  <meta property="og:title" content="Ell-ena: your AI-powered teammate">
+  <meta property="og:description" content="Turn chats and meetings into tasks, tickets and summaries, so your team never loses context.">
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Ell-ena: your AI-powered teammate">
+  <meta name="twitter:description" content="Turn chats and meetings into tasks, tickets and summaries, so your team never loses context.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -28,12 +70,80 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
 
-  <title>Ell-ena</title>
+  <title>Ell-ena | AI-powered teammate for tasks, tickets and meetings</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Shown while Flutter downloads. No logo: SplashScreen's intro animation
+       is the first time the logo appears. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #F0F0F0; }
+    html.dark, html.dark body { background: #1A1A1A; }
+    #launch-screen {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: inherit;
+      transition: opacity 200ms ease-out;
+    }
+    #launch-screen span {
+      width: 8px; height: 8px; margin: 0 8px; border-radius: 50%;
+      background: #66BB6A;
+      animation: launch-pulse 1.2s ease-in-out infinite;
+    }
+    #launch-screen span:nth-child(2) { animation-delay: 0.2s; }
+    #launch-screen span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes launch-pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+  </style>
+  <script>
+    // Mirror ThemeController: the saved choice wins, otherwise follow the OS.
+    (function () {
+      var mode = null;
+      try {
+        mode = JSON.parse(localStorage.getItem('flutter.app_theme_mode'));
+      } catch (e) {}
+      var dark = mode === 'dark' ||
+        (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.classList.add('dark');
+    })();
+  </script>
 </head>
 <body>
+  <div id="launch-screen" role="progressbar" aria-label="Loading Ell-ena">
+    <span></span><span></span><span></span>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var launch = document.getElementById('launch-screen');
+      if (!launch) return;
+      launch.style.opacity = '0';
+      setTimeout(function () { launch.remove(); }, 200);
+    });
+  </script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script>
+    window.jsxRuntime = {
+      Fragment: React.Fragment,
+      jsx: function (type, props, key) {
+        var next = props ? Object.assign({}, props) : {};
+        if (key !== undefined) next.key = key;
+        return React.createElement(type, next);
+      },
+      jsxs: function (type, props, key) {
+        var next = props ? Object.assign({}, props) : {};
+        if (key !== undefined) next.key = key;
+        return React.createElement(type, next);
+      },
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/support-us-button@2.2.1/dist/index.umd.js"></script>
+  <script src="support_us.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AOSSIE-Org/SocialShareButton@v1.0.4/src/social-share-button.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

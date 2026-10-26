@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter analyze and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # The web interop libraries opt into Dart 3.12.
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+
+      # `.env` is a bundled asset, so the build needs the file. Tests replace
+      # its contents with fake values; no secrets are used.
+      - name: Create .env
+        run: cp .env.example .env
+
+      - run: flutter pub get
+
+      # Fails on errors only, until the existing warnings and infos are fixed.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Test
+        run: flutter test --coverage
+
+      - name: Check line coverage (minimum 90%)
+        run: |
+          awk -F: '
+            /^LF:/ { found += $2 }
+            /^LH:/ { hit += $2 }
+            END {
+              pct = 100 * hit / found
+              printf "Line coverage: %.1f%% (%d/%d)\n", pct, hit, found
+              if (pct < 90) { print "Coverage is below 90%"; exit 1 }
+            }' coverage/lcov.info
+
+  edge-functions:
+    name: Edge Function tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - run: deno test

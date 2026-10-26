@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/app_localizations.dart';
+import '../../providers/dashboard/dashboard_controller.dart';
+import '../../shell/app_shell.dart';
+import '../../shell/shell_refreshable.dart';
+import '../../widgets/account_actions.dart';
 import '../../widgets/custom_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -7,20 +13,19 @@ import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../meetings/meeting_detail_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with SingleTickerProviderStateMixin
+    implements ShellRefreshable {
   late AnimationController _controller;
-  int _selectedTimeRange = 0; // 0: Week, 1: Month
   bool _isLoading = true;
   String? _userName;
-  String? _currentTeamId;
   String? _currentTeamName;
   List<Map<String, dynamic>> _userTeams = [];
   int _tasksTotal = 0;
@@ -35,6 +40,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<FlSpot> _taskCompletionSpots = [];
   List<Map<String, dynamic>> _upcomingItems = [];
   List<Map<String, dynamic>> _allTasks = [];
+
+  AppLocalizations get _l10n => AppLocalizations.of(context);
+
+  static const _wideMaxContentWidth = 1440.0;
 
   @override
   void initState() {
@@ -56,82 +65,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     await _loadData();
   }
 
-  void _showTeamSwitcher() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(
-            'Switch Team',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _userTeams.length,
-              itemBuilder: (context, index) {
-                final team = _userTeams[index];
-                final isCurrentTeam = team['id'] == _currentTeamId;
+  @override
+  Future<void> refreshFromShell() => _loadData();
 
-                final scheme = Theme.of(context).colorScheme;
-                return ListTile(
-                  title: Text(
-                    team['name'] ?? 'Team',
-                    style: TextStyle(
-                      color: scheme.onSurface,
-                      fontWeight:
-                          isCurrentTeam ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Team Code: ${team['team_code'] ?? 'N/A'}',
-                    style: TextStyle(
-                      color: scheme.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: isCurrentTeam
-                        ? Colors.green.shade400
-                        : Colors.grey.shade700,
-                    child: Text(
-                      (team['name'] as String? ?? 'T')[0].toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  trailing: isCurrentTeam
-                      ? Icon(Icons.check, color: Colors.green.shade400)
-                      : null,
-                  onTap: () {
-                    if (!isCurrentTeam) {
-                      _switchTeam(team['id']);
-                    }
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            ),
-          ],
-        );
-      },
+  Future<void> _showTeamSwitcher() async {
+    final teamId = await showTeamSwitcherDialog(
+      context,
+      teams: _userTeams,
+      currentTeamId: ref.read(dashboardControllerProvider).selectedTeamId,
     );
+    if (teamId != null) {
+      _switchTeam(teamId);
+    }
   }
 
   Future<void> _switchTeam(String teamId) async {
@@ -150,7 +95,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error switching team: ${result['error']}'),
+              content: Text(_l10n.errorSwitchingTeam('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -165,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error switching team: $e'),
+            content: Text(_l10n.errorSwitchingTeam('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -189,8 +134,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       // Set current team
       if (profile != null && profile['team_id'] != null) {
-        _currentTeamId = profile['team_id'];
-        _currentTeamName = profile['teams']?['name'] ?? 'My Team';
+        ref
+            .read(dashboardControllerProvider.notifier)
+            .setSelectedTeam(profile['team_id'] as String);
+        _currentTeamName = profile['teams']?['name'] as String?;
       }
 
       // Fetch all teams associated with the user's email
@@ -223,39 +170,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       _allTasks = tasks;
       final tickets = List<Map<String, dynamic>>.from(results[1] as List);
       final meetings = List<Map<String, dynamic>>.from(results[2] as List);
+      final now = DateTime.now();
 
       _tasksTotal = tasks.length;
       _tasksInProgress =
           tasks.where((t) => t['status'] == 'in_progress').length;
       _tasksCompleted = tasks.where((t) => t['status'] == 'completed').length;
 
-      // Build completion series for last 7 days
-      final now = DateTime.now();
-      final Map<int, int> dayIndexToCompleted = {
-        for (var i = 0; i < 7; i++) i: 0
-      };
-      for (final t in tasks) {
-        if (t['status'] == 'completed') {
-          final ts = (t['updated_at'] ?? t['created_at'])?.toString();
-          if (ts != null) {
-            final updated = DateTime.tryParse(ts);
-            if (updated != null) {
-              final diffDays = now
-                  .difference(
-                      DateTime(updated.year, updated.month, updated.day))
-                  .inDays;
-              if (diffDays >= 0 && diffDays < 7) {
-                final idx = 6 - diffDays; // earlier days on the left
-                dayIndexToCompleted[idx] = (dayIndexToCompleted[idx] ?? 0) + 1;
-              }
-            }
-          }
-        }
-      }
-      _taskCompletionSpots = List.generate(
-        7,
-        (i) => FlSpot(i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
-      );
+      _recomputeChartSpots();
 
       _ticketsOpen = tickets.where((t) => t['status'] == 'open').length;
       _ticketsInProgress =
@@ -307,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           items.add({
             'type': 'meeting',
             'id': m['id'],
-            'title': m['title'] ?? 'Meeting',
+            'title': m['title'],
             'at': dt,
             'icon': Icons.groups,
             'color': Colors.blue.shade400,
@@ -325,7 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             items.add({
               'type': 'task',
               'id': t['id'],
-              'title': t['title'] ?? 'Task',
+              'title': t['title'],
               'at': due,
               'icon': Icons.task_alt,
               'color': Colors.green.shade400,
@@ -347,7 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             items.add({
               'type': 'ticket',
               'id': tk['id'],
-              'title': tk['title'] ?? 'Ticket',
+              'title': tk['title'],
               'at': created,
               'icon': Icons.confirmation_number,
               'color': Colors.orange.shade400,
@@ -382,198 +304,257 @@ class _DashboardScreenState extends State<DashboardScreen>
         body: DashboardLoadingSkeleton(),
       );
     }
+    final isWide = AppShell.isDesktop(context);
+    final scrollView = CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        // On wide screens the shell's top bar has the team switcher.
+        if (!isWide) _buildWelcomeHeader(),
+        SliverToBoxAdapter(
+          child: isWide
+              ? _buildWideContent()
+              : Transform.translate(
+                  offset: const Offset(0, -10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildOverviewCards(),
+                        const SizedBox(height: 24),
+                        _buildAnalyticsSection(),
+                        const SizedBox(height: 24),
+                        _buildUpcomingSection(),
+                        const SizedBox(height: 24),
+                        _buildRecentActivity(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: Colors.green,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              expandedHeight: 140,
-              pinned: true,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFF2E7D32),
-                            const Color(0xFF1B5E20),
-                          ],
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(24),
-                          bottomRight: Radius.circular(24),
-                        ),
-                      ),
-                    ),
-                    CustomPaint(
-                      painter: DotPatternPainter(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                      size: Size(MediaQuery.of(context).size.width, 140),
-                    ),
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text(
-                                        'Welcome back,',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              _userName ?? '—',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(
-                                                0.2,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                12,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.trending_up,
-                                                  color: Colors
-                                                      .greenAccent.shade100,
-                                                  size: 14,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
-                                                  style: TextStyle(
-                                                    color: Colors
-                                                        .greenAccent.shade100,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      if (_userTeams.length > 1)
-                                        GestureDetector(
-                                          onTap: _showTeamSwitcher,
-                                          child: Padding(
-                                            padding:
-                                                const EdgeInsets.only(top: 4),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  _currentTeamName ?? 'My Team',
-                                                  style: TextStyle(
-                                                    color: Colors.white
-                                                        .withOpacity(0.9),
-                                                    fontSize: 14,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Icon(
-                                                  Icons.swap_horiz,
-                                                  color: Colors.white
-                                                      .withOpacity(0.9),
-                                                  size: 16,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+      // Wide screens refresh from the shell's top bar; pull is a touch gesture.
+      body: isWide
+          ? scrollView
+          : RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              child: scrollView,
+            ),
+    );
+  }
+
+  /// Wide screens show the same sections as the phone, arranged for the
+  /// width: content capped at [_wideMaxContentWidth] and centered, the
+  /// overview's six numbers in one row, and the chart beside Upcoming.
+  Widget _buildWideContent() {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _wideMaxContentWidth),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildOverviewCards(singleRow: width >= 720),
+                  const SizedBox(height: 24),
+                  _buildPair(
+                    _buildAnalyticsSection(),
+                    _buildUpcomingSection(),
+                    sideBySide: width >= 900,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildRecentActivity(),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// [main] takes two thirds beside [side], or stacks above it when narrow.
+  Widget _buildPair(Widget main, Widget side, {required bool sideBySide}) {
+    if (!sideBySide) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [main, const SizedBox(height: 24), side],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 2, child: main),
+        const SizedBox(width: 24),
+        Expanded(child: side),
+      ],
+    );
+  }
+
+  /// Phone greeting: name, completion badge and team switcher.
+  Widget _buildWelcomeHeader() {
+    return SliverAppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      expandedHeight: 140,
+      pinned: true,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF2E7D32),
+                    const Color(0xFF1B5E20),
                   ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Transform.translate(
-                offset: const Offset(0, -10),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildOverviewCards(),
-                      const SizedBox(height: 24),
-                      _buildAnalyticsSection(),
-                      const SizedBox(height: 24),
-                      _buildUpcomingSection(),
-                      const SizedBox(height: 24),
-                      _buildRecentActivity(),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+            CustomPaint(
+              painter: DotPatternPainter(
+                color: Colors.white.withOpacity(0.1),
+              ),
+              size: Size(MediaQuery.of(context).size.width, 140),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _l10n.dashboardWelcomeBack,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _userName ?? '—',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(
+                                        0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        12,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.trending_up,
+                                          color: Colors.greenAccent.shade100,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '+${_tasksCompleted > 0 && _tasksTotal > 0 ? ((_tasksCompleted / (_tasksTotal == 0 ? 1 : _tasksTotal)) * 100).round() : 0}%',
+                                          style: TextStyle(
+                                            color: Colors.greenAccent.shade100,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_userTeams.length > 1)
+                                GestureDetector(
+                                  onTap: _showTeamSwitcher,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _currentTeamName ?? _l10n.myTeam,
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.9),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.swap_horiz,
+                                          color: Colors.white.withOpacity(0.9),
+                                          size: 16,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -583,7 +564,62 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildOverviewCards() {
+  /// [singleRow] puts all six numbers in one row on wide screens; the phone
+  /// shows tasks and tickets as two rows of three.
+  Widget _buildOverviewCards({bool singleRow = false}) {
+    final taskItems = <Widget>[
+      Expanded(
+        child: _buildOverviewItem(
+          _tasksTotal.toString(),
+          _l10n.dashboardTotalTasks,
+          Icons.task_alt,
+          Colors.green.shade400,
+        ),
+      ),
+      Expanded(
+        child: _buildOverviewItem(
+          _tasksInProgress.toString(),
+          _l10n.dashboardInProgress,
+          Icons.pending_actions,
+          Colors.orange.shade400,
+        ),
+      ),
+      Expanded(
+        child: _buildOverviewItem(
+          _tasksCompleted.toString(),
+          _l10n.dashboardCompleted,
+          Icons.check_circle_outline,
+          Colors.blue.shade400,
+        ),
+      ),
+    ];
+    final ticketItems = <Widget>[
+      Expanded(
+        child: _buildOverviewItem(
+          _ticketsOpen.toString(),
+          _l10n.dashboardOpenTickets,
+          Icons.bug_report,
+          Colors.red.shade400,
+        ),
+      ),
+      Expanded(
+        child: _buildOverviewItem(
+          _ticketsInProgress.toString(),
+          _l10n.dashboardTicketsInProgress,
+          Icons.hourglass_bottom,
+          Colors.amber.shade400,
+        ),
+      ),
+      Expanded(
+        child: _buildOverviewItem(
+          _ticketsResolved.toString(),
+          _l10n.dashboardResolved,
+          Icons.verified,
+          Colors.teal.shade300,
+        ),
+      ),
+    ];
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -600,14 +636,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Today\'s Overview',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  _l10n.dashboardTodaysOverview,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -640,53 +678,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildOverviewItem(
-                _tasksTotal.toString(),
-                'Total Tasks',
-                Icons.task_alt,
-                Colors.green.shade400,
-              ),
-              _buildOverviewItem(
-                _tasksInProgress.toString(),
-                'In Progress',
-                Icons.pending_actions,
-                Colors.orange.shade400,
-              ),
-              _buildOverviewItem(
-                _tasksCompleted.toString(),
-                'Completed',
-                Icons.check_circle_outline,
-                Colors.blue.shade400,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildOverviewItem(
-                _ticketsOpen.toString(),
-                'Open Tickets',
-                Icons.bug_report,
-                Colors.red.shade400,
-              ),
-              _buildOverviewItem(
-                _ticketsInProgress.toString(),
-                'Tickets In Progress',
-                Icons.hourglass_bottom,
-                Colors.amber.shade400,
-              ),
-              _buildOverviewItem(
-                _ticketsResolved.toString(),
-                'Resolved',
-                Icons.verified,
-                Colors.teal.shade300,
-              ),
-            ],
-          ),
+          if (singleRow)
+            Row(children: [...taskItems, ...ticketItems])
+          else ...[
+            Row(children: taskItems),
+            const SizedBox(height: 16),
+            Row(children: ticketItems),
+          ],
         ],
       ),
     );
@@ -720,6 +718,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
         ),
       ],
@@ -728,6 +729,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildAnalyticsSection() {
     final colorScheme = Theme.of(context).colorScheme;
+    final timeRange = ref.watch(dashboardControllerProvider).timeRange;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -748,15 +751,16 @@ class _DashboardScreenState extends State<DashboardScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Task Completion by Day',
+                _l10n.dashboardTaskCompletionByDay,
                 style: Theme.of(context)
                     .textTheme
                     .titleLarge
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
-              if (_selectedTimeRange == 1)
+              if (timeRange == 1)
                 Text(
-                  DateFormat('MMMM yyyy').format(DateTime.now()),
+                  DateFormat('MMMM yyyy', _l10n.localeName)
+                      .format(DateTime.now()),
                   style: TextStyle(
                     color: Colors.grey.shade400,
                     fontSize: 13,
@@ -771,8 +775,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _timeRangeButton('Week', 0),
-                    _timeRangeButton('Month', 1),
+                    _timeRangeButton(_l10n.dashboardWeek, 0),
+                    _timeRangeButton(_l10n.dashboardMonth, 1),
                   ],
                 ),
               ),
@@ -784,11 +788,11 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: _taskCompletionSpots.isEmpty
                 ? Center(
                     child: Text(
-                      'No completions yet',
+                      _l10n.dashboardNoCompletions,
                       style: TextStyle(color: Colors.grey.shade500),
                     ),
                   )
-                : _selectedTimeRange == 0
+                : timeRange == 0
                     // Bar Chart for Weekly view
                     ? BarChart(
                         BarChartData(
@@ -831,7 +835,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   final day =
                                       now.subtract(Duration(days: 6 - idx));
                                   return Text(
-                                    DateFormat('E').format(day),
+                                    DateFormat('E', _l10n.localeName)
+                                        .format(day),
                                     style: TextStyle(
                                       color: Colors.grey.shade400,
                                       fontSize: 12,
@@ -947,50 +952,49 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _timeRangeButton(String text, int index) {
-    final isSelected = _selectedTimeRange == index;
-    return GestureDetector(
-      //onTap: () => setState(() => _selectedTimeRange = index),
-      onTap: () {
-        setState(() {
-          _selectedTimeRange = index;
+  void _recomputeChartSpots() {
+    final timeRange = ref.read(dashboardControllerProvider).timeRange;
 
-          if (index == 0) {
-            // Week → reusing existing weekly logic
-            final now = DateTime.now();
-            final Map<int, int> dayIndexToCompleted = {
-              for (var i = 0; i < 7; i++) i: 0
-            };
+    if (timeRange == 0) {
+      final now = DateTime.now();
+      final Map<int, int> dayIndexToCompleted = {
+        for (var i = 0; i < 7; i++) i: 0,
+      };
 
-            for (final t in _allTasks) {
-              if (t['status'] == 'completed') {
-                final ts = (t['updated_at'] ?? t['created_at'])?.toString();
-                final updated = ts != null ? DateTime.tryParse(ts) : null;
-                if (updated == null) continue;
+      for (final t in _allTasks) {
+        if (t['status'] == 'completed') {
+          final ts = (t['updated_at'] ?? t['created_at'])?.toString();
+          final updated = ts != null ? DateTime.tryParse(ts) : null;
+          if (updated == null) continue;
 
-                final diffDays = now
-                    .difference(
-                        DateTime(updated.year, updated.month, updated.day))
-                    .inDays;
+          final diffDays = now
+              .difference(DateTime(updated.year, updated.month, updated.day))
+              .inDays;
 
-                if (diffDays >= 0 && diffDays < 7) {
-                  final idx = 6 - diffDays;
-                  dayIndexToCompleted[idx] =
-                      (dayIndexToCompleted[idx] ?? 0) + 1;
-                }
-              }
-            }
-
-            _taskCompletionSpots = List.generate(
-              7,
-              (i) => FlSpot(
-                  i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
-            );
-          } else {
-            // Month → current calendar month
-            _taskCompletionSpots = _buildCurrentMonthSpots(_allTasks);
+          if (diffDays >= 0 && diffDays < 7) {
+            final idx = 6 - diffDays;
+            dayIndexToCompleted[idx] = (dayIndexToCompleted[idx] ?? 0) + 1;
           }
-        });
+        }
+      }
+
+      _taskCompletionSpots = List.generate(
+        7,
+        (i) => FlSpot(i.toDouble(), (dayIndexToCompleted[i] ?? 0).toDouble()),
+      );
+      return;
+    }
+
+    _taskCompletionSpots = _buildCurrentMonthSpots(_allTasks);
+  }
+
+  Widget _timeRangeButton(String text, int index) {
+    final timeRange = ref.watch(dashboardControllerProvider).timeRange;
+    final isSelected = timeRange == index;
+    return GestureDetector(
+      onTap: () {
+        ref.read(dashboardControllerProvider.notifier).setTimeRange(index);
+        setState(_recomputeChartSpots);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1048,7 +1052,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Upcoming',
+          _l10n.dashboardUpcoming,
           style: Theme.of(context)
               .textTheme
               .titleLarge
@@ -1073,7 +1077,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Text(
-                      'Nothing due today or scheduled soon',
+                      _l10n.dashboardNothingUpcoming,
                       style: TextStyle(color: colorScheme.onSurfaceVariant),
                     ),
                   ),
@@ -1083,7 +1087,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     final item = _upcomingItems[index];
                     final dt = item['at'] as DateTime?;
                     final timeLabel = dt != null
-                        ? DateFormat('MMM d • h:mm a').format(dt)
+                        ? DateFormat('MMM d • h:mm a', _l10n.localeName)
+                            .format(dt)
                         : '';
                     final IconData icon = item['icon'] as IconData;
                     final Color color = item['color'] as Color;
@@ -1092,7 +1097,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       child: Column(
                         children: [
                           _buildUpcomingItem(
-                            (item['title'] as String?) ?? '',
+                            (item['title'] as String?) ??
+                                _fallbackTitle(item['type'] as String?),
                             timeLabel,
                             icon,
                             color,
@@ -1107,6 +1113,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ],
     );
+  }
+
+  /// Title shown for an upcoming item that has none, by item type.
+  String _fallbackTitle(String? type) {
+    switch (type) {
+      case 'meeting':
+        return _l10n.dashboardMeeting;
+      case 'ticket':
+        return _l10n.dashboardTicket;
+      default:
+        return _l10n.dashboardTask;
+    }
   }
 
   Widget _buildUpcomingItem(
@@ -1182,7 +1200,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recent Activity',
+          _l10n.dashboardRecentActivity,
           style: Theme.of(context)
               .textTheme
               .titleLarge
@@ -1212,8 +1230,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final items = <Map<String, dynamic>>[];
     for (final t in _recentTasks) {
       items.add({
-        'type': 'Task',
-        'title': t['title'] ?? 'Task',
+        'type': _l10n.dashboardTask,
+        'title': t['title'] ?? _l10n.dashboardTask,
         'status': t['status'] ?? 'todo',
         'time': t['updated_at'] ?? t['created_at'],
         'icon': Icons.task_alt,
@@ -1222,8 +1240,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     for (final tk in _recentTickets) {
       items.add({
-        'type': 'Ticket',
-        'title': tk['title'] ?? 'Ticket',
+        'type': _l10n.dashboardTicket,
+        'title': tk['title'] ?? _l10n.dashboardTicket,
         'status': tk['status'] ?? 'open',
         'time': tk['updated_at'] ?? tk['created_at'],
         'icon': Icons.confirmation_number,
@@ -1245,7 +1263,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Text('No recent activity',
+          child: Text(_l10n.dashboardNoRecentActivity,
               style: TextStyle(color: colorScheme.onSurfaceVariant)),
         ),
       );
@@ -1255,8 +1273,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: List.generate(limited.length, (index) {
         final a = limited[index];
         final date = DateTime.tryParse(a['time']?.toString() ?? '');
-        final timeLabel =
-            date != null ? DateFormat('MMM d, h:mm a').format(date) : '';
+        final timeLabel = date != null
+            ? DateFormat('MMM d, h:mm a', _l10n.localeName).format(date)
+            : '';
         return Column(
           children: [
             Padding(
@@ -1286,7 +1305,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                         ),
                         Text(
-                          'Status: ${a['status']}',
+                          _l10n.dashboardStatus('${a['status']}'),
                           style: TextStyle(
                               color: colorScheme.onSurfaceVariant,
                               fontSize: 14),
