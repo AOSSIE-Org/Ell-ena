@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as cal;
 import 'package:googleapis_auth/auth_io.dart';
@@ -27,7 +28,7 @@ class GoogleMeetService {
       final accessToken = authentication.accessToken;
       
       if (accessToken == null) {
-        print('No access token available');
+        debugPrint('No access token available');
         return null;
       }
 
@@ -78,7 +79,7 @@ class GoogleMeetService {
         authClient.close();
       }
     } catch (e) {
-      print('Error creating Google Meet link: $e');
+      debugPrint('Error creating Google Meet link: $e');
       return null;
     }
   }

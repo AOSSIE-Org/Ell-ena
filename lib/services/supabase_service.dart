@@ -1,12 +1,16 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../router/app_routes.dart';
+
 class SupabaseService {
+  static const _mobileOAuthRedirect = 'io.supabase.ellena://login-callback';
+
   static final SupabaseService _instance = SupabaseService._internal();
   late final SupabaseClient _client;
   bool _isInitialized = false;
@@ -39,6 +43,10 @@ class SupabaseService {
 
   SupabaseService._internal();
 
+  /// Separate instance for tests. Production code keeps using [SupabaseService].
+  @visibleForTesting
+  SupabaseService.withClient(this._client) : _isInitialized = true;
+
   bool get isInitialized => _isInitialized;
 
   List<Map<String, dynamic>> get teamMembersCache => _teamMembersCache;
@@ -53,8 +61,8 @@ class SupabaseService {
         debugPrint('Error loading .env file: $e');
       });
 
-      final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-      final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+      final supabaseUrl = dotenv.env['SUPABASE_URL']?.trim() ?? '';
+      final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim() ?? '';
 
       if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
         throw Exception(
@@ -294,7 +302,7 @@ class SupabaseService {
   // Generate a random 6-character team ID
   String generateTeamId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = Random();
+    final random = Random.secure();
     return List.generate(6, (index) => chars[random.nextInt(chars.length)])
         .join();
   }
@@ -514,8 +522,7 @@ class SupabaseService {
         };
       }
 
-      final redirectUrl = dotenv.env['OAUTH_REDIRECT_URL'] ??
-          'io.supabase.ellena://login-callback';
+      final redirectUrl = _oauthRedirectUrl;
 
       // Create a completer to wait for auth state change
       final completer = Completer<Map<String, dynamic>>();
@@ -542,7 +549,9 @@ class SupabaseService {
       final response = await _client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: redirectUrl,
-        authScreenLaunchMode: LaunchMode.externalApplication,
+        authScreenLaunchMode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
         queryParams: const {
           'access_type': 'offline',
           'prompt': 'consent',
@@ -554,6 +563,16 @@ class SupabaseService {
         return {
           'success': false,
           'error': 'Failed to launch Google sign-in',
+        };
+      }
+
+      // Web leaves this page for Google and returns to the Pages URL.
+      // Supabase reads the session from that callback on the next load.
+      if (kIsWeb) {
+        await authSubscription.cancel();
+        return {
+          'success': true,
+          'pendingRedirect': true,
         };
       }
 
@@ -575,6 +594,40 @@ class SupabaseService {
         'error': e.toString(),
       };
     }
+  }
+
+  /// Web uses an http(s) `OAUTH_REDIRECT_URL`, or the current site root.
+  /// Android and iOS keep the native deep link.
+  String get _oauthRedirectUrl {
+    final configured = dotenv.env['OAUTH_REDIRECT_URL']?.trim();
+    if (kIsWeb) {
+      if (configured != null &&
+          (configured.startsWith('https://') ||
+              configured.startsWith('http://'))) {
+        return configured;
+      }
+      return _currentWebRedirect();
+    }
+    if (configured != null && configured.isNotEmpty) return configured;
+    return _mobileOAuthRedirect;
+  }
+
+  /// Site root for this deployment, without a shell route such as `/home`.
+  String _currentWebRedirect() {
+    final uri = Uri.base;
+    var path = uri.path;
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.substring(0, path.length - 1);
+    }
+    for (final route in AppRoutes.shellPaths) {
+      if (path.endsWith(route)) {
+        path = path.substring(0, path.length - route.length);
+        break;
+      }
+    }
+    if (path.isEmpty) path = '/';
+    if (!path.endsWith('/')) path = '$path/';
+    return uri.replace(path: path, query: '', fragment: '').toString();
   }
 
   // Helper method to process authenticated user
@@ -1162,7 +1215,7 @@ class SupabaseService {
     if (user == null) return [];
 
     final requestKey =
-        '${filterByAssignment}_${filterByStatus}_${filterByDueDate}';
+        '${filterByAssignment}_${filterByStatus}_$filterByDueDate';
 
     // Reuse in-flight request if present
     final existing = _pendingGetTasks[requestKey];
@@ -1184,8 +1237,6 @@ class SupabaseService {
       _pendingGetTasks.remove(requestKey);
     }
   }
-
-
 
   // Get tasks for the current user's team
   Future<List<Map<String, dynamic>>> _doGetTasks({
@@ -1277,6 +1328,7 @@ class SupabaseService {
     String? description,
     DateTime? dueDate,
     String? assignedToUserId,
+    String? ticketId,
   }) async {
     try {
       if (!_isInitialized) {
@@ -1321,6 +1373,12 @@ class SupabaseService {
 
       if (dueDate != null) {
         taskData['due_date'] = dueDate.toIso8601String();
+      }
+
+      // Optional. Null leaves the task unlinked. The database rejects a ticket
+      // from another team.
+      if (ticketId != null && ticketId.trim().isNotEmpty) {
+        taskData['ticket_id'] = ticketId.trim();
       }
 
       final response = await _client.from('tasks').insert(taskData).select();
@@ -1374,6 +1432,44 @@ class SupabaseService {
       };
     } catch (e) {
       debugPrint('Error updating task status: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Set or clear the optional ticket linked to a task.
+  /// Pass null to remove the association.
+  Future<Map<String, dynamic>> updateTaskTicket({
+    required String taskId,
+    String? ticketId,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      await _client.from('tasks').update({
+        'ticket_id': ticketId == null || ticketId.trim().isEmpty
+            ? null
+            : ticketId.trim(),
+      }).eq('id', taskId);
+
+      return {'success': true};
+    } catch (e) {
+      debugPrint('Error updating task ticket: $e');
       return {
         'success': false,
         'error': e.toString(),
@@ -1502,10 +1598,24 @@ class SupabaseService {
         });
       }
 
+      Map<String, dynamic>? linkedTicket;
+      final linkedTicketId = taskResponse['ticket_id']?.toString();
+      if (linkedTicketId != null && linkedTicketId.isNotEmpty) {
+        final ticketResponse = await _client
+            .from('tickets')
+            .select('id, ticket_number, title, team_id')
+            .eq('id', linkedTicketId)
+            .maybeSingle();
+        if (ticketResponse != null) {
+          linkedTicket = ticketResponse;
+        }
+      }
+
       Map<String, dynamic> taskWithDetails = {
         ...taskResponse,
         'creator': creator,
         'assignee': assignee,
+        'ticket': linkedTicket,
       };
 
       return {
@@ -1765,6 +1875,7 @@ class SupabaseService {
     required String priority,
     required String category,
     String? assignedToUserId,
+    bool syncToGithub = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -1803,6 +1914,7 @@ class SupabaseService {
         'approval_status': 'pending',
         'team_id': teamId,
         'created_by': user.id,
+        'sync_to_github': syncToGithub,
       };
 
       if (assignedToUserId != null && assignedToUserId.isNotEmpty) {
@@ -1819,15 +1931,107 @@ class SupabaseService {
         };
       }
 
+      Map<String, dynamic> ticket =
+          Map<String, dynamic>.from(response[0] as Map);
+
+      // Request server-side GitHub issue creation when the user opted in.
+      // The Edge Function loads the ticket from the DB (client does not send
+      // title/repo/token). Failures are stored on the ticket; creation still
+      // succeeds.
+      if (syncToGithub && ticket['id'] != null) {
+        final syncResult = await syncTicketToGithub(ticket['id'].toString());
+        if (syncResult['ticket'] is Map) {
+          ticket = Map<String, dynamic>.from(syncResult['ticket'] as Map);
+        }
+      }
+
       // Refresh tickets
       await getTickets();
 
       return {
         'success': true,
-        'ticket': response[0],
+        'ticket': ticket,
       };
     } catch (e) {
       debugPrint('Error creating ticket: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Invoke the github-sync Edge Function for a ticket (server loads ticket).
+  /// Does not expose GitHub credentials to the client.
+  Future<Map<String, dynamic>> syncTicketToGithub(String ticketId) async {
+    try {
+      if (!_isInitialized) {
+        return {
+          'success': false,
+          'error': 'Supabase is not initialized',
+        };
+      }
+
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'User not authenticated',
+        };
+      }
+
+      Map<String, dynamic>? payload;
+      late final int statusCode;
+      Object? invokeError;
+
+      try {
+        final response = await _client.functions.invoke(
+          'github-sync',
+          body: {'ticket_id': ticketId},
+        );
+        statusCode = response.status;
+        final data = response.data;
+        if (data is Map) {
+          payload = Map<String, dynamic>.from(data);
+        }
+      } on FunctionException catch (e) {
+        statusCode = e.status;
+        invokeError = e;
+        if (e.details is Map) {
+          payload = Map<String, dynamic>.from(e.details as Map);
+        } else if (e.details is String) {
+          payload = {'error': e.details};
+        }
+      }
+
+      // Refresh ticket row so UI sees status / issue URL even after failures.
+      Map<String, dynamic>? ticket;
+      try {
+        final row = await _client
+            .from('tickets')
+            .select()
+            .eq('id', ticketId)
+            .maybeSingle();
+        if (row != null) {
+          ticket = Map<String, dynamic>.from(row);
+        }
+      } catch (e) {
+        debugPrint('Error refreshing ticket after github-sync: $e');
+      }
+
+      final ok = statusCode >= 200 && statusCode < 300;
+      return {
+        'success': ok,
+        'status': statusCode,
+        if (payload != null) 'response': payload,
+        if (ticket != null) 'ticket': ticket,
+        if (!ok)
+          'error': payload?['error']?.toString() ??
+              invokeError?.toString() ??
+              'GitHub synchronization failed',
+      };
+    } catch (e) {
+      debugPrint('Error invoking github-sync: $e');
       return {
         'success': false,
         'error': e.toString(),
@@ -2235,7 +2439,6 @@ class SupabaseService {
         _meetingsStreamController.add(processedMeetings);
       }
 
-
       return processedMeetings;
     } catch (e) {
       debugPrint('Error getting meetings: $e');
@@ -2315,6 +2518,126 @@ class SupabaseService {
     }
   }
 
+  Future<Map<String, dynamic>> _invokeFunction(
+    String functionName, {
+    required Map<String, dynamic> body,
+  }) async {
+    try {
+      if (!_isInitialized) {
+        return {'success': false, 'error': 'Supabase is not initialized'};
+      }
+
+      final response = await _client.functions.invoke(
+        functionName,
+        body: body,
+      );
+      final data = response.data;
+      final payload = data is Map ? Map<String, dynamic>.from(data) : null;
+      final ok = response.status >= 200 && response.status < 300;
+      return {
+        'success': ok,
+        'status': response.status,
+        if (payload != null) ...payload,
+        if (!ok)
+          'error': payload?['error']?.toString() ??
+              'Request to $functionName failed',
+      };
+    } on FunctionException catch (e) {
+      String message = 'Request to $functionName failed';
+      if (e.details is Map && (e.details as Map)['error'] != null) {
+        message = (e.details as Map)['error'].toString();
+      } else if (e.details is String && (e.details as String).isNotEmpty) {
+        message = e.details as String;
+      }
+      return {
+        'success': false,
+        'status': e.status,
+        'error': message,
+      };
+    } catch (e) {
+      debugPrint('Error invoking $functionName: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Dispatch the meeting transcription bot. Payload keys match start-bot.
+  Future<Map<String, dynamic>> startBot({
+    required String meetingId,
+    required String meetingUrl,
+  }) {
+    return _invokeFunction(
+      'start-bot',
+      body: {
+        'meeting_id': meetingId,
+        'meeting_url': meetingUrl,
+      },
+    );
+  }
+
+  /// Fetch the transcript, then summarize and embed it when each step succeeds.
+  Future<Map<String, dynamic>> fetchAndProcessTranscript({
+    required String meetingId,
+    required String meetingUrl,
+  }) async {
+    Map<String, dynamic> result = {
+      'success': false,
+      'error': 'Failed to fetch summary',
+    };
+    try {
+      final transcript = await _invokeFunction(
+        'fetch-transcript',
+        body: {
+          'meeting_id': meetingId,
+          'meeting_url': meetingUrl,
+        },
+      );
+      if (transcript['success'] != true) {
+        result = transcript;
+        return result;
+      }
+
+      final summary = await _invokeFunction(
+        'summarize-transcription',
+        body: {'meeting_id': meetingId},
+      );
+      if (summary['success'] != true) {
+        result = {
+          ...summary,
+          'error': summary['error'] ?? 'Failed to summarize transcription',
+        };
+        return result;
+      }
+
+      final embeddings = await _invokeFunction(
+        'generate-embeddings',
+        body: {'meeting_id': meetingId},
+      );
+      if (embeddings['success'] != true) {
+        result = {
+          ...embeddings,
+          'error': embeddings['error'] ?? 'Failed to generate embeddings',
+        };
+        return result;
+      }
+
+      result = {'success': true, 'status': 200};
+      return result;
+    } catch (e) {
+      debugPrint('Error in fetchAndProcessTranscript: $e');
+      result = {'success': false, 'error': e.toString()};
+      return result;
+    } finally {
+      try {
+        final meeting = await getMeetingDetails(meetingId);
+        if (meeting != null) {
+          result['meeting'] = meeting;
+        }
+      } catch (e) {
+        debugPrint('Error reloading meeting after transcript pipeline: $e');
+      }
+    }
+  }
+
   // Get meeting details
   Future<Map<String, dynamic>?> getMeetingDetails(String meetingId) async {
     try {
@@ -2358,7 +2681,7 @@ class SupabaseService {
     required DateTime meetingDate,
     String? meetingUrl,
     String? transcription,
-    String? ai_summary,
+    String? aiSummary,
     int? durationMinutes,
   }) async {
     try {
@@ -2391,8 +2714,8 @@ class SupabaseService {
         meetingData['transcription'] = transcription;
       }
 
-      if (ai_summary != null) {
-        meetingData['ai_summary'] = ai_summary;
+      if (aiSummary != null) {
+        meetingData['ai_summary'] = aiSummary;
       }
 
       if (durationMinutes != null) {

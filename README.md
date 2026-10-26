@@ -1,7 +1,7 @@
 # Ell-ena
 
 <p align="center">
-  <img src="ELL-ena-logo/svg/ell-ena%20black.svg" alt="Ell-ena logo" width="180"/>
+  <img src="ELL-ena-logo/svg/ellena_logo.svg" alt="Ell-ena logo" width="220"/>
 </p>
 
 **Ell-ena** is your AI-powered teammate that makes managing work effortless. From automatically creating tickets to capturing every detail in meeting transcriptions, Ell-ena keeps the full context of your projects at its fingertips—so nothing ever falls through the cracks.  
@@ -250,6 +250,11 @@ Please read our [Contributing Guidelines](CONTRIBUTING.md) for more details.
 Join the AOSSIE Discord and discuss Ell-ena in our project channel:
 
 - [Ell-ena Discord channel](https://discord.com/channels/1022871757289422898/1349032611267477586)
+
+## 🐛 Reporting Issues
+
+- **Bugs and feature requests:** open an issue using one of the [issue templates](https://github.com/AOSSIE-Org/Ell-ena/issues/new/choose). Search [existing issues](https://github.com/AOSSIE-Org/Ell-ena/issues) first.
+- **Security vulnerabilities:** do not open a public issue. Follow the [AOSSIE security policy](https://github.com/AOSSIE-Org/.github/blob/main/SECURITY.md) to report privately.
 
 ## 📚 Documentation
 

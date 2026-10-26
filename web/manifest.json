@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#1A1A1A",
     "theme_color": "#4CAF50",
-    "description": "Your AI-powered Task Assistant",
+    "description": "AI-powered teammate that turns chats and meetings into tasks, tickets and summaries.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/app_localizations.dart';
+import '../../shell/app_shell.dart';
 import '../../widgets/custom_widgets.dart';
+import '../../widgets/social_share_button.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
 import '../home/home_screen.dart';
@@ -65,6 +69,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() => _isLoading = true);
 
@@ -79,8 +84,8 @@ class _LoginScreenState extends State<LoginScreen>
         NavigationService().navigateToReplacement(const HomeScreen());
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login failed. Please try again.'),
+          SnackBar(
+            content: Text(l10n.authLoginFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -89,8 +94,8 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid email or password'),
+        SnackBar(
+          content: Text(l10n.authInvalidCredentials),
           backgroundColor: Colors.red,
         ),
       );
@@ -98,8 +103,8 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connection error. Please try again.'),
+        SnackBar(
+          content: Text(l10n.authConnectionError),
           backgroundColor: Colors.red,
         ),
       );
@@ -111,12 +116,16 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleGoogleSignIn() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _isLoading = true);
 
     try {
       final result = await _supabaseService.signInWithGoogle();
 
       if (mounted) {
+        if (result['pendingRedirect'] == true) {
+          return;
+        }
         if (result['success'] == true) {
           if (result['isNewUser'] == true) {
             // New user - show team selection dialog
@@ -135,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen>
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? 'Google sign-in failed'),
+              content: Text(result['error'] ?? l10n.authGoogleSignInFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -145,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(l10n.authErrorWithDetails(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -159,9 +168,11 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AuthScreenWrapper(
-      title: 'Welcome Back',
-      subtitle: 'Sign in to continue with Ell-ena',
+      title: l10n.authWelcomeBack,
+      subtitle: l10n.authSignInSubtitle,
+      centerOnWideScreens: true,
       children: [
         FadeTransition(
           opacity: _fadeAnimation,
@@ -173,14 +184,14 @@ class _LoginScreenState extends State<LoginScreen>
                 children: [
                   CustomTextField(
                     controller: _emailController,
-                    label: 'Email',
+                    label: l10n.authEmailLabel,
                     icon: Icons.email_outlined,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
+                        return l10n.authEnterEmail;
                       }
                       if (!value.contains('@')) {
-                        return 'Please enter a valid email';
+                        return l10n.authEnterValidEmail;
                       }
                       return null;
                     },
@@ -188,15 +199,15 @@ class _LoginScreenState extends State<LoginScreen>
                   const SizedBox(height: 16),
                   CustomTextField(
                     controller: _passwordController,
-                    label: 'Password',
+                    label: l10n.authPasswordLabel,
                     icon: Icons.lock_outline,
                     isPassword: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
+                        return l10n.authEnterPassword;
                       }
                       if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                        return l10n.authPasswordTooShort;
                       }
                       return null;
                     },
@@ -211,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen>
                         );
                       },
                       child: Text(
-                        'Forgot Password?',
+                        l10n.authForgotPassword,
                         style: TextStyle(
                           color: Colors.green.shade400,
                           fontWeight: FontWeight.w600,
@@ -221,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   const SizedBox(height: 24),
                   CustomButton(
-                    text: 'Sign In',
+                    text: l10n.login,
                     onPressed: _isLoading ? null : _handleLogin,
                     isLoading: _isLoading,
                   ),
@@ -235,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen>
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'OR',
+                          l10n.authOr,
                           style: TextStyle(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -252,16 +263,16 @@ class _LoginScreenState extends State<LoginScreen>
                   // Google Sign-In Button
                   OutlinedButton.icon(
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    icon: const FaIcon(
+                    icon: FaIcon(
                       FontAwesomeIcons.google,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 20,
                     ),
-                    label: const Text(
-                      'Sign in with Google',
+                    label: Text(
+                      l10n.authSignInWithGoogle,
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -282,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Don\'t have an account? ',
+                        l10n.authNoAccount,
                         style: TextStyle(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant),
@@ -292,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen>
                           NavigationService().navigateTo(const SignupScreen());
                         },
                         child: Text(
-                          'Sign Up',
+                          l10n.signUp,
                           style: TextStyle(
                             color: Colors.green.shade400,
                             fontWeight: FontWeight.w600,
@@ -301,12 +312,41 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ],
                   ),
+                  if (AppShell.isDesktop(context)) ...[
+                    const SocialShareSlot(),
+                    const _AossieMark(),
+                  ],
                 ],
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Wide layout only. The phone login screen does not build this.
+class _AossieMark extends StatelessWidget {
+  const _AossieMark();
+
+  static final Uri _site = Uri.parse('https://aossie.org');
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 40),
+      child: Center(
+        child: InkWell(
+          onTap: () => launchUrl(_site, mode: LaunchMode.externalApplication),
+          borderRadius: BorderRadius.circular(8),
+          child: Image.asset(
+            'ELL-ena-logo/png/aossie-logo.png',
+            height: 64,
+            semanticLabel: 'AOSSIE',
+          ),
+        ),
+      ),
     );
   }
 }

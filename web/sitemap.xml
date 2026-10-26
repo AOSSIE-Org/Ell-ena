@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Replace PROJECT_HOST with the public origin before this file is published.
+  Include a base path and leave off the trailing slash when the site is not
+  served from the domain root.
+  Only public pages are listed. Signed-in screens are omitted.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://PROJECT_HOST/</loc>
+  </url>
+  <url>
+    <loc>https://PROJECT_HOST/login</loc>
+  </url>
+</urlset>

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/task_ticket_link.dart';
 import '../../widgets/custom_widgets.dart';
 
 class TaskDetailScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Map<String, dynamic>? _taskDetails;
   List<Map<String, dynamic>> _comments = [];
   bool _isAdmin = false;
+  List<Map<String, dynamic>> _tickets = [];
   final _commentController = TextEditingController();
 
   @override
@@ -24,6 +27,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     super.initState();
     _loadTaskDetails();
     _checkUserRole();
+    _loadTickets();
   }
 
   @override
@@ -38,6 +42,40 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       setState(() {
         _isAdmin = userProfile?['role'] == 'admin';
       });
+    }
+  }
+
+  Future<void> _loadTickets() async {
+    try {
+      final tickets = await _supabaseService.getTickets();
+      if (mounted) {
+        setState(() {
+          _tickets = tickets;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading tickets: $e');
+    }
+  }
+
+  Future<void> _updateLinkedTicket(String? ticketId) async {
+    final l10n = AppLocalizations.of(context);
+    final result = await _supabaseService.updateTaskTicket(
+      taskId: widget.taskId,
+      ticketId: TaskTicketLink.normalizeId(ticketId),
+    );
+    if (!mounted) return;
+    if (result['success'] == true) {
+      await _loadTaskDetails();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['error']?.toString() ?? l10n.taskLinkedTicketUpdateFailed,
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -71,28 +109,30 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _updateTaskStatus(String status) async {
+    final l10n = AppLocalizations.of(context);
     try {
-      final success = await _supabaseService.updateTaskStatus(
+      final result = await _supabaseService.updateTaskStatus(
         taskId: widget.taskId,
         status: status,
       );
 
       if (mounted) {
-        if (success == true) {
+        if (result['success'] == true) {
           // Reload task details
           await _loadTaskDetails();
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Task status updated to ${_getStatusLabel(status)}',
+                l10n.taskStatusUpdatedTo(_getStatusLabel(l10n, status)),
               ),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to update task status'),
+            SnackBar(
+              content: Text(l10n.taskStatusUpdateFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -103,7 +143,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating task status: $e'),
+            content: Text(l10n.taskErrorUpdatingStatus(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -112,6 +152,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _updateTaskApproval(String approvalStatus) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await _supabaseService.updateTaskApproval(
         taskId: widget.taskId,
@@ -126,7 +167,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Task ${approvalStatus == 'approved' ? 'approved' : 'rejected'}',
+              approvalStatus == 'approved'
+                  ? l10n.taskApprovedMessage
+                  : l10n.taskRejectedMessage,
             ),
             backgroundColor:
                 approvalStatus == 'approved' ? Colors.green : Colors.red,
@@ -138,7 +181,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating task approval: $e'),
+            content: Text(l10n.taskErrorUpdatingApproval(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -147,6 +190,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _deleteTask() async {
+    final l10n = AppLocalizations.of(context);
     // Show confirmation dialog
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -154,23 +198,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Delete Task',
+            l10n.taskDeleteTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Text(
-            'Are you sure you want to delete this task? This action cannot be undone.',
+            l10n.taskDeleteConfirmMessage,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: Text(l10n.taskDelete),
             ),
           ],
         );
@@ -186,7 +230,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         if (result['success']) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Task deleted successfully'),
+              content: Text(l10n.taskDeletedSuccess),
               backgroundColor: Colors.green,
             ),
           );
@@ -194,7 +238,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting task: ${result['error']}'),
+              content: Text(l10n.taskErrorDeleting('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -205,7 +249,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting task: $e'),
+            content: Text(l10n.taskErrorDeleting(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -215,6 +259,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Future<void> _addComment() async {
     if (_commentController.text.trim().isEmpty) return;
+    final l10n = AppLocalizations.of(context);
 
     try {
       final result = await _supabaseService.addTaskComment(
@@ -228,7 +273,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding comment: ${result['error']}'),
+            content: Text(l10n.taskErrorAddingComment('${result['error']}')),
             backgroundColor: Colors.red,
           ),
         );
@@ -238,7 +283,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding comment: $e'),
+            content: Text(l10n.taskErrorAddingComment(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -246,16 +291,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
-  String _getStatusLabel(String status) {
+  String _getStatusLabel(AppLocalizations l10n, String status) {
     switch (status) {
       case 'todo':
-        return 'To Do';
+        return l10n.taskStatusTodo;
       case 'in_progress':
-        return 'In Progress';
+        return l10n.taskStatusInProgress;
       case 'completed':
-        return 'Completed';
+        return l10n.taskStatusCompleted;
       default:
-        return 'Unknown';
+        return l10n.taskUnknown;
     }
   }
 
@@ -286,11 +331,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('Task Details'),
+          title: Text(l10n.taskDetailsTitle),
           backgroundColor: Colors.green.shade800,
         ),
         body: const Center(child: CustomLoading()),
@@ -301,7 +347,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('Task Details'),
+          title: Text(l10n.taskDetailsTitle),
           backgroundColor: Colors.green.shade800,
         ),
         body: Center(
@@ -310,9 +356,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             children: [
               Icon(Icons.error_outline, size: 80, color: Colors.red.shade400),
               const SizedBox(height: 16),
-              const Text(
-                'Task not found',
-                style: TextStyle(
+              Text(
+                l10n.taskNotFound,
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -320,7 +366,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'The task may have been deleted',
+                l10n.taskMayHaveBeenDeleted,
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade400),
               ),
             ],
@@ -329,17 +375,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       );
     }
 
-    final String title = _taskDetails!['title'] ?? 'Untitled Task';
-    final String description = _taskDetails!['description'] ?? 'No description';
+    final String title = _taskDetails!['title'] ?? l10n.taskUntitled;
+    final String description =
+        _taskDetails!['description'] ?? l10n.taskNoDescription;
     final String status = _taskDetails!['status'] ?? 'todo';
     final String approvalStatus = _taskDetails!['approval_status'] ?? 'pending';
     final String creatorName =
-        _taskDetails!['creator']?['full_name'] ?? 'Unknown';
+        _taskDetails!['creator']?['full_name'] ?? l10n.taskUnknown;
     final String assigneeName =
-        _taskDetails!['assignee']?['full_name'] ?? 'Unassigned';
+        _taskDetails!['assignee']?['full_name'] ?? l10n.taskUnassigned;
 
     // Format due date if available
-    String dueDate = 'No due date';
+    String dueDate = l10n.taskNoDueDate;
     if (_taskDetails!['due_date'] != null) {
       final DateTime date = DateTime.parse(_taskDetails!['due_date']);
       dueDate = '${date.day}/${date.month}/${date.year}';
@@ -351,13 +398,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Task Details'),
+        title: Text(l10n.taskDetailsTitle),
         backgroundColor: Colors.green.shade800,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadTaskDetails,
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
           ),
           // Show delete button if user is creator or admin
           if (_isAdmin ||
@@ -365,7 +412,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: _deleteTask,
-              tooltip: 'Delete Task',
+              tooltip: l10n.taskDeleteTitle,
               color: Colors.red.shade300,
             ),
         ],
@@ -388,7 +435,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           color: Theme.of(context)
                               .colorScheme
                               .shadow
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -406,7 +453,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
+                                color: statusColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: statusColor),
                               ),
@@ -423,7 +470,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    _getStatusLabel(status),
+                                    _getStatusLabel(l10n, status),
                                     style: TextStyle(
                                       color: statusColor,
                                       fontWeight: FontWeight.bold,
@@ -438,7 +485,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: approvalColor.withOpacity(0.1),
+                                color: approvalColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: approvalColor),
                               ),
@@ -464,7 +511,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Due: $dueDate',
+                          l10n.taskDueLabel(dueDate),
                           style: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 14,
@@ -499,7 +546,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Created by $creatorName',
+                              l10n.taskCreatedBy(creatorName),
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 14,
@@ -507,7 +554,59 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             ),
                           ],
                         ),
-                        if (assigneeName != 'Unassigned') ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.taskLinkedTicket,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Builder(builder: (context) {
+                          final linkedId =
+                              _taskDetails!['ticket_id']?.toString();
+                          final options = <Map<String, dynamic>>[
+                            ..._tickets,
+                          ];
+                          final known = options.any(
+                            (ticket) => ticket['id']?.toString() == linkedId,
+                          );
+                          final current = _taskDetails!['ticket'];
+                          if (linkedId != null &&
+                              !known &&
+                              current is Map<String, dynamic>) {
+                            options.insert(0, current);
+                          }
+                          return DropdownButtonHideUnderline(
+                            child: DropdownButton<String?>(
+                              isExpanded: true,
+                              value: options.any((ticket) =>
+                                      ticket['id']?.toString() == linkedId)
+                                  ? linkedId
+                                  : null,
+                              items: [
+                                DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text(l10n.taskNoLinkedTicket),
+                                ),
+                                ...options.map((ticket) {
+                                  return DropdownMenuItem<String?>(
+                                    value: ticket['id']?.toString(),
+                                    child: Text(
+                                      TaskTicketLink.labelFor(ticket),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }),
+                              ],
+                              onChanged: _updateLinkedTicket,
+                            ),
+                          );
+                        }),
+                        if (_taskDetails!['assignee']?['full_name'] !=
+                            null) ...[
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -527,7 +626,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Assigned to $assigneeName',
+                                l10n.taskAssignedTo(assigneeName),
                                 style: TextStyle(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -549,9 +648,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Actions',
-                            style: TextStyle(
+                          Text(
+                            l10n.taskActions,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -569,9 +668,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     Icons.play_arrow,
                                     color: Colors.white,
                                   ),
-                                  label: const Text(
-                                    'Start',
-                                    style: TextStyle(color: Colors.white),
+                                  label: Text(
+                                    l10n.taskStart,
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.orange.shade600,
@@ -589,9 +688,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     Icons.check_circle,
                                     color: Colors.white,
                                   ),
-                                  label: const Text(
-                                    'Complete',
-                                    style: TextStyle(color: Colors.white),
+                                  label: Text(
+                                    l10n.taskComplete,
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green.shade600,
@@ -609,9 +708,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     Icons.check,
                                     color: Colors.white,
                                   ),
-                                  label: const Text(
-                                    'Approve',
-                                    style: TextStyle(color: Colors.white),
+                                  label: Text(
+                                    l10n.taskApprove,
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green.shade600,
@@ -628,9 +727,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                     Icons.close,
                                     color: Colors.white,
                                   ),
-                                  label: const Text(
-                                    'Reject',
-                                    style: TextStyle(color: Colors.white),
+                                  label: Text(
+                                    l10n.taskReject,
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.red.shade600,
@@ -657,7 +756,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Comments (${_comments.length})',
+                              l10n.taskCommentsCount(_comments.length),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -668,7 +767,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               TextButton.icon(
                                 onPressed: () {},
                                 icon: const Icon(Icons.sort, size: 16),
-                                label: const Text('Latest first'),
+                                label: Text(l10n.taskLatestFirst),
                                 style: TextButton.styleFrom(
                                   foregroundColor: Colors.grey.shade400,
                                   padding: EdgeInsets.zero,
@@ -693,7 +792,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No comments yet',
+                                    l10n.taskNoCommentsYet,
                                     style: TextStyle(
                                       color: Colors.grey.shade400,
                                       fontSize: 16,
@@ -701,7 +800,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Be the first to comment',
+                                    l10n.taskBeFirstToComment,
                                     style: TextStyle(
                                       color: Colors.grey.shade600,
                                       fontSize: 14,
@@ -718,8 +817,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                             itemCount: _comments.length,
                             itemBuilder: (context, index) {
                               final comment = _comments[index];
-                              final userName =
-                                  comment['user']?['full_name'] ?? 'Unknown';
+                              final userName = comment['user']?['full_name'] ??
+                                  l10n.taskUnknown;
                               final content = comment['content'] ?? '';
                               final createdAt = DateTime.parse(
                                 comment['created_at'],
@@ -731,13 +830,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                               String formattedDate;
 
                               if (difference.inDays > 0) {
-                                formattedDate = '${difference.inDays}d ago';
+                                formattedDate =
+                                    l10n.taskDaysAgo(difference.inDays);
                               } else if (difference.inHours > 0) {
-                                formattedDate = '${difference.inHours}h ago';
+                                formattedDate =
+                                    l10n.taskHoursAgo(difference.inHours);
                               } else if (difference.inMinutes > 0) {
-                                formattedDate = '${difference.inMinutes}m ago';
+                                formattedDate =
+                                    l10n.taskMinutesAgo(difference.inMinutes);
                               } else {
-                                formattedDate = 'Just now';
+                                formattedDate = l10n.taskJustNow;
                               }
 
                               return Container(
@@ -814,7 +916,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.shadow.withOpacity(0.2),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .shadow
+                      .withValues(alpha: 0.2),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -826,7 +931,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   child: TextField(
                     controller: _commentController,
                     decoration: InputDecoration(
-                      hintText: 'Add a comment...',
+                      hintText: l10n.taskAddCommentHint,
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -849,6 +954,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   child: IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
                     onPressed: _addComment,
+                    tooltip: l10n.taskSendComment,
                   ),
                 ),
               ],
