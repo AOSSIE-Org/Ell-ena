@@ -1,0 +1,41 @@
+name: Summary scheduler tests
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'sqls/08_meetings_ai_summary.sql'
+      - 'test/sql/**'
+      - '.github/workflows/summary-scheduler-tests.yml'
+  push:
+    paths:
+      - 'supabase/migrations/**'
+      - 'sqls/08_meetings_ai_summary.sql'
+      - 'test/sql/**'
+      - '.github/workflows/summary-scheduler-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  summary-scheduler:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scheduler_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run scheduler regressions
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d scheduler_test -X -v ON_ERROR_STOP=1 -f test/sql/summary_scheduler_test.sql
