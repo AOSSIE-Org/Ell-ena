@@ -28,3 +28,4 @@ A modern and minimal logo for **Ell-ena**, an AI-powered teammate that makes man
 ### SVG (Vector) Files
 - **ell-ena-black.svg** — Black version of the Ell-ena logo (vector format)
 - **ell-ena.svg** — Primary Ell-ena logo (vector format)
+- **ellena_logo.svg** — Green logo on a white rounded square (clean vector, used in the project README)

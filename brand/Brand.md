@@ -8,8 +8,8 @@ Canonical branding assets live in this folder. App runtime assets stay under `EL
 
 | File | Use |
 |------|-----|
-| [`logo.svg`](logo.svg) | Primary SVG mark |
-| [`favicon.svg`](favicon.svg) | Favicon SVG |
+| [`logo.svg`](logo.svg) | Primary SVG mark (green on a white rounded square) |
+| [`favicon.svg`](favicon.svg) | Favicon SVG (mark cropped tight, transparent) |
 | [`icons/app-icon-source.png`](icons/app-icon-source.png) | App / launcher icon source |
 | [`icons/logo-mark.png`](icons/logo-mark.png) | Compact mark (splash) |
 | [`icons/logo-light-with-name.png`](icons/logo-light-with-name.png) | Light lockup |
@@ -64,4 +64,4 @@ App bar title: 20 / w600.
 
 - **UI:** Material Icons; active accent `#66BB6A`.
 - **App icon:** generated via `flutter_launcher_icons` → Android / iOS / macOS / Windows.
-- **Web:** `web/favicon.png`, `web/icons/Icon-192.png`, `Icon-512.png` (copies in `brand/icons/`).
+- **Web:** `web/favicon.svg`, `web/favicon.png`, `web/icons/Icon-192.png`, `Icon-512.png`, `Icon-maskable-192.png`, `Icon-maskable-512.png` (copies in `brand/` and `brand/icons/`; the build serves them from `web/`, so update both).

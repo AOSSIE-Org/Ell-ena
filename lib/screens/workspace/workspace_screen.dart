@@ -3,14 +3,21 @@ import '../tasks/task_screen.dart';
 import '../tasks/create_task_screen.dart';
 import '../tickets/ticket_screen.dart';
 import '../tickets/create_ticket_screen.dart';
+import '../../l10n/app_localizations.dart';
 import '../meetings/meeting_screen.dart';
 import '../meetings/create_meeting_screen.dart';
-import '../chat/chat_screen.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
 
 class WorkspaceScreen extends StatefulWidget {
-  const WorkspaceScreen({super.key});
+  final int initialTabIndex;
+  final ValueChanged<int>? onTabSelected;
+
+  const WorkspaceScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.onTabSelected,
+  });
 
   @override
   State<WorkspaceScreen> createState() => _WorkspaceScreenState();
@@ -19,15 +26,16 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-  String? _selectedPriority;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2),
+    );
     _tabController.addListener(_handleTabChange);
 
     // Simulate loading delay
@@ -47,10 +55,22 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(WorkspaceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTabIndex != widget.initialTabIndex &&
+        _tabController.index != widget.initialTabIndex) {
+      _tabController.animateTo(widget.initialTabIndex.clamp(0, 2));
+    }
+  }
+
   void _handleTabChange() {
     if (_tabController.indexIsChanging) {
       setState(() {});
+      return;
     }
+
+    widget.onTabSelected?.call(_tabController.index);
   }
 
   void _showCreateDialog() {
@@ -65,6 +85,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   void _showCreateTaskDialog() {
+    final l10n = AppLocalizations.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CreateTaskScreen()),
@@ -80,9 +101,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         // Force refresh of the task screen
         TaskScreen.refreshTasks();
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task created successfully'),
+          SnackBar(
+            content: Text(l10n.workspaceTaskCreated),
             backgroundColor: Colors.green,
           ),
         );
@@ -91,6 +113,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   void _showCreateTicketDialog() {
+    final l10n = AppLocalizations.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CreateTicketScreen()),
@@ -106,9 +129,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         // Force refresh of the ticket screen
         TicketScreen.refreshTickets();
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ticket created successfully'),
+          SnackBar(
+            content: Text(l10n.workspaceTicketCreated),
             backgroundColor: Colors.green,
           ),
         );
@@ -117,6 +141,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   }
 
   void _showCreateMeetingDialog() {
+    final l10n = AppLocalizations.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) =>  CreateMeetingScreen()),
@@ -132,9 +157,10 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         // Force refresh of the meeting screen
         MeetingScreen.refreshMeetings();
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Meeting created successfully'),
+          SnackBar(
+            content: Text(l10n.workspaceMeetingCreated),
             backgroundColor: Colors.green,
           ),
         );
@@ -152,6 +178,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     }
 
     final statusBarHeight = MediaQuery.of(context).padding.top;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -170,10 +197,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               labelColor: Colors.green,
               unselectedLabelColor:
                   Theme.of(context).colorScheme.onSurfaceVariant,
-              tabs: const [
-                Tab(icon: Icon(Icons.task), text: 'Tasks'),
-                Tab(icon: Icon(Icons.confirmation_number), text: 'Tickets'),
-                Tab(icon: Icon(Icons.group), text: 'Meetings'),
+              tabs: [
+                Tab(icon: const Icon(Icons.task), text: l10n.tasks),
+                Tab(
+                  icon: const Icon(Icons.confirmation_number),
+                  text: l10n.tickets,
+                ),
+                Tab(icon: const Icon(Icons.group), text: l10n.meetings),
               ],
             ),
           ),
@@ -188,7 +218,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'workspace-add-button',
         onPressed: _showCreateDialog,
+        tooltip: _tabController.index == 0
+            ? l10n.newTask
+            : _tabController.index == 1
+                ? l10n.newTicket
+                : l10n.newMeeting,
         backgroundColor: Colors.green,
         child: const Icon(Icons.add),
       ),

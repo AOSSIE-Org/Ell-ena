@@ -114,8 +114,10 @@ serve(async (req) => {
       Meeting transcript:
     `;
 
+    // gemini-1.5-* IDs are retired and return 404. gemini-2.5-flash is the current stable Flash model.
+    const geminiModel = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,12 +165,23 @@ serve(async (req) => {
       }
     }
 
-    await supabase
+    const overallSummary = typeof structuredSummary.overall_summary === "string"
+      ? structuredSummary.overall_summary
+      : "";
+
+    const { error: updateError } = await supabase
       .from("meetings")
-      .update({ 
-        meeting_summary_json: structuredSummary
+      .update({
+        meeting_summary_json: structuredSummary,
+        ai_summary: overallSummary,
+        transcription_status: "completed",
+        updated_at: new Date().toISOString(),
       })
       .eq("id", meeting_id);
+
+    if (updateError) {
+      throw new Error(`Failed to save meeting summary: ${updateError.message}`);
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

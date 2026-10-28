@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
+import '../../widgets/adaptive_create_flow.dart';
+import '../../shell/app_shell.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
+import '../../widgets/detail_side_panel.dart';
 import 'task_detail_screen.dart';
 import 'create_task_screen.dart';
 
 class TaskScreen extends StatefulWidget {
   // Create a static key that can be used to access the state
-  static final GlobalKey<_TaskScreenState> globalKey =
+  static final GlobalKey<_TaskScreenState> _globalKey =
       GlobalKey<_TaskScreenState>();
+  static GlobalKey<State<TaskScreen>> get globalKey => _globalKey;
 
-  const TaskScreen({Key? key}) : super(key: key);
+  const TaskScreen({super.key});
 
   // Static method to refresh tasks from anywhere
   static void refreshTasks() {
-    globalKey.currentState?.refreshTasks();
+    _globalKey.currentState?.refreshTasks();
+  }
+
+  /// Opens the create-task screen; used by the wide shell's top bar.
+  static void openCreateTask() {
+    _globalKey.currentState?._openCreateTask();
   }
 
   @override
@@ -26,6 +36,9 @@ class _TaskScreenState extends State<TaskScreen> {
   List<Map<String, dynamic>> _tasks = [];
   String _selectedStatus = 'todo';
   bool _isAdmin = false;
+
+  /// Task shown in the side panel on wide screens.
+  String? _selectedTaskId;
 
   @override
   void initState() {
@@ -95,6 +108,7 @@ class _TaskScreenState extends State<TaskScreen> {
   }
 
   Future<void> _updateTaskStatus(String taskId, String status) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await _supabaseService.updateTaskStatus(
         taskId: taskId,
@@ -105,9 +119,10 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task status: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error updating task status: $e'),
+          content: Text(l10n.taskErrorUpdatingStatus(e.toString())),
           backgroundColor: Colors.red,
         ),
       );
@@ -115,6 +130,7 @@ class _TaskScreenState extends State<TaskScreen> {
   }
 
   Future<void> _updateTaskApproval(String taskId, String approvalStatus) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await _supabaseService.updateTaskApproval(
         taskId: taskId,
@@ -125,10 +141,31 @@ class _TaskScreenState extends State<TaskScreen> {
       _loadTasks();
     } catch (e) {
       debugPrint('Error updating task approval: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error updating task approval: $e'),
+          content: Text(l10n.taskErrorUpdatingApproval(e.toString())),
           backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _openCreateTask() async {
+    final l10n = AppLocalizations.of(context);
+    final result = await openCreateFlow(
+      context,
+      const CreateTaskScreen(),
+      fullscreenDialog: true,
+    );
+
+    if (result == true) {
+      _loadTasks();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.taskCreatedSuccess),
+          backgroundColor: Colors.green,
         ),
       );
     }
@@ -159,30 +196,16 @@ class _TaskScreenState extends State<TaskScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CreateTaskScreen(),
-              fullscreenDialog: true,
+      // Wide screens create from the shell's top bar instead.
+      floatingActionButton: AppShell.isDesktop(context)
+          ? null
+          : FloatingActionButton(
+              heroTag: 'tasks-add-button',
+              onPressed: _openCreateTask,
+              backgroundColor: Colors.green.shade400,
+              child: const Icon(Icons.add, color: Colors.white),
             ),
-          );
-
-          if (result == true) {
-            _loadTasks();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Task created successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        },
-        backgroundColor: Colors.green.shade400,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      body: Column(
+      body: _withTaskPanel(Column(
         children: [
           _buildProgressHeader(
             completedTasks: completedTasks.length,
@@ -196,7 +219,21 @@ class _TaskScreenState extends State<TaskScreen> {
             child: _buildDraggableTaskList(),
           ),
         ],
-      ),
+      )),
+    );
+  }
+
+  Widget _withTaskPanel(Widget content) {
+    final taskId = _selectedTaskId;
+    return DetailPanelLayout(
+      content: content,
+      panel: taskId == null || !AppShell.isDesktop(context)
+          ? null
+          : DetailSidePanel(
+              itemKey: taskId,
+              onClose: _closeTaskPanel,
+              child: TaskDetailScreen(taskId: taskId),
+            ),
     );
   }
 
@@ -205,6 +242,7 @@ class _TaskScreenState extends State<TaskScreen> {
         _tasks.where((task) => task['status'] == _selectedStatus).toList();
 
     if (filteredTasks.isEmpty) {
+      final l10n = AppLocalizations.of(context);
       final colorScheme = Theme.of(context).colorScheme;
       return Center(
         child: Column(
@@ -221,7 +259,7 @@ class _TaskScreenState extends State<TaskScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No tasks found',
+              l10n.taskNoTasksFound,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -231,10 +269,10 @@ class _TaskScreenState extends State<TaskScreen> {
             const SizedBox(height: 8),
             Text(
               _selectedStatus == 'todo'
-                  ? 'Add new tasks to get started'
+                  ? l10n.taskEmptyTodo
                   : _selectedStatus == 'in_progress'
-                      ? 'Move tasks here when you start working on them'
-                      : 'Completed tasks will appear here',
+                      ? l10n.taskEmptyInProgress
+                      : l10n.taskEmptyCompleted,
               style: TextStyle(
                 fontSize: 14,
                 color: colorScheme.onSurfaceVariant,
@@ -248,83 +286,120 @@ class _TaskScreenState extends State<TaskScreen> {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: ReorderableListView.builder(
-        itemCount: filteredTasks.length,
-        onReorder: (oldIndex, newIndex) {
-          // Just for visual reordering, no status change
-          setState(() {
-            if (oldIndex < newIndex) {
-              newIndex -= 1;
-            }
-            final item = filteredTasks.removeAt(oldIndex);
-            filteredTasks.insert(newIndex, item);
-          });
-        },
-        itemBuilder: (context, index) {
-          final task = filteredTasks[index];
-          return Draggable<Map<String, dynamic>>(
-            key: ValueKey(task['id']),
-            data: task,
-            feedback: Material(
-              color: Colors.transparent,
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width - 32,
+    return LayoutBuilder(builder: (context, outer) {
+      // The table needs room for its columns; narrower lists (e.g. beside the
+      // side panel on a small window) keep the cards.
+      final dense = AppShell.isDesktop(context) &&
+          outer.maxWidth >= _TaskTable.minListWidth;
+      final list = LayoutBuilder(
+        builder: (context, constraints) {
+          // Drag feedback matches the list it was lifted from.
+          final feedbackWidth = dense
+              ? constraints.maxWidth
+              : MediaQuery.of(context).size.width - 32;
+          return ReorderableListView.builder(
+            itemCount: filteredTasks.length,
+            onReorderItem: (oldIndex, newIndex) {
+              // Just for visual reordering, no status change
+              setState(() {
+                final item = filteredTasks.removeAt(oldIndex);
+                filteredTasks.insert(newIndex, item);
+              });
+            },
+            itemBuilder: (context, index) {
+              final task = filteredTasks[index];
+              return Draggable<Map<String, dynamic>>(
+                key: ValueKey(task['id']),
+                data: task,
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: SizedBox(
+                    width: feedbackWidth,
+                    child: _TaskCard(
+                      task: task,
+                      isAdmin: _isAdmin,
+                      dense: dense,
+                      onStatusChange: _updateTaskStatus,
+                      onApprovalChange: _updateTaskApproval,
+                      onTap: () {},
+                    ),
+                  ),
+                ),
+                childWhenDragging: Opacity(
+                  opacity: 0.5,
+                  child: _TaskCard(
+                    task: task,
+                    isAdmin: _isAdmin,
+                    dense: dense,
+                    onStatusChange: _updateTaskStatus,
+                    onApprovalChange: _updateTaskApproval,
+                    onTap: () {},
+                  ),
+                ),
+                onDragEnd: (details) {
+                  if (details.wasAccepted) {
+                    // Status change will be handled by the DragTarget
+                  }
+                },
                 child: _TaskCard(
                   task: task,
                   isAdmin: _isAdmin,
+                  dense: dense,
+                  selected: dense && task['id'] == _selectedTaskId,
                   onStatusChange: _updateTaskStatus,
                   onApprovalChange: _updateTaskApproval,
-                  onTap: () {},
+                  onTap: () => _openTask(task),
                 ),
-              ),
-            ),
-            childWhenDragging: Opacity(
-              opacity: 0.5,
-              child: _TaskCard(
-                task: task,
-                isAdmin: _isAdmin,
-                onStatusChange: _updateTaskStatus,
-                onApprovalChange: _updateTaskApproval,
-                onTap: () {},
-              ),
-            ),
-            onDragEnd: (details) {
-              if (details.wasAccepted) {
-                // Status change will be handled by the DragTarget
-              }
+              );
             },
-            child: _TaskCard(
-              task: task,
-              isAdmin: _isAdmin,
-              onStatusChange: _updateTaskStatus,
-              onApprovalChange: _updateTaskApproval,
-              onTap: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TaskDetailScreen(taskId: task['id']),
-                  ),
-                );
-
-                if (result == true) {
-                  _loadTasks();
-                }
-              },
-            ),
           );
         },
+      );
+
+      if (!dense) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: list,
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: _TaskTable(child: list),
+      );
+    });
+  }
+
+  /// Phones open the task as a page; wide screens show it in the side panel.
+  Future<void> _openTask(Map<String, dynamic> task) async {
+    if (AppShell.isDesktop(context)) {
+      setState(() => _selectedTaskId = task['id'] as String?);
+      return;
+    }
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TaskDetailScreen(taskId: task['id']),
       ),
     );
+
+    if (result == true) {
+      _loadTasks();
+    }
+  }
+
+  void _closeTaskPanel() {
+    setState(() => _selectedTaskId = null);
+    // The panel may have changed or deleted the task.
+    _loadTasks();
   }
 
   Widget _buildStatusChangeHint() {
+    final l10n = AppLocalizations.of(context);
     final nextStatus = _selectedStatus == 'todo'
-        ? 'In Progress'
+        ? l10n.taskStatusInProgress
         : _selectedStatus == 'in_progress'
-            ? 'Completed'
-            : 'To Do';
+            ? l10n.taskStatusCompleted
+            : l10n.taskStatusTodo;
 
     final nextStatusId = _selectedStatus == 'todo'
         ? 'in_progress'
@@ -350,7 +425,7 @@ class _TaskScreenState extends State<TaskScreen> {
         size: 16,
       ),
       label: Text(
-        'View $nextStatus Tasks',
+        l10n.taskViewStatusTasks(nextStatus),
         style: const TextStyle(color: Colors.white),
       ),
       style: ElevatedButton.styleFrom(
@@ -361,10 +436,19 @@ class _TaskScreenState extends State<TaskScreen> {
   }
 
   Widget _buildStatusTabs() {
+    final l10n = AppLocalizations.of(context);
     final statusOptions = [
-      {'id': 'todo', 'label': 'To Do', 'color': Colors.blue},
-      {'id': 'in_progress', 'label': 'In Progress', 'color': Colors.orange},
-      {'id': 'completed', 'label': 'Completed', 'color': Colors.green},
+      {'id': 'todo', 'label': l10n.taskStatusTodo, 'color': Colors.blue},
+      {
+        'id': 'in_progress',
+        'label': l10n.taskStatusInProgress,
+        'color': Colors.orange
+      },
+      {
+        'id': 'completed',
+        'label': l10n.taskStatusCompleted,
+        'color': Colors.green
+      },
     ];
 
     return Container(
@@ -381,9 +465,9 @@ class _TaskScreenState extends State<TaskScreen> {
                 return Container(
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? color.withOpacity(0.2)
+                        ? color.withValues(alpha: 0.2)
                         : candidateData.isNotEmpty
-                            ? color.withOpacity(0.1)
+                            ? color.withValues(alpha: 0.1)
                             : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
@@ -410,13 +494,14 @@ class _TaskScreenState extends State<TaskScreen> {
                   ),
                 );
               },
-              onAccept: (task) {
+              onAcceptWithDetails: (details) {
+                final task = details.data;
                 final newStatus = status['id'] as String;
                 if (task['status'] != newStatus) {
                   _updateTaskStatus(task['id'], newStatus);
                 }
               },
-              onWillAccept: (data) => data != null,
+              onWillAcceptWithDetails: (details) => true,
             ),
           );
         }).toList(),
@@ -430,6 +515,7 @@ class _TaskScreenState extends State<TaskScreen> {
     required int todoTasks,
     required int totalTasks,
   }) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -445,19 +531,19 @@ class _TaskScreenState extends State<TaskScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildProgressStat(
-                label: 'To Do',
+                label: l10n.taskStatusTodo,
                 value: todoTasks,
                 total: totalTasks > 0 ? totalTasks : 1,
                 color: Colors.blue.shade400,
               ),
               _buildProgressStat(
-                label: 'In Progress',
+                label: l10n.taskStatusInProgress,
                 value: inProgressTasks,
                 total: totalTasks > 0 ? totalTasks : 1,
                 color: Colors.orange.shade400,
               ),
               _buildProgressStat(
-                label: 'Completed',
+                label: l10n.taskStatusCompleted,
                 value: completedTasks,
                 total: totalTasks > 0 ? totalTasks : 1,
                 color: Colors.green.shade400,
@@ -541,18 +627,95 @@ class _TaskCard extends StatelessWidget {
   final Function(String, String) onApprovalChange;
   final VoidCallback onTap;
 
+  /// One-line table row for wide screens, with the same data and actions.
+  final bool dense;
+
+  /// Highlights the row whose task is open in the side panel.
+  final bool selected;
+
   const _TaskCard({
     required this.task,
     required this.isAdmin,
     required this.onStatusChange,
     required this.onApprovalChange,
     required this.onTap,
+    this.dense = false,
+    this.selected = false,
   });
+
+  bool get _canDelete =>
+      task['created_by'] == SupabaseService().client.auth.currentUser?.id ||
+      isAdmin;
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(l10n.taskDeleteTitle,
+            style: Theme.of(context).textTheme.titleLarge),
+        content: Text(
+          l10n.taskDeleteConfirmMessage,
+          style:
+              TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.taskDelete),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final result = await SupabaseService().deleteTask(task['id']);
+        if (result['success'] == true) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.taskDeletedSuccess),
+                backgroundColor: Colors.green,
+              ),
+            );
+            // Refresh the task list
+            TaskScreen.refreshTasks();
+          }
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['error'] ?? l10n.taskDeleteFailed),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.taskErrorGeneric(e.toString())),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String title = task['title'] ?? 'Untitled Task';
-    final String description = task['description'] ?? 'No description';
+    final l10n = AppLocalizations.of(context);
+    final String title = task['title'] ?? l10n.taskUntitled;
+    final String description = task['description'] ?? l10n.taskNoDescription;
     final String status = task['status'] ?? 'todo';
     final String approvalStatus = task['approval_status'] ?? 'pending';
 
@@ -561,27 +724,27 @@ class _TaskCard extends StatelessWidget {
     String creatorName;
     if (task['created_by'] != null) {
       if (supabaseService.isCurrentUser(task['created_by'])) {
-        creatorName = 'You';
+        creatorName = l10n.taskYou;
       } else {
         creatorName = supabaseService.getUserNameById(task['created_by']);
       }
     } else {
-      creatorName = 'Unknown';
+      creatorName = l10n.taskUnknown;
     }
 
     String assigneeName;
     if (task['assigned_to'] != null) {
       if (supabaseService.isCurrentUser(task['assigned_to'])) {
-        assigneeName = 'You';
+        assigneeName = l10n.taskYou;
       } else {
         assigneeName = supabaseService.getUserNameById(task['assigned_to']);
       }
     } else {
-      assigneeName = 'Unassigned';
+      assigneeName = l10n.taskUnassigned;
     }
 
     // Format due date if available
-    String dueDate = 'No due date';
+    String dueDate = l10n.taskNoDueDate;
     if (task['due_date'] != null) {
       final DateTime date = DateTime.parse(task['due_date']);
       dueDate = '${date.day}/${date.month}/${date.year}';
@@ -600,6 +763,21 @@ class _TaskCard extends StatelessWidget {
             ? Colors.green
             : Colors.red;
 
+    if (dense) {
+      return _buildRow(
+        context,
+        title: title,
+        description: description,
+        status: status,
+        statusColor: statusColor,
+        approvalStatus: approvalStatus,
+        approvalColor: approvalColor,
+        creatorName: creatorName,
+        assigneeName: assigneeName,
+        dueDate: dueDate,
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -609,7 +787,8 @@ class _TaskCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.shadow.withOpacity(0.1),
+              color:
+                  Theme.of(context).colorScheme.shadow.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -621,7 +800,7 @@ class _TaskCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -644,10 +823,10 @@ class _TaskCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         status == 'todo'
-                            ? 'To Do'
+                            ? l10n.taskStatusTodo
                             : status == 'in_progress'
-                                ? 'In Progress'
-                                : 'Completed',
+                                ? l10n.taskStatusInProgress
+                                : l10n.taskStatusCompleted,
                         style: TextStyle(
                           color: statusColor,
                           fontWeight: FontWeight.bold,
@@ -665,7 +844,7 @@ class _TaskCard extends StatelessWidget {
                                   onApprovalChange(task['id'], 'approved'),
                               icon: Icon(Icons.check_circle,
                                   color: Colors.green.shade400, size: 20),
-                              tooltip: 'Approve',
+                              tooltip: l10n.taskApprove,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -675,7 +854,7 @@ class _TaskCard extends StatelessWidget {
                                   onApprovalChange(task['id'], 'rejected'),
                               icon: Icon(Icons.cancel,
                                   color: Colors.red.shade400, size: 20),
-                              tooltip: 'Reject',
+                              tooltip: l10n.taskReject,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -692,85 +871,10 @@ class _TaskCard extends StatelessWidget {
                                       ?.id ||
                               isAdmin)
                             IconButton(
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.surface,
-                                    title: Text('Delete Task',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge),
-                                    content: Text(
-                                      'Are you sure you want to delete this task? This action cannot be undone.',
-                                      style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        style: TextButton.styleFrom(
-                                            foregroundColor: Colors.red),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-
-                                if (confirm == true) {
-                                  try {
-                                    final result = await SupabaseService()
-                                        .deleteTask(task['id']);
-                                    if (result['success'] == true) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Task deleted successfully'),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
-                                        // Refresh the task list
-                                        TaskScreen.refreshTasks();
-                                      }
-                                    } else {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(result['error'] ??
-                                                'Failed to delete task'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text('Error: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                }
-                              },
+                              onPressed: () => _confirmDelete(context),
                               icon: Icon(Icons.delete_outline,
                                   color: Colors.red.shade400, size: 20),
-                              tooltip: 'Delete',
+                              tooltip: l10n.taskDelete,
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -819,7 +923,7 @@ class _TaskCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: approvalColor.withOpacity(0.1),
+                          color: approvalColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -864,7 +968,7 @@ class _TaskCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Created by $creatorName',
+                            l10n.taskCreatedBy(creatorName),
                             style: TextStyle(
                               color: Theme.of(context)
                                   .colorScheme
@@ -874,7 +978,7 @@ class _TaskCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (assigneeName != 'Unassigned')
+                      if (task['assigned_to'] != null)
                         Row(
                           children: [
                             CircleAvatar(
@@ -893,7 +997,7 @@ class _TaskCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Assigned to $assigneeName',
+                              l10n.taskAssignedTo(assigneeName),
                               style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -928,7 +1032,7 @@ class _TaskCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Drag to change status',
+                    l10n.taskDragToChangeStatus,
                     style: TextStyle(
                       color: Colors.grey.shade500,
                       fontSize: 12,
@@ -939,6 +1043,301 @@ class _TaskCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Wide-screen table row: same fields and actions as the card, one line.
+  Widget _buildRow(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required String status,
+    required Color statusColor,
+    required String approvalStatus,
+    required Color approvalColor,
+    required String creatorName,
+    required String assigneeName,
+    required String dueDate,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final statusLabel = status == 'todo'
+        ? l10n.taskStatusTodo
+        : status == 'in_progress'
+            ? l10n.taskStatusInProgress
+            : l10n.taskStatusCompleted;
+
+    return Material(
+      color: selected
+          ? colorScheme.primary.withValues(alpha: 0.08)
+          : colorScheme.surface,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding:
+              const EdgeInsets.fromLTRB(12, 10, _TaskTable.trailingGap, 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: colorScheme.outlineVariant),
+            ),
+          ),
+          child: Row(
+            children: [
+              Tooltip(
+                message: l10n.taskDragToChangeStatus,
+                child: Icon(
+                  Icons.drag_indicator,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: statusLabel,
+                child: Icon(
+                  status == 'todo'
+                      ? Icons.assignment_outlined
+                      : status == 'in_progress'
+                          ? Icons.pending_actions_outlined
+                          : Icons.task_alt_outlined,
+                  color: statusColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: _TaskTable.titleFlex,
+                child: Tooltip(
+                  message: description,
+                  waitDuration: const Duration(milliseconds: 500),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        description,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: _TaskTable.approvalWidth,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: approvalColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      approvalStatus.toUpperCase(),
+                      style: TextStyle(
+                        color: approvalColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: _TaskTable.personFlex,
+                child: _PersonCell(
+                  name: creatorName,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+              Expanded(
+                flex: _TaskTable.personFlex,
+                child: task['assigned_to'] == null
+                    ? Text(
+                        assigneeName,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    : _PersonCell(
+                        name: assigneeName,
+                        color: Colors.purple.shade700,
+                      ),
+              ),
+              SizedBox(
+                width: _TaskTable.dueWidth,
+                child: Text(
+                  dueDate,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: _TaskTable.actionsWidth,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (isAdmin && approvalStatus == 'pending') ...[
+                      IconButton(
+                        onPressed: () =>
+                            onApprovalChange(task['id'], 'approved'),
+                        icon: Icon(Icons.check_circle,
+                            color: Colors.green.shade400, size: 20),
+                        tooltip: l10n.taskApprove,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        onPressed: () =>
+                            onApprovalChange(task['id'], 'rejected'),
+                        icon: Icon(Icons.cancel,
+                            color: Colors.red.shade400, size: 20),
+                        tooltip: l10n.taskReject,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                    if (_canDelete)
+                      IconButton(
+                        onPressed: () => _confirmDelete(context),
+                        icon: Icon(Icons.delete_outline,
+                            color: Colors.red.shade400, size: 20),
+                        tooltip: l10n.taskDelete,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Avatar initial and name, as in the card's "Created by" / "Assigned to".
+class _PersonCell extends StatelessWidget {
+  final String name;
+  final Color color;
+
+  const _PersonCell({required this.name, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 12,
+          backgroundColor: color,
+          child: Text(
+            name.isNotEmpty ? name[0].toUpperCase() : '?',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            name,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Frame and column headings for the wide-screen task rows.
+class _TaskTable extends StatelessWidget {
+  static const titleFlex = 5;
+  static const personFlex = 2;
+  static const approvalWidth = 110.0;
+  static const dueWidth = 100.0;
+  static const actionsWidth = 128.0;
+
+  /// Narrower lists fall back to cards.
+  static const minListWidth = 880.0;
+
+  /// Room for the reorder handle the list adds at the end of each row on
+  /// desktop platforms.
+  static const trailingGap = 40.0;
+
+  final Widget child;
+
+  const _TaskTable({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final headingStyle = theme.textTheme.labelMedium?.copyWith(
+      color: colorScheme.onSurfaceVariant,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Container(
+            color: colorScheme.surfaceContainerLow,
+            padding: const EdgeInsets.fromLTRB(12, 12, trailingGap, 12),
+            child: Row(
+              children: [
+                // Drag handle (18) + gap (8) + status icon (20) + gap (12).
+                const SizedBox(width: 58),
+                Expanded(
+                  flex: titleFlex,
+                  child: Text(l10n.taskTableTask, style: headingStyle),
+                ),
+                SizedBox(
+                  width: approvalWidth,
+                  child: Text(l10n.taskTableApproval, style: headingStyle),
+                ),
+                Expanded(
+                  flex: personFlex,
+                  child: Text(l10n.taskTableCreatedBy, style: headingStyle),
+                ),
+                Expanded(
+                  flex: personFlex,
+                  child: Text(l10n.taskTableAssignedTo, style: headingStyle),
+                ),
+                SizedBox(
+                  width: dueWidth,
+                  child: Text(l10n.taskTableDueDate, style: headingStyle),
+                ),
+                const SizedBox(width: actionsWidth),
+              ],
+            ),
+          ),
+          Expanded(child: child),
+        ],
       ),
     );
   }
