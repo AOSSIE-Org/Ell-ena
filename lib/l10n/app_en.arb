@@ -1,0 +1,2420 @@
+{
+  "@@locale": "en",
+  "appTitle": "Ell-ena",
+  "@appTitle": {
+    "description": "The application title shown in the task switcher and browser tab."
+  },
+  "login": "Sign In",
+  "@login": {
+    "description": "Primary authentication action on the login screen."
+  },
+  "signUp": "Sign Up",
+  "@signUp": {
+    "description": "Registration action on the authentication screens."
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout action label."
+  },
+  "logoutTitle": "Log out?",
+  "@logoutTitle": {
+    "description": "Title for the logout confirmation dialog."
+  },
+  "logoutMessage": "You will need to log in again to access your account.",
+  "@logoutMessage": {
+    "description": "Body text for the logout confirmation dialog."
+  },
+  "dashboard": "Dashboard",
+  "@dashboard": {
+    "description": "Dashboard navigation label."
+  },
+  "calendar": "Calendar",
+  "@calendar": {
+    "description": "Calendar navigation label."
+  },
+  "workspace": "Workspace",
+  "@workspace": {
+    "description": "Workspace navigation label."
+  },
+  "chat": "Chat",
+  "@chat": {
+    "description": "Chat navigation label."
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile navigation label."
+  },
+  "tasks": "Tasks",
+  "@tasks": {
+    "description": "Tasks section label."
+  },
+  "tickets": "Tickets",
+  "@tickets": {
+    "description": "Tickets section label."
+  },
+  "meetings": "Meetings",
+  "@meetings": {
+    "description": "Meetings section label."
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings section label."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Generic cancel action."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Generic save action."
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Generic loading indicator label."
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Generic search placeholder label."
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language preference setting label."
+  },
+  "languageName": "{localeCode, select, en{English} hi{हिन्दी} other{{localeCode}}}",
+  "@languageName": {
+    "description": "Display name for a language identified by locale code.",
+    "placeholders": {
+      "localeCode": {
+        "type": "String"
+      }
+    }
+  },
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Title for the language selection sheet."
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Tooltip for the button that reloads the open page."
+  },
+  "switchTeam": "Switch Team",
+  "@switchTeam": {
+    "description": "Title of the team switcher dialog and tooltip of the team button."
+  },
+  "teamCode": "Team Code: {code}",
+  "@teamCode": {
+    "description": "Team code shown under each team in the team switcher.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "teamFallbackName": "Team",
+  "@teamFallbackName": {
+    "description": "Shown when a team has no name."
+  },
+  "myTeam": "My Team",
+  "@myTeam": {
+    "description": "Shown when the current team's name is unknown."
+  },
+  "errorSwitchingTeam": "Error switching team: {error}",
+  "@errorSwitchingTeam": {
+    "description": "Snackbar when switching teams fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardWelcomeBack": "Welcome back,",
+  "@dashboardWelcomeBack": {
+    "description": "Greeting above the user's name on the phone dashboard."
+  },
+  "dashboardTodaysOverview": "Today's Overview",
+  "@dashboardTodaysOverview": {
+    "description": "Title of the phone dashboard summary card."
+  },
+  "dashboardTotalTasks": "Total Tasks",
+  "@dashboardTotalTasks": {
+    "description": "Dashboard stat label."
+  },
+  "dashboardInProgress": "In Progress",
+  "@dashboardInProgress": {
+    "description": "Dashboard stat label for tasks in progress."
+  },
+  "dashboardCompleted": "Completed",
+  "@dashboardCompleted": {
+    "description": "Dashboard stat label for completed tasks."
+  },
+  "dashboardOpenTickets": "Open Tickets",
+  "@dashboardOpenTickets": {
+    "description": "Dashboard stat label."
+  },
+  "dashboardTicketsInProgress": "Tickets In Progress",
+  "@dashboardTicketsInProgress": {
+    "description": "Dashboard stat label."
+  },
+  "dashboardResolved": "Resolved",
+  "@dashboardResolved": {
+    "description": "Dashboard stat label for resolved tickets."
+  },
+  "dashboardTaskCompletionByDay": "Task Completion by Day",
+  "@dashboardTaskCompletionByDay": {
+    "description": "Title of the dashboard completion chart."
+  },
+  "dashboardWeek": "Week",
+  "@dashboardWeek": {
+    "description": "Chart range option."
+  },
+  "dashboardMonth": "Month",
+  "@dashboardMonth": {
+    "description": "Chart range option."
+  },
+  "dashboardNoCompletions": "No completions yet",
+  "@dashboardNoCompletions": {
+    "description": "Empty state of the completion chart."
+  },
+  "dashboardUpcoming": "Upcoming",
+  "@dashboardUpcoming": {
+    "description": "Title of the upcoming items section."
+  },
+  "dashboardNothingUpcoming": "Nothing due today or scheduled soon",
+  "@dashboardNothingUpcoming": {
+    "description": "Empty state of the upcoming section."
+  },
+  "dashboardRecentActivity": "Recent Activity",
+  "@dashboardRecentActivity": {
+    "description": "Title of the recent activity section."
+  },
+  "dashboardNoRecentActivity": "No recent activity",
+  "@dashboardNoRecentActivity": {
+    "description": "Empty state of the recent activity section."
+  },
+  "dashboardTask": "Task",
+  "@dashboardTask": {
+    "description": "Type label for a task in dashboard lists."
+  },
+  "dashboardTicket": "Ticket",
+  "@dashboardTicket": {
+    "description": "Type label for a ticket in dashboard lists."
+  },
+  "dashboardMeeting": "Meeting",
+  "@dashboardMeeting": {
+    "description": "Fallback title for a meeting without a title."
+  },
+  "dashboardStatus": "Status: {status}",
+  "@dashboardStatus": {
+    "description": "Status line in the recent activity list.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "newTask": "New Task",
+  "@newTask": {
+    "description": "Wide-screen top bar button that opens the create-task screen."
+  },
+  "newTicket": "New Ticket",
+  "@newTicket": {
+    "description": "Wide-screen top bar button that opens the create-ticket screen."
+  },
+  "newMeeting": "New Meeting",
+  "@newMeeting": {
+    "description": "Wide-screen top bar button that opens the create-meeting screen."
+  },
+  "authWelcomeBack": "Welcome Back",
+  "@authWelcomeBack": {
+    "description": "Title of the login screen."
+  },
+  "authSignInSubtitle": "Sign in to continue with Ell-ena",
+  "@authSignInSubtitle": {
+    "description": "Subtitle of the login screen."
+  },
+  "authEmailLabel": "Email",
+  "@authEmailLabel": {
+    "description": "Label of email input fields on auth screens."
+  },
+  "authPasswordLabel": "Password",
+  "@authPasswordLabel": {
+    "description": "Label of password input fields on auth screens."
+  },
+  "authEnterEmail": "Please enter your email",
+  "@authEnterEmail": {
+    "description": "Validation error when the email field is empty."
+  },
+  "authEnterValidEmail": "Please enter a valid email",
+  "@authEnterValidEmail": {
+    "description": "Validation error when the email is not valid."
+  },
+  "authEnterPassword": "Please enter your password",
+  "@authEnterPassword": {
+    "description": "Validation error when the password field is empty."
+  },
+  "authPasswordTooShort": "Password must be at least 6 characters",
+  "@authPasswordTooShort": {
+    "description": "Validation error when the password is shorter than 6 characters."
+  },
+  "authForgotPassword": "Forgot Password?",
+  "@authForgotPassword": {
+    "description": "Link on the login screen to reset the password."
+  },
+  "authOr": "OR",
+  "@authOr": {
+    "description": "Divider text between email sign-in and Google sign-in."
+  },
+  "authSignInWithGoogle": "Sign in with Google",
+  "@authSignInWithGoogle": {
+    "description": "Button label for Google sign-in on the login screen."
+  },
+  "authNoAccount": "Don't have an account? ",
+  "@authNoAccount": {
+    "description": "Prompt before the Sign Up link on the login screen. Keep the trailing space."
+  },
+  "authLoginFailed": "Login failed. Please try again.",
+  "@authLoginFailed": {
+    "description": "Snackbar when login does not return a user."
+  },
+  "authInvalidCredentials": "Invalid email or password",
+  "@authInvalidCredentials": {
+    "description": "Snackbar when login credentials are wrong."
+  },
+  "authConnectionError": "Connection error. Please try again.",
+  "@authConnectionError": {
+    "description": "Snackbar when login fails due to a connection problem."
+  },
+  "authGoogleSignInFailed": "Google sign-in failed",
+  "@authGoogleSignInFailed": {
+    "description": "Fallback snackbar when Google sign-in fails without an error message."
+  },
+  "authErrorWithDetails": "Error: {error}",
+  "@authErrorWithDetails": {
+    "description": "Generic error snackbar showing technical error details.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "authVerificationEmailSent": "Verification email sent. Please check your inbox.",
+  "@authVerificationEmailSent": {
+    "description": "Snackbar after the signup verification email is sent."
+  },
+  "authTeamIdNotFound": "Team ID not found. Please check and try again.",
+  "@authTeamIdNotFound": {
+    "description": "Snackbar when the entered team ID does not exist."
+  },
+  "authTeamIdLabel": "Team ID",
+  "@authTeamIdLabel": {
+    "description": "Label of the team ID field on the signup screen."
+  },
+  "authEnterTeamId": "Please enter team ID",
+  "@authEnterTeamId": {
+    "description": "Validation error when the team ID field is empty."
+  },
+  "authTeamIdLength": "Team ID must be 6 characters",
+  "@authTeamIdLength": {
+    "description": "Validation error when the team ID is not 6 characters."
+  },
+  "authFullNameLabel": "Full Name",
+  "@authFullNameLabel": {
+    "description": "Label of the full name field on the signup screen."
+  },
+  "authEnterName": "Please enter your name",
+  "@authEnterName": {
+    "description": "Validation error when the name field is empty."
+  },
+  "authConfirmPasswordLabel": "Confirm Password",
+  "@authConfirmPasswordLabel": {
+    "description": "Label of the confirm password field."
+  },
+  "authConfirmPasswordPrompt": "Please confirm your password",
+  "@authConfirmPasswordPrompt": {
+    "description": "Validation error when the confirm password field is empty."
+  },
+  "authPasswordsDoNotMatch": "Passwords do not match",
+  "@authPasswordsDoNotMatch": {
+    "description": "Validation error when the two passwords differ."
+  },
+  "authTeamNameLabel": "Team Name",
+  "@authTeamNameLabel": {
+    "description": "Label of the team name field."
+  },
+  "authEnterTeamName": "Please enter team name",
+  "@authEnterTeamName": {
+    "description": "Validation error when the team name field is empty."
+  },
+  "authAdminNameLabel": "Admin Name",
+  "@authAdminNameLabel": {
+    "description": "Label of the admin name field when creating a team."
+  },
+  "authEnterAdminName": "Please enter admin name",
+  "@authEnterAdminName": {
+    "description": "Validation error when the admin name field is empty."
+  },
+  "authAdminEmailLabel": "Admin Email",
+  "@authAdminEmailLabel": {
+    "description": "Label of the admin email field when creating a team."
+  },
+  "authEnterAdminEmail": "Please enter admin email",
+  "@authEnterAdminEmail": {
+    "description": "Validation error when the admin email field is empty."
+  },
+  "authCreateAccount": "Create Account",
+  "@authCreateAccount": {
+    "description": "Title of the signup screen."
+  },
+  "authSignUpSubtitle": "Join Ell-ena to get started",
+  "@authSignUpSubtitle": {
+    "description": "Subtitle of the signup screen."
+  },
+  "authJoinTheTeamTab": "Join the Team",
+  "@authJoinTheTeamTab": {
+    "description": "Signup tab for joining an existing team."
+  },
+  "authCreateTheTeamTab": "Create the Team",
+  "@authCreateTheTeamTab": {
+    "description": "Signup tab for creating a new team."
+  },
+  "authJoinTeam": "Join Team",
+  "@authJoinTeam": {
+    "description": "Button/option to join an existing team."
+  },
+  "authCreateTeam": "Create Team",
+  "@authCreateTeam": {
+    "description": "Button/option to create a new team."
+  },
+  "authSignUpWithGoogle": "Sign up with Google",
+  "@authSignUpWithGoogle": {
+    "description": "Button label for Google sign-up on the signup screen."
+  },
+  "authAlreadyHaveAccount": "Already have an account? Sign In",
+  "@authAlreadyHaveAccount": {
+    "description": "Button on the signup screen that goes to the login screen."
+  },
+  "authResetCodeSent": "Reset code sent to your email",
+  "@authResetCodeSent": {
+    "description": "Snackbar after the password reset code is sent."
+  },
+  "authGenericError": "An error occurred. Please try again.",
+  "@authGenericError": {
+    "description": "Generic error message on auth screens."
+  },
+  "authInvalidEmailAddress": "Invalid email address",
+  "@authInvalidEmailAddress": {
+    "description": "Error when the email address is invalid."
+  },
+  "authEmailNotFound": "Email address not found",
+  "@authEmailNotFound": {
+    "description": "Error when the email address is not registered."
+  },
+  "authTooManyAttempts": "Too many attempts. Please try again later.",
+  "@authTooManyAttempts": {
+    "description": "Error when the server rate-limits requests."
+  },
+  "authResetPasswordTitle": "Reset Password",
+  "@authResetPasswordTitle": {
+    "description": "Title of the forgot password screen."
+  },
+  "authResetPasswordSubtitle": "Enter your email to receive a reset code",
+  "@authResetPasswordSubtitle": {
+    "description": "Subtitle of the forgot password screen."
+  },
+  "authSendResetCode": "Send Reset Code",
+  "@authSendResetCode": {
+    "description": "Button that sends the password reset code."
+  },
+  "authBackToLogin": "Back to Login",
+  "@authBackToLogin": {
+    "description": "Button that returns to the login screen."
+  },
+  "authPasswordUpdated": "Password updated successfully",
+  "@authPasswordUpdated": {
+    "description": "Snackbar after the password is changed."
+  },
+  "authPasswordUpdateFailed": "Failed to update password",
+  "@authPasswordUpdateFailed": {
+    "description": "Error when the password update fails."
+  },
+  "authSetNewPasswordTitle": "Set New Password",
+  "@authSetNewPasswordTitle": {
+    "description": "Title of the set new password screen."
+  },
+  "authSetNewPasswordSubtitle": "Create a new password for your account",
+  "@authSetNewPasswordSubtitle": {
+    "description": "Subtitle of the set new password screen."
+  },
+  "authNewPasswordLabel": "New Password",
+  "@authNewPasswordLabel": {
+    "description": "Label of the new password field."
+  },
+  "authEnterNewPassword": "Please enter a password",
+  "@authEnterNewPassword": {
+    "description": "Validation error when the new password field is empty."
+  },
+  "authUpdatePassword": "Update Password",
+  "@authUpdatePassword": {
+    "description": "Button that saves the new password."
+  },
+  "authVerificationFailed": "Verification failed",
+  "@authVerificationFailed": {
+    "description": "Fallback error when OTP verification fails."
+  },
+  "authCodeExpiredOrInvalid": "Verification code has expired or invalid. Please request a new code.",
+  "@authCodeExpiredOrInvalid": {
+    "description": "Error when the OTP is expired or invalid."
+  },
+  "authInvalidCode": "Invalid verification code. Please try again.",
+  "@authInvalidCode": {
+    "description": "Error when the OTP is invalid."
+  },
+  "authCodeExpired": "Verification code has expired. Please request a new code.",
+  "@authCodeExpired": {
+    "description": "Error when the OTP has expired."
+  },
+  "authCodeResent": "Verification code resent successfully. Please check your inbox and spam folder.",
+  "@authCodeResent": {
+    "description": "Snackbar after the OTP is resent."
+  },
+  "authResendFailed": "Failed to resend code",
+  "@authResendFailed": {
+    "description": "Fallback error when resending the OTP fails."
+  },
+  "authEmailNotFoundOrInvalid": "Email address not found or invalid.",
+  "@authEmailNotFoundOrInvalid": {
+    "description": "Error when resending the OTP to an unknown or invalid email."
+  },
+  "authUnableToResend": "Unable to resend code. Please go back and try again.",
+  "@authUnableToResend": {
+    "description": "Error when the OTP cannot be resent."
+  },
+  "authTeamCreatedTitle": "Team Created Successfully!",
+  "@authTeamCreatedTitle": {
+    "description": "Title of the dialog shown after a team is created."
+  },
+  "authYourTeamIdIs": "Your Team ID is:",
+  "@authYourTeamIdIs": {
+    "description": "Text above the new team ID in the team created dialog."
+  },
+  "authCopyTeamId": "Copy Team ID",
+  "@authCopyTeamId": {
+    "description": "Tooltip of the button that copies the team ID."
+  },
+  "authTeamIdCopied": "Team ID copied to clipboard",
+  "@authTeamIdCopied": {
+    "description": "Snackbar after the team ID is copied."
+  },
+  "authShareTeamId": "Share this ID with your team members so they can join your team.",
+  "@authShareTeamId": {
+    "description": "Hint in the team created dialog."
+  },
+  "authContinue": "Continue",
+  "@authContinue": {
+    "description": "Button that closes the team created dialog and continues to the app."
+  },
+  "authVerifyEmailTitle": "Verify Email",
+  "@authVerifyEmailTitle": {
+    "description": "Title of the OTP verification screen."
+  },
+  "authVerifyEmailSubtitle": "Enter the 6-digit code sent to {email}",
+  "@authVerifyEmailSubtitle": {
+    "description": "Subtitle of the OTP verification screen.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendCodeIn": "Resend code in {countdown}",
+  "@authResendCodeIn": {
+    "description": "Countdown before the OTP can be resent; countdown is formatted like 00:59.",
+    "placeholders": {
+      "countdown": {
+        "type": "String"
+      }
+    }
+  },
+  "authCheckSpamFolder": "Check your spam/junk folder if you don't\n see the email.",
+  "@authCheckSpamFolder": {
+    "description": "Hint on the OTP screen. Keep the line break."
+  },
+  "authVerifyCode": "Verify Code",
+  "@authVerifyCode": {
+    "description": "Button that verifies the OTP."
+  },
+  "authDidNotReceiveCode": "Didn't receive the code? ",
+  "@authDidNotReceiveCode": {
+    "description": "Prompt before the Resend link. Keep the trailing space."
+  },
+  "authResend": "Resend",
+  "@authResend": {
+    "description": "Link that resends the OTP."
+  },
+  "authFailedToJoinTeam": "Failed to join team",
+  "@authFailedToJoinTeam": {
+    "description": "Fallback error when joining a team with Google fails."
+  },
+  "authFailedToCreateTeam": "Failed to create team",
+  "@authFailedToCreateTeam": {
+    "description": "Fallback error when creating a team with Google fails."
+  },
+  "authCompleteSetup": "Complete Your Setup",
+  "@authCompleteSetup": {
+    "description": "Title of the team selection dialog after Google sign-in."
+  },
+  "authChooseHowToProceed": "Choose how you want to proceed:",
+  "@authChooseHowToProceed": {
+    "description": "Instruction in the team selection dialog."
+  },
+  "authYourNameLabel": "Your Name",
+  "@authYourNameLabel": {
+    "description": "Label of the name field in the team selection dialog."
+  },
+  "authTeamCodeLabel": "Team Code",
+  "@authTeamCodeLabel": {
+    "description": "Label of the team code field in the team selection dialog."
+  },
+  "authEnterTeamCode": "Please enter team code",
+  "@authEnterTeamCode": {
+    "description": "Validation error when the team code field is empty."
+  },
+  "onboardingTaskManagementTitle": "All-in-One Task Management",
+  "@onboardingTaskManagementTitle": {
+    "description": "Title of the first onboarding slide."
+  },
+  "onboardingTaskManagementDescription": "Create tickets, to-dos, and transcribe meetings—all in one place.",
+  "@onboardingTaskManagementDescription": {
+    "description": "Description of the first onboarding slide."
+  },
+  "onboardingAssistantTitle": "AI-Powered Assistant",
+  "@onboardingAssistantTitle": {
+    "description": "Title of the second onboarding slide."
+  },
+  "onboardingAssistantDescription": "Just chat with Ell-ena and let AI do the heavy lifting.",
+  "@onboardingAssistantDescription": {
+    "description": "Description of the second onboarding slide."
+  },
+  "onboardingContextTitle": "Smart Context",
+  "@onboardingContextTitle": {
+    "description": "Title of the third onboarding slide."
+  },
+  "onboardingContextDescription": "Smarter you with AI-powered context awareness.",
+  "@onboardingContextDescription": {
+    "description": "Description of the third onboarding slide."
+  },
+  "onboardingGetStarted": "Get Started",
+  "@onboardingGetStarted": {
+    "description": "Button on the last onboarding slide."
+  },
+  "onboardingNext": "Next",
+  "@onboardingNext": {
+    "description": "Button that goes to the next onboarding slide."
+  },
+  "onboardingSkip": "Skip",
+  "@onboardingSkip": {
+    "description": "Button that skips onboarding."
+  },
+  "meetingErrorDeleting": "Error deleting meeting: {error}",
+  "@meetingErrorDeleting": {
+    "description": "Snackbar shown when deleting a meeting fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingCouldNotLaunchUrl": "Could not launch meeting URL",
+  "@meetingCouldNotLaunchUrl": {
+    "description": "Snackbar shown when the meeting link cannot be opened."
+  },
+  "meetingErrorLaunchingUrl": "Error launching URL: {error}",
+  "@meetingErrorLaunchingUrl": {
+    "description": "Snackbar shown when opening the meeting link throws an error.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingUpcoming": "Upcoming",
+  "@meetingUpcoming": {
+    "description": "Label for upcoming meetings stat and filter tab."
+  },
+  "meetingPast": "Past",
+  "@meetingPast": {
+    "description": "Label for past meetings stat and filter tab."
+  },
+  "meetingNoUpcoming": "No upcoming meetings",
+  "@meetingNoUpcoming": {
+    "description": "Empty state title when there are no upcoming meetings."
+  },
+  "meetingNoPast": "No past meetings",
+  "@meetingNoPast": {
+    "description": "Empty state title when there are no past meetings."
+  },
+  "meetingEmptyUpcomingHint": "Create new meetings to get started",
+  "@meetingEmptyUpcomingHint": {
+    "description": "Empty state hint for the upcoming meetings list."
+  },
+  "meetingEmptyPastHint": "Past meetings will appear here",
+  "@meetingEmptyPastHint": {
+    "description": "Empty state hint for the past meetings list."
+  },
+  "meetingToday": "Today",
+  "@meetingToday": {
+    "description": "Relative date label for a meeting today."
+  },
+  "meetingTomorrow": "Tomorrow",
+  "@meetingTomorrow": {
+    "description": "Relative date label for a meeting tomorrow."
+  },
+  "meetingYesterday": "Yesterday",
+  "@meetingYesterday": {
+    "description": "Relative date label for a meeting yesterday."
+  },
+  "meetingDaysAgo": "{count, plural, =1{1 day ago} other{{count} days ago}}",
+  "@meetingDaysAgo": {
+    "description": "Relative date label for a past meeting a number of days ago.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "meetingUntitled": "Untitled Meeting",
+  "@meetingUntitled": {
+    "description": "Fallback title for a meeting without a title."
+  },
+  "meetingUnknownUser": "Unknown",
+  "@meetingUnknownUser": {
+    "description": "Fallback name when the meeting creator is unknown."
+  },
+  "meetingCancelMeetingTooltip": "Cancel Meeting",
+  "@meetingCancelMeetingTooltip": {
+    "description": "Tooltip for the delete icon on a meeting card."
+  },
+  "meetingDurationMin": "{minutes} min",
+  "@meetingDurationMin": {
+    "description": "Short meeting duration shown on a meeting card.",
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingCreatedBy": "Created by {name}",
+  "@meetingCreatedBy": {
+    "description": "Shows who created the meeting.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingJoin": "Join",
+  "@meetingJoin": {
+    "description": "Button to join a meeting from the meeting card."
+  },
+  "meetingTranscription": "Transcription",
+  "@meetingTranscription": {
+    "description": "Button / tab label for the meeting transcription."
+  },
+  "meetingAiSummary": "AI Summary",
+  "@meetingAiSummary": {
+    "description": "Button / tab label for the AI-generated meeting summary."
+  },
+  "meetingSelectDateTimeFirst": "Please select date and time first",
+  "@meetingSelectDateTimeFirst": {
+    "description": "Snackbar when creating a Meet link before choosing date and time."
+  },
+  "meetingTimeMustBeFuture": "Meeting time must be in the future",
+  "@meetingTimeMustBeFuture": {
+    "description": "Snackbar when the chosen meeting time is in the past."
+  },
+  "meetingMeetLinkCreated": "Google Meet link created successfully",
+  "@meetingMeetLinkCreated": {
+    "description": "Snackbar after a Google Meet link is created."
+  },
+  "meetingMeetLinkFailed": "Failed to create Google Meet link. Please sign in with Google.",
+  "@meetingMeetLinkFailed": {
+    "description": "Snackbar when creating a Google Meet link fails."
+  },
+  "meetingRetry": "Retry",
+  "@meetingRetry": {
+    "description": "Snackbar action to retry creating a Google Meet link."
+  },
+  "meetingSelectDatePrompt": "Please select a date",
+  "@meetingSelectDatePrompt": {
+    "description": "Snackbar when no meeting date is selected."
+  },
+  "meetingSelectTimePrompt": "Please select a time",
+  "@meetingSelectTimePrompt": {
+    "description": "Snackbar when no meeting time is selected."
+  },
+  "meetingOnlyGoogleMeetSupported": "Only Google Meet URLs are supported for transcription",
+  "@meetingOnlyGoogleMeetSupported": {
+    "description": "Snackbar when a non-Google Meet URL is entered."
+  },
+  "meetingFailedToCreate": "Failed to create meeting: {error}",
+  "@meetingFailedToCreate": {
+    "description": "Snackbar when the backend rejects meeting creation.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingErrorCreating": "Error creating meeting: {error}",
+  "@meetingErrorCreating": {
+    "description": "Snackbar when creating a meeting throws an error.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingCreateTitle": "Create Meeting",
+  "@meetingCreateTitle": {
+    "description": "App bar title and submit button on the create-meeting screen."
+  },
+  "meetingTitleRequiredLabel": "Title *",
+  "@meetingTitleRequiredLabel": {
+    "description": "Label for the required meeting title field."
+  },
+  "meetingEnterTitle": "Please enter a title",
+  "@meetingEnterTitle": {
+    "description": "Validation message for an empty meeting title."
+  },
+  "meetingDescription": "Description",
+  "@meetingDescription": {
+    "description": "Label for the meeting description."
+  },
+  "meetingSelectDateRequired": "Select Date *",
+  "@meetingSelectDateRequired": {
+    "description": "Placeholder for the required meeting date picker."
+  },
+  "meetingSelectTimeRequired": "Select Time *",
+  "@meetingSelectTimeRequired": {
+    "description": "Placeholder for the required meeting time picker."
+  },
+  "meetingDurationMinutesLabel": "Duration (minutes)",
+  "@meetingDurationMinutesLabel": {
+    "description": "Label for the meeting duration field."
+  },
+  "meetingDurationPositive": "Duration must be greater than 0",
+  "@meetingDurationPositive": {
+    "description": "Validation message for a non-positive duration."
+  },
+  "meetingEnterValidNumber": "Please enter a valid number",
+  "@meetingEnterValidNumber": {
+    "description": "Validation message for a non-numeric duration."
+  },
+  "meetingGoogleMeetUrl": "Google Meet URL",
+  "@meetingGoogleMeetUrl": {
+    "description": "Label for the Google Meet URL field."
+  },
+  "meetingCreatingMeetLink": "Creating Meet Link...",
+  "@meetingCreatingMeetLink": {
+    "description": "Button label while a Google Meet link is being created."
+  },
+  "meetingCreateMeetLink": "Create Google Meet Link",
+  "@meetingCreateMeetLink": {
+    "description": "Button to create a Google Meet link."
+  },
+  "meetingTranscriptionGoogleMeetOnly": "Ellena AI transcription only works with Google Meet URLs",
+  "@meetingTranscriptionGoogleMeetOnly": {
+    "description": "Warning shown for non-Google Meet URLs."
+  },
+  "meetingNotFound": "Meeting not found",
+  "@meetingNotFound": {
+    "description": "Shown when the meeting cannot be found."
+  },
+  "meetingErrorLoadingDetails": "Error loading meeting details: {error}",
+  "@meetingErrorLoadingDetails": {
+    "description": "Snackbar when loading meeting details fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingTitleEmpty": "Title cannot be empty",
+  "@meetingTitleEmpty": {
+    "description": "Snackbar when saving a meeting with an empty title."
+  },
+  "meetingSelectDateTime": "Please select date and time",
+  "@meetingSelectDateTime": {
+    "description": "Snackbar when saving a meeting without date or time."
+  },
+  "meetingErrorUpdating": "Error updating meeting: {error}",
+  "@meetingErrorUpdating": {
+    "description": "Snackbar when updating a meeting fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingTicketCreated": "Ticket created",
+  "@meetingTicketCreated": {
+    "description": "Snackbar after creating a ticket from a meeting action item."
+  },
+  "meetingFailedToCreateTicket": "Failed to create ticket: {error}",
+  "@meetingFailedToCreateTicket": {
+    "description": "Snackbar when creating a ticket from an action item fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingErrorGeneric": "Error: {error}",
+  "@meetingErrorGeneric": {
+    "description": "Generic error snackbar on the meeting detail screen.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingTaskCreated": "Task created",
+  "@meetingTaskCreated": {
+    "description": "Snackbar after creating a task from a meeting follow-up."
+  },
+  "meetingFailedToCreateTask": "Failed to create task: {error}",
+  "@meetingFailedToCreateTask": {
+    "description": "Snackbar when creating a task from a follow-up fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingUrlCopied": "Meeting URL copied to clipboard",
+  "@meetingUrlCopied": {
+    "description": "Snackbar after copying the meeting URL."
+  },
+  "meetingEditTitle": "Edit Meeting",
+  "@meetingEditTitle": {
+    "description": "App bar title in edit mode and tooltip of the edit button."
+  },
+  "meetingDetailsTitle": "Meeting Details",
+  "@meetingDetailsTitle": {
+    "description": "App bar title of the meeting detail screen."
+  },
+  "meetingSaveChanges": "Save Changes",
+  "@meetingSaveChanges": {
+    "description": "Button and tooltip to save meeting edits."
+  },
+  "meetingDeleteTitle": "Delete Meeting",
+  "@meetingDeleteTitle": {
+    "description": "Tooltip of the delete button and title of the delete confirmation dialog."
+  },
+  "meetingStatusNotStarted": "Not started",
+  "@meetingStatusNotStarted": {
+    "description": "Transcription status: not started."
+  },
+  "meetingStatusCompleted": "Completed",
+  "@meetingStatusCompleted": {
+    "description": "Transcription status: completed."
+  },
+  "meetingStatusAttempted": "Attempted",
+  "@meetingStatusAttempted": {
+    "description": "Transcription status: attempted."
+  },
+  "meetingStatusInProgress": "In progress",
+  "@meetingStatusInProgress": {
+    "description": "Transcription status: in progress."
+  },
+  "meetingStatusPending": "Pending",
+  "@meetingStatusPending": {
+    "description": "Transcription status: pending."
+  },
+  "meetingStatusNotAvailable": "Not available",
+  "@meetingStatusNotAvailable": {
+    "description": "Transcription status: not available."
+  },
+  "meetingBadgeUpcoming": "UPCOMING",
+  "@meetingBadgeUpcoming": {
+    "description": "Uppercase badge for an upcoming meeting."
+  },
+  "meetingBadgePast": "PAST",
+  "@meetingBadgePast": {
+    "description": "Uppercase badge for a past meeting."
+  },
+  "meetingDate": "Date",
+  "@meetingDate": {
+    "description": "Label for the meeting date."
+  },
+  "meetingTime": "Time",
+  "@meetingTime": {
+    "description": "Label for the meeting time."
+  },
+  "meetingDuration": "Duration",
+  "@meetingDuration": {
+    "description": "Label for the meeting duration."
+  },
+  "meetingDurationMinutes": "{minutes} minutes",
+  "@meetingDurationMinutes": {
+    "description": "Meeting duration value on the detail screen.",
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingUrl": "Meeting URL",
+  "@meetingUrl": {
+    "description": "Label for the meeting URL."
+  },
+  "meetingCopyUrl": "Copy URL",
+  "@meetingCopyUrl": {
+    "description": "Tooltip for the copy-URL button."
+  },
+  "meetingOpenUrl": "Open URL",
+  "@meetingOpenUrl": {
+    "description": "Tooltip for the open-URL button."
+  },
+  "meetingTranscriptionStatus": "Transcription: {status}",
+  "@meetingTranscriptionStatus": {
+    "description": "Shows the transcription status of a meeting.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingJoinMeeting": "Join Meeting",
+  "@meetingJoinMeeting": {
+    "description": "Button to join the meeting on the detail screen."
+  },
+  "meetingTitleLabel": "Title",
+  "@meetingTitleLabel": {
+    "description": "Label for the meeting title field in edit mode."
+  },
+  "meetingSelectDate": "Select Date",
+  "@meetingSelectDate": {
+    "description": "Placeholder for the meeting date picker in edit mode."
+  },
+  "meetingSelectTime": "Select Time",
+  "@meetingSelectTime": {
+    "description": "Placeholder for the meeting time picker in edit mode."
+  },
+  "meetingAiSummaryNotAvailable": "AI summary not available yet.",
+  "@meetingAiSummaryNotAvailable": {
+    "description": "Shown when a past meeting has no AI summary."
+  },
+  "meetingActionItemFallback": "Action Item",
+  "@meetingActionItemFallback": {
+    "description": "Fallback title for an action item without text."
+  },
+  "meetingOwnerDeadline": "Owner: {owner}   •   Deadline: {deadline}",
+  "@meetingOwnerDeadline": {
+    "description": "Owner and deadline of a meeting action item (values come from AI output).",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      },
+      "deadline": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingNotApplicable": "N/A",
+  "@meetingNotApplicable": {
+    "description": "Fallback when an action item has no deadline."
+  },
+  "meetingManageDiscussion": "Manage Important Discussion",
+  "@meetingManageDiscussion": {
+    "description": "Section title for meeting action items."
+  },
+  "meetingNoActionItems": "No action items detected",
+  "@meetingNoActionItems": {
+    "description": "Shown when the summary has no action items."
+  },
+  "meetingManageTasks": "Manage Tasks",
+  "@meetingManageTasks": {
+    "description": "Section title for meeting follow-up tasks."
+  },
+  "meetingNoFollowUps": "No follow-up tasks detected",
+  "@meetingNoFollowUps": {
+    "description": "Shown when the summary has no follow-up tasks."
+  },
+  "meetingFollowUpTaskFallback": "Follow-up Task",
+  "@meetingFollowUpTaskFallback": {
+    "description": "Fallback title for a follow-up task without text."
+  },
+  "meetingDeadline": "Deadline: {deadline}",
+  "@meetingDeadline": {
+    "description": "Deadline of a follow-up task (value comes from AI output).",
+    "placeholders": {
+      "deadline": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingDeleteConfirm": "Are you sure you want to delete this meeting? This action cannot be undone.",
+  "@meetingDeleteConfirm": {
+    "description": "Body of the delete-meeting confirmation dialog."
+  },
+  "meetingDelete": "Delete",
+  "@meetingDelete": {
+    "description": "Confirm button in the delete-meeting dialog."
+  },
+  "meetingFailedToLoad": "Failed to load meeting: {error}",
+  "@meetingFailedToLoad": {
+    "description": "Snackbar when loading meeting insights fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingInsightsTitle": "Meeting Insights",
+  "@meetingInsightsTitle": {
+    "description": "App bar title of the meeting insights screen."
+  },
+  "meetingDownloadPdf": "Download PDF",
+  "@meetingDownloadPdf": {
+    "description": "Tooltip for the download-PDF button."
+  },
+  "meetingSavedTo": "Saved to {path}",
+  "@meetingSavedTo": {
+    "description": "Snackbar after saving a PDF, with the file path.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingPdfError": "PDF error: {error}",
+  "@meetingPdfError": {
+    "description": "Snackbar when PDF generation fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingNoTranscription": "No transcription available",
+  "@meetingNoTranscription": {
+    "description": "Empty state of the transcription tab."
+  },
+  "meetingSpeaker": "Speaker",
+  "@meetingSpeaker": {
+    "description": "Fallback name for an unknown transcript speaker."
+  },
+  "meetingNoAiSummary": "No AI summary generated yet",
+  "@meetingNoAiSummary": {
+    "description": "Empty state of the AI summary tab."
+  },
+  "meetingKeyDiscussionPoints": "Key Discussion Points",
+  "@meetingKeyDiscussionPoints": {
+    "description": "AI summary section title."
+  },
+  "meetingImportantDecisions": "Important Decisions",
+  "@meetingImportantDecisions": {
+    "description": "AI summary section title."
+  },
+  "meetingActionItems": "Action Items",
+  "@meetingActionItems": {
+    "description": "AI summary section title."
+  },
+  "meetingHighlights": "Meeting Highlights",
+  "@meetingHighlights": {
+    "description": "AI summary section title."
+  },
+  "meetingFollowUpTasks": "Follow-up Tasks",
+  "@meetingFollowUpTasks": {
+    "description": "AI summary section title."
+  },
+  "meetingOverallSummary": "Overall Summary",
+  "@meetingOverallSummary": {
+    "description": "AI summary section title."
+  },
+  "chatListening": "Listening...",
+  "@chatListening": {
+    "description": "Title in the voice input listening dialog."
+  },
+  "chatTapToCancel": "Tap anywhere to cancel",
+  "@chatTapToCancel": {
+    "description": "Hint in the voice input listening dialog."
+  },
+  "chatCouldNotOpenItemDetails": "Could not open this item. Details missing.",
+  "@chatCouldNotOpenItemDetails": {
+    "description": "SnackBar when a context result has no entity id."
+  },
+  "chatCouldNotOpenItem": "Could not open this item.",
+  "@chatCouldNotOpenItem": {
+    "description": "SnackBar when a context result has an unknown type."
+  },
+  "chatCouldNotNavigate": "Could not navigate to the item. Details missing.",
+  "@chatCouldNotNavigate": {
+    "description": "SnackBar when a created item card cannot be opened."
+  },
+  "chatSpeechNotAvailable": "Speech recognition not available on this device",
+  "@chatSpeechNotAvailable": {
+    "description": "SnackBar when speech-to-text is unavailable."
+  },
+  "chatTitle": "Chat with Ell-ena",
+  "@chatTitle": {
+    "description": "Chat screen header title."
+  },
+  "chatSubtitle": "Your AI Assistant",
+  "@chatSubtitle": {
+    "description": "Chat screen header subtitle."
+  },
+  "chatContext": "Context",
+  "@chatContext": {
+    "description": "Title of the context insights panel and tooltip of the button that opens it."
+  },
+  "chatEmptyState": "Start a conversation with Ell-ena",
+  "@chatEmptyState": {
+    "description": "Empty state of the chat message list."
+  },
+  "chatInputHint": "Type your message...",
+  "@chatInputHint": {
+    "description": "Hint text of the chat input field."
+  },
+  "chatVoiceInputTooltip": "Voice input",
+  "@chatVoiceInputTooltip": {
+    "description": "Tooltip of the microphone button."
+  },
+  "chatStopListeningTooltip": "Stop listening",
+  "@chatStopListeningTooltip": {
+    "description": "Tooltip of the microphone button while listening."
+  },
+  "chatSendTooltip": "Send message",
+  "@chatSendTooltip": {
+    "description": "Tooltip of the send button."
+  },
+  "chatItemCreated": "Item Created",
+  "@chatItemCreated": {
+    "description": "Title of a created-item card with unknown type."
+  },
+  "chatCreatedJustNow": "Created just now",
+  "@chatCreatedJustNow": {
+    "description": "Label on a created task/ticket card."
+  },
+  "chatViewTask": "View Task",
+  "@chatViewTask": {
+    "description": "Button on a created task card."
+  },
+  "chatViewTicket": "View Ticket",
+  "@chatViewTicket": {
+    "description": "Button on a created ticket card."
+  },
+  "chatViewMeeting": "View Meeting",
+  "@chatViewMeeting": {
+    "description": "Button on a created meeting card."
+  },
+  "chatViewItem": "View Item",
+  "@chatViewItem": {
+    "description": "Button on a created item card with no type."
+  },
+  "chatContextLoadError": "Could not load context",
+  "@chatContextLoadError": {
+    "description": "Context insights panel error title."
+  },
+  "chatContextTryAgain": "Try sending your message again.",
+  "@chatContextTryAgain": {
+    "description": "Context insights panel fallback error message."
+  },
+  "chatContextEmptyTitle": "No context yet",
+  "@chatContextEmptyTitle": {
+    "description": "Context insights panel idle title."
+  },
+  "chatContextEmptyMessage": "Send a message to find related tasks, tickets, and meetings.",
+  "@chatContextEmptyMessage": {
+    "description": "Context insights panel idle message."
+  },
+  "chatContextNoMatchesTitle": "No matches found",
+  "@chatContextNoMatchesTitle": {
+    "description": "Context insights panel empty-results title."
+  },
+  "chatContextNoMatchesMessage": "Nothing in your workspace matched this message closely enough.",
+  "@chatContextNoMatchesMessage": {
+    "description": "Context insights panel empty-results message."
+  },
+  "chatResultDue": "Due {date}",
+  "@chatResultDue": {
+    "description": "Due date label on a context result tile.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "calendarUntitledTask": "Untitled Task",
+  "@calendarUntitledTask": {
+    "description": "Calendar event title fallback for a task without a title."
+  },
+  "calendarUntitledTicket": "Untitled Ticket",
+  "@calendarUntitledTicket": {
+    "description": "Calendar event title fallback for a ticket without a title."
+  },
+  "calendarUntitledMeeting": "Untitled Meeting",
+  "@calendarUntitledMeeting": {
+    "description": "Calendar event title fallback for a meeting without a title."
+  },
+  "calendarCreateAt": "Create at {time}",
+  "@calendarCreateAt": {
+    "description": "Title of the calendar create dialog for a selected time slot.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "calendarScheduleMeeting": "Schedule a Meeting",
+  "@calendarScheduleMeeting": {
+    "description": "Calendar create dialog option."
+  },
+  "calendarCreateTask": "Create a Task",
+  "@calendarCreateTask": {
+    "description": "Calendar create dialog option."
+  },
+  "calendarCreateTicket": "Create a Ticket",
+  "@calendarCreateTicket": {
+    "description": "Calendar create dialog option."
+  },
+  "calendarCreateWithAi": "Create with Ell-ena AI",
+  "@calendarCreateWithAi": {
+    "description": "Calendar create dialog option that opens chat."
+  },
+  "profileFailedToLoad": "Failed to load profile: {error}",
+  "@profileFailedToLoad": {
+    "description": "SnackBar when loading the profile fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profileUserFallback": "User",
+  "@profileUserFallback": {
+    "description": "Fallback display name when the profile has no full name."
+  },
+  "profileTeamAdmin": "Team Admin",
+  "@profileTeamAdmin": {
+    "description": "Role label under the user name for admins."
+  },
+  "profileTeamMember": "Team Member",
+  "@profileTeamMember": {
+    "description": "Role label under the user name for members."
+  },
+  "profileYourTeam": "Your Team",
+  "@profileYourTeam": {
+    "description": "Fallback team name on the profile screen."
+  },
+  "profileAdminBadge": "ADMIN",
+  "@profileAdminBadge": {
+    "description": "Role badge on the profile avatar for admins."
+  },
+  "profileMemberBadge": "MEMBER",
+  "@profileMemberBadge": {
+    "description": "Role badge on the profile avatar for members."
+  },
+  "profileTeamSwitched": "Team switched successfully",
+  "@profileTeamSwitched": {
+    "description": "SnackBar after switching teams."
+  },
+  "profileTeamInformation": "Team Information",
+  "@profileTeamInformation": {
+    "description": "Profile team info section title."
+  },
+  "profileTeamName": "Team Name",
+  "@profileTeamName": {
+    "description": "Label for the team name on the profile screen."
+  },
+  "profileTeamId": "Team ID",
+  "@profileTeamId": {
+    "description": "Label for the team code on the profile screen."
+  },
+  "profileYourActivity": "Your Activity",
+  "@profileYourActivity": {
+    "description": "Profile stats section title."
+  },
+  "profileStatTasksCompleted": "Tasks\nCompleted",
+  "@profileStatTasksCompleted": {
+    "description": "Profile stat label (two lines)."
+  },
+  "profileStatHoursLogged": "Hours\nLogged",
+  "@profileStatHoursLogged": {
+    "description": "Profile stat label (two lines)."
+  },
+  "profileStatTeamProjects": "Team\nProjects",
+  "@profileStatTeamProjects": {
+    "description": "Profile stat label (two lines)."
+  },
+  "profileEditProfile": "Edit Profile",
+  "@profileEditProfile": {
+    "description": "Settings item and edit profile screen title."
+  },
+  "profileEditProfileSubtitle": "Update your personal information",
+  "@profileEditProfileSubtitle": {
+    "description": "Settings item subtitle."
+  },
+  "profileNotifications": "Notifications",
+  "@profileNotifications": {
+    "description": "Settings item title."
+  },
+  "profileNotificationsSubtitle": "Manage your notification preferences",
+  "@profileNotificationsSubtitle": {
+    "description": "Settings item subtitle."
+  },
+  "profileSecurity": "Security",
+  "@profileSecurity": {
+    "description": "Settings item title."
+  },
+  "profileSecuritySubtitle": "Configure security settings",
+  "@profileSecuritySubtitle": {
+    "description": "Settings item subtitle."
+  },
+  "profileSwitchTeamSubtitle": "Change to another team",
+  "@profileSwitchTeamSubtitle": {
+    "description": "Switch team settings item subtitle."
+  },
+  "profileTeamMembers": "Team Members",
+  "@profileTeamMembers": {
+    "description": "Settings item title and team members screen title."
+  },
+  "profileTeamMembersSubtitle": "Manage your team members",
+  "@profileTeamMembersSubtitle": {
+    "description": "Settings item subtitle."
+  },
+  "profileThemeLight": "Light",
+  "@profileThemeLight": {
+    "description": "Theme mode option."
+  },
+  "profileThemeDark": "Dark",
+  "@profileThemeDark": {
+    "description": "Theme mode option."
+  },
+  "profileThemeSystem": "System",
+  "@profileThemeSystem": {
+    "description": "Theme mode option."
+  },
+  "profilePreferences": "Preferences",
+  "@profilePreferences": {
+    "description": "Profile preferences section title."
+  },
+  "profilePushNotifications": "Push Notifications",
+  "@profilePushNotifications": {
+    "description": "Preferences item title."
+  },
+  "profileTheme": "Theme",
+  "@profileTheme": {
+    "description": "Preferences item title for theme mode."
+  },
+  "profileUpdated": "Profile updated successfully",
+  "@profileUpdated": {
+    "description": "SnackBar after saving the profile."
+  },
+  "profileUpdateFailed": "Failed to update profile",
+  "@profileUpdateFailed": {
+    "description": "SnackBar when saving the profile fails."
+  },
+  "profileUpdateError": "Error updating profile: {error}",
+  "@profileUpdateError": {
+    "description": "SnackBar when saving the profile throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profilePersonalInformation": "Personal Information",
+  "@profilePersonalInformation": {
+    "description": "Edit profile section title."
+  },
+  "profileFirstName": "First Name",
+  "@profileFirstName": {
+    "description": "Edit profile first name field label."
+  },
+  "profileFirstNameRequired": "Please enter your first name",
+  "@profileFirstNameRequired": {
+    "description": "Validator message for the first name field."
+  },
+  "profileLastName": "Last Name",
+  "@profileLastName": {
+    "description": "Edit profile last name field label."
+  },
+  "profileEmail": "Email",
+  "@profileEmail": {
+    "description": "Edit profile email field label."
+  },
+  "profileEmailCannotChange": "Email cannot be changed",
+  "@profileEmailCannotChange": {
+    "description": "Helper text under the read-only email field."
+  },
+  "profileRole": "Role",
+  "@profileRole": {
+    "description": "Edit profile role section title."
+  },
+  "profileAdminPrivileges": "You have admin privileges",
+  "@profileAdminPrivileges": {
+    "description": "Role description for admins."
+  },
+  "profileStandardAccess": "Standard team member access",
+  "@profileStandardAccess": {
+    "description": "Role description for members."
+  },
+  "profileTeamMembersTitle": "{teamName} Members",
+  "@profileTeamMembersTitle": {
+    "description": "Team members screen app bar title.",
+    "placeholders": {
+      "teamName": {
+        "type": "String"
+      }
+    }
+  },
+  "profileNoMembersFound": "No team members found",
+  "@profileNoMembersFound": {
+    "description": "Team members empty state title."
+  },
+  "profileNoMembersYet": "Your team doesn't have any members yet",
+  "@profileNoMembersYet": {
+    "description": "Team members empty state message."
+  },
+  "profileUnknownMember": "Unknown",
+  "@profileUnknownMember": {
+    "description": "Fallback name for a team member without a name."
+  },
+  "profileRoleAdmin": "Admin",
+  "@profileRoleAdmin": {
+    "description": "Role chip for admin team members."
+  },
+  "profileRoleMember": "Member",
+  "@profileRoleMember": {
+    "description": "Role chip for regular team members."
+  },
+  "workspaceTaskCreated": "Task created successfully",
+  "@workspaceTaskCreated": {
+    "description": "SnackBar after creating a task from the workspace."
+  },
+  "workspaceTicketCreated": "Ticket created successfully",
+  "@workspaceTicketCreated": {
+    "description": "SnackBar after creating a ticket from the workspace."
+  },
+  "workspaceMeetingCreated": "Meeting created successfully",
+  "@workspaceMeetingCreated": {
+    "description": "SnackBar after creating a meeting from the workspace."
+  },
+  "commonErrorLoggingOut": "Error logging out: {error}",
+  "@commonErrorLoggingOut": {
+    "description": "SnackBar when signing out fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskErrorUpdatingStatus": "Error updating task status: {error}",
+  "@taskErrorUpdatingStatus": {
+    "description": "Snackbar when updating a task's status fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskErrorUpdatingApproval": "Error updating task approval: {error}",
+  "@taskErrorUpdatingApproval": {
+    "description": "Snackbar when updating a task's approval fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskCreatedSuccess": "Task created successfully",
+  "@taskCreatedSuccess": {
+    "description": "Snackbar after a task is created."
+  },
+  "taskNoTasksFound": "No tasks found",
+  "@taskNoTasksFound": {
+    "description": "Empty state title on the task list."
+  },
+  "taskEmptyTodo": "Add new tasks to get started",
+  "@taskEmptyTodo": {
+    "description": "Empty state hint for the To Do tab."
+  },
+  "taskEmptyInProgress": "Move tasks here when you start working on them",
+  "@taskEmptyInProgress": {
+    "description": "Empty state hint for the In Progress tab."
+  },
+  "taskEmptyCompleted": "Completed tasks will appear here",
+  "@taskEmptyCompleted": {
+    "description": "Empty state hint for the Completed tab."
+  },
+  "taskStatusTodo": "To Do",
+  "@taskStatusTodo": {
+    "description": "Task status label: to do."
+  },
+  "taskStatusInProgress": "In Progress",
+  "@taskStatusInProgress": {
+    "description": "Task status label: in progress."
+  },
+  "taskStatusCompleted": "Completed",
+  "@taskStatusCompleted": {
+    "description": "Task status label: completed."
+  },
+  "taskViewStatusTasks": "View {status} Tasks",
+  "@taskViewStatusTasks": {
+    "description": "Button in the empty state that switches to another status tab. {status} is a translated status label.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "taskDeleteTitle": "Delete Task",
+  "@taskDeleteTitle": {
+    "description": "Title of the delete-task confirmation dialog; also the delete tooltip on the task detail screen."
+  },
+  "taskDeleteConfirmMessage": "Are you sure you want to delete this task? This action cannot be undone.",
+  "@taskDeleteConfirmMessage": {
+    "description": "Body of the delete-task confirmation dialog."
+  },
+  "taskDelete": "Delete",
+  "@taskDelete": {
+    "description": "Delete button / tooltip for a task."
+  },
+  "taskDeletedSuccess": "Task deleted successfully",
+  "@taskDeletedSuccess": {
+    "description": "Snackbar after a task is deleted."
+  },
+  "taskDeleteFailed": "Failed to delete task",
+  "@taskDeleteFailed": {
+    "description": "Snackbar fallback when deleting a task fails."
+  },
+  "taskErrorGeneric": "Error: {error}",
+  "@taskErrorGeneric": {
+    "description": "Generic error snackbar on the task list.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskUntitled": "Untitled Task",
+  "@taskUntitled": {
+    "description": "Fallback title for a task without a title."
+  },
+  "taskNoDescription": "No description",
+  "@taskNoDescription": {
+    "description": "Fallback for a task without a description."
+  },
+  "taskYou": "You",
+  "@taskYou": {
+    "description": "Shown instead of the current user's name as creator/assignee."
+  },
+  "taskUnknown": "Unknown",
+  "@taskUnknown": {
+    "description": "Fallback when a person or status is unknown."
+  },
+  "taskUnassigned": "Unassigned",
+  "@taskUnassigned": {
+    "description": "Shown when a task has no assignee; also the 'no assignee' dropdown option."
+  },
+  "taskNoDueDate": "No due date",
+  "@taskNoDueDate": {
+    "description": "Shown when a task has no due date."
+  },
+  "taskApprove": "Approve",
+  "@taskApprove": {
+    "description": "Approve a task (button / tooltip)."
+  },
+  "taskReject": "Reject",
+  "@taskReject": {
+    "description": "Reject a task (button / tooltip)."
+  },
+  "taskCreatedBy": "Created by {name}",
+  "@taskCreatedBy": {
+    "description": "Task creator line.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "taskAssignedTo": "Assigned to {name}",
+  "@taskAssignedTo": {
+    "description": "Task assignee line.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "taskDragToChangeStatus": "Drag to change status",
+  "@taskDragToChangeStatus": {
+    "description": "Hint on task cards / tooltip on the drag handle."
+  },
+  "taskTableTask": "Task",
+  "@taskTableTask": {
+    "description": "Column header in the wide-screen task table."
+  },
+  "taskTableApproval": "Approval",
+  "@taskTableApproval": {
+    "description": "Column header in the wide-screen task table."
+  },
+  "taskTableCreatedBy": "Created by",
+  "@taskTableCreatedBy": {
+    "description": "Column header in the wide-screen task table."
+  },
+  "taskTableAssignedTo": "Assigned to",
+  "@taskTableAssignedTo": {
+    "description": "Column header in the wide-screen task table."
+  },
+  "taskTableDueDate": "Due date",
+  "@taskTableDueDate": {
+    "description": "Column header in the wide-screen task table."
+  },
+  "taskLinkedTicketUpdateFailed": "Failed to update linked ticket",
+  "@taskLinkedTicketUpdateFailed": {
+    "description": "Snackbar when changing a task's linked ticket fails."
+  },
+  "taskStatusUpdatedTo": "Task status updated to {status}",
+  "@taskStatusUpdatedTo": {
+    "description": "Snackbar after a task's status changes. {status} is a translated status label.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "taskStatusUpdateFailed": "Failed to update task status",
+  "@taskStatusUpdateFailed": {
+    "description": "Snackbar when a status update fails."
+  },
+  "taskApprovedMessage": "Task approved",
+  "@taskApprovedMessage": {
+    "description": "Snackbar after approving a task."
+  },
+  "taskRejectedMessage": "Task rejected",
+  "@taskRejectedMessage": {
+    "description": "Snackbar after rejecting a task."
+  },
+  "taskErrorDeleting": "Error deleting task: {error}",
+  "@taskErrorDeleting": {
+    "description": "Snackbar when deleting a task fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskErrorAddingComment": "Error adding comment: {error}",
+  "@taskErrorAddingComment": {
+    "description": "Snackbar when adding a comment fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskDetailsTitle": "Task Details",
+  "@taskDetailsTitle": {
+    "description": "App bar title of the task detail screen."
+  },
+  "taskNotFound": "Task not found",
+  "@taskNotFound": {
+    "description": "Title when a task can't be loaded."
+  },
+  "taskMayHaveBeenDeleted": "The task may have been deleted",
+  "@taskMayHaveBeenDeleted": {
+    "description": "Subtitle when a task can't be loaded."
+  },
+  "taskDueLabel": "Due: {date}",
+  "@taskDueLabel": {
+    "description": "Due date line on the task detail screen.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "taskLinkedTicket": "Linked ticket",
+  "@taskLinkedTicket": {
+    "description": "Label for the linked-ticket picker."
+  },
+  "taskNoLinkedTicket": "No linked ticket",
+  "@taskNoLinkedTicket": {
+    "description": "Option/hint when no ticket is linked to a task."
+  },
+  "taskActions": "Actions",
+  "@taskActions": {
+    "description": "Section heading for task action buttons."
+  },
+  "taskStart": "Start",
+  "@taskStart": {
+    "description": "Button that moves a task to In Progress."
+  },
+  "taskComplete": "Complete",
+  "@taskComplete": {
+    "description": "Button that marks a task as completed."
+  },
+  "taskCommentsCount": "Comments ({count})",
+  "@taskCommentsCount": {
+    "description": "Comments section heading with the number of comments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskLatestFirst": "Latest first",
+  "@taskLatestFirst": {
+    "description": "Comment sort label."
+  },
+  "taskNoCommentsYet": "No comments yet",
+  "@taskNoCommentsYet": {
+    "description": "Empty state for task comments."
+  },
+  "taskBeFirstToComment": "Be the first to comment",
+  "@taskBeFirstToComment": {
+    "description": "Empty state hint for task comments."
+  },
+  "taskDaysAgo": "{count}d ago",
+  "@taskDaysAgo": {
+    "description": "Relative comment time in days.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskHoursAgo": "{count}h ago",
+  "@taskHoursAgo": {
+    "description": "Relative comment time in hours.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskMinutesAgo": "{count}m ago",
+  "@taskMinutesAgo": {
+    "description": "Relative comment time in minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "taskJustNow": "Just now",
+  "@taskJustNow": {
+    "description": "Relative comment time for under a minute."
+  },
+  "taskAddCommentHint": "Add a comment...",
+  "@taskAddCommentHint": {
+    "description": "Hint in the task comment input."
+  },
+  "taskSendComment": "Send comment",
+  "@taskSendComment": {
+    "description": "Tooltip for the send-comment icon button."
+  },
+  "taskErrorCreating": "Error creating task: {error}",
+  "@taskErrorCreating": {
+    "description": "Snackbar when creating a task fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "taskCreateNewTitle": "Create New Task",
+  "@taskCreateNewTitle": {
+    "description": "App bar title of the create-task screen."
+  },
+  "taskTitleLabel": "Task Title",
+  "@taskTitleLabel": {
+    "description": "Label for the task title field."
+  },
+  "taskTitleHint": "Enter task title",
+  "@taskTitleHint": {
+    "description": "Hint for the task title field."
+  },
+  "taskTitleRequired": "Please enter a task title",
+  "@taskTitleRequired": {
+    "description": "Validation error when the task title is empty."
+  },
+  "taskDescriptionLabel": "Description",
+  "@taskDescriptionLabel": {
+    "description": "Label for the task description field."
+  },
+  "taskDescriptionHint": "Enter task description",
+  "@taskDescriptionHint": {
+    "description": "Hint for the task description field."
+  },
+  "taskDueDateLabel": "Due Date",
+  "@taskDueDateLabel": {
+    "description": "Label for the due date picker on the create-task screen."
+  },
+  "taskSelectDueDate": "Select due date",
+  "@taskSelectDueDate": {
+    "description": "Placeholder when no due date is selected."
+  },
+  "taskAssignToLabel": "Assign To",
+  "@taskAssignToLabel": {
+    "description": "Label for the assignee picker."
+  },
+  "taskSelectTeamMember": "Select team member",
+  "@taskSelectTeamMember": {
+    "description": "Hint for the assignee picker."
+  },
+  "taskAdminBadge": "Admin",
+  "@taskAdminBadge": {
+    "description": "Badge next to admin team members in the assignee picker."
+  },
+  "taskCreateButton": "Create Task",
+  "@taskCreateButton": {
+    "description": "Submit button on the create-task screen."
+  },
+  "ticketErrorUpdatingStatus": "Error updating ticket status: {error}",
+  "@ticketErrorUpdatingStatus": {
+    "description": "Snackbar when updating a ticket's status throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketErrorUpdatingApproval": "Error updating ticket approval: {error}",
+  "@ticketErrorUpdatingApproval": {
+    "description": "Snackbar when updating a ticket's approval throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketCreatedSuccess": "Ticket created successfully",
+  "@ticketCreatedSuccess": {
+    "description": "Snackbar after a ticket is created."
+  },
+  "ticketStatusOpen": "Open",
+  "@ticketStatusOpen": {
+    "description": "Ticket status label for 'open'."
+  },
+  "ticketStatusInProgress": "In Progress",
+  "@ticketStatusInProgress": {
+    "description": "Ticket status label for 'in_progress'."
+  },
+  "ticketStatusResolved": "Resolved",
+  "@ticketStatusResolved": {
+    "description": "Ticket status label for 'resolved'."
+  },
+  "ticketNoTicketsFound": "No tickets found",
+  "@ticketNoTicketsFound": {
+    "description": "Empty-state title on the tickets list."
+  },
+  "ticketEmptyOpen": "Create new tickets to get started",
+  "@ticketEmptyOpen": {
+    "description": "Empty-state hint for the Open tab."
+  },
+  "ticketEmptyInProgress": "Move tickets here when you start working on them",
+  "@ticketEmptyInProgress": {
+    "description": "Empty-state hint for the In Progress tab."
+  },
+  "ticketEmptyResolved": "Resolved tickets will appear here",
+  "@ticketEmptyResolved": {
+    "description": "Empty-state hint for the Resolved tab."
+  },
+  "ticketViewStatusTickets": "View {status} Tickets",
+  "@ticketViewStatusTickets": {
+    "description": "Button to switch to another status tab; status is the translated status label.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketDeleteTitle": "Delete Ticket",
+  "@ticketDeleteTitle": {
+    "description": "Title of the delete-ticket confirmation dialog and the delete menu item."
+  },
+  "ticketDeleteConfirm": "Are you sure you want to delete this ticket? This action cannot be undone.",
+  "@ticketDeleteConfirm": {
+    "description": "Body of the delete-ticket confirmation dialog."
+  },
+  "ticketDelete": "Delete",
+  "@ticketDelete": {
+    "description": "Delete button and tooltip for a ticket."
+  },
+  "ticketDeletedSuccess": "Ticket deleted successfully",
+  "@ticketDeletedSuccess": {
+    "description": "Snackbar after a ticket is deleted."
+  },
+  "ticketDeleteFailed": "Failed to delete ticket",
+  "@ticketDeleteFailed": {
+    "description": "Fallback snackbar when deleting a ticket fails without an error message."
+  },
+  "ticketErrorGeneric": "Error: {error}",
+  "@ticketErrorGeneric": {
+    "description": "Generic error snackbar on the tickets list.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketUntitled": "Untitled Ticket",
+  "@ticketUntitled": {
+    "description": "Fallback title for a ticket with no title."
+  },
+  "ticketNoDescription": "No description",
+  "@ticketNoDescription": {
+    "description": "Fallback description on ticket cards."
+  },
+  "ticketYou": "You",
+  "@ticketYou": {
+    "description": "Shown instead of the creator's name when the current user created the ticket."
+  },
+  "ticketUnknown": "Unknown",
+  "@ticketUnknown": {
+    "description": "Fallback for an unknown person's name."
+  },
+  "ticketApprove": "Approve",
+  "@ticketApprove": {
+    "description": "Tooltip of the approve-ticket button."
+  },
+  "ticketReject": "Reject",
+  "@ticketReject": {
+    "description": "Tooltip of the reject-ticket button."
+  },
+  "ticketCreatedByName": "Created by {name}",
+  "@ticketCreatedByName": {
+    "description": "Creator line on a ticket card.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketDragToChangeStatus": "Drag to change status",
+  "@ticketDragToChangeStatus": {
+    "description": "Hint/tooltip on the drag handle of a ticket."
+  },
+  "ticketPriority": "Priority",
+  "@ticketPriority": {
+    "description": "Priority column heading and form label."
+  },
+  "ticketTicket": "Ticket",
+  "@ticketTicket": {
+    "description": "Ticket-number column heading in the tickets table."
+  },
+  "ticketTitle": "Title",
+  "@ticketTitle": {
+    "description": "Title column heading and title field label."
+  },
+  "ticketCategory": "Category",
+  "@ticketCategory": {
+    "description": "Category column heading and form label."
+  },
+  "ticketApproval": "Approval",
+  "@ticketApproval": {
+    "description": "Approval column heading in the tickets table."
+  },
+  "ticketCreatedByLabel": "Created by",
+  "@ticketCreatedByLabel": {
+    "description": "Label above/heading for the ticket creator."
+  },
+  "ticketCreated": "Created",
+  "@ticketCreated": {
+    "description": "Created-date column heading in the tickets table."
+  },
+  "ticketLoadDetailsFailed": "Failed to load ticket details",
+  "@ticketLoadDetailsFailed": {
+    "description": "Snackbar when ticket details cannot be loaded."
+  },
+  "ticketErrorLoadingDetails": "Error loading ticket details: {error}",
+  "@ticketErrorLoadingDetails": {
+    "description": "Snackbar when loading ticket details throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketErrorDeleting": "Error deleting ticket: {error}",
+  "@ticketErrorDeleting": {
+    "description": "Snackbar when deleting a ticket fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketAddCommentFailed": "Failed to add comment: {error}",
+  "@ticketAddCommentFailed": {
+    "description": "Snackbar when adding a comment fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketErrorAddingComment": "Error adding comment: {error}",
+  "@ticketErrorAddingComment": {
+    "description": "Snackbar when adding a comment throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketStatusUpdated": "Ticket status updated successfully",
+  "@ticketStatusUpdated": {
+    "description": "Snackbar after a ticket status change."
+  },
+  "ticketUpdateStatusFailed": "Failed to update ticket status: {error}",
+  "@ticketUpdateStatusFailed": {
+    "description": "Snackbar when a ticket status change fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketPriorityUpdated": "Ticket priority updated successfully",
+  "@ticketPriorityUpdated": {
+    "description": "Snackbar after a ticket priority change."
+  },
+  "ticketUpdatePriorityFailed": "Failed to update ticket priority: {error}",
+  "@ticketUpdatePriorityFailed": {
+    "description": "Snackbar when a ticket priority change fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketErrorUpdatingPriority": "Error updating ticket priority: {error}",
+  "@ticketErrorUpdatingPriority": {
+    "description": "Snackbar when a ticket priority change throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketCouldNotOpenGithubIssue": "Could not open GitHub issue",
+  "@ticketCouldNotOpenGithubIssue": {
+    "description": "Snackbar when the GitHub issue link cannot be opened."
+  },
+  "ticketGithubSyncUpdated": "GitHub sync updated",
+  "@ticketGithubSyncUpdated": {
+    "description": "Snackbar after retrying GitHub sync succeeds."
+  },
+  "ticketGithubSyncFailed": "GitHub synchronization failed",
+  "@ticketGithubSyncFailed": {
+    "description": "Fallback snackbar when GitHub sync fails."
+  },
+  "ticketErrorSyncingGithub": "Error syncing to GitHub: {error}",
+  "@ticketErrorSyncingGithub": {
+    "description": "Snackbar when GitHub sync throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketViewOnGithubWithId": "View on GitHub (#{id})",
+  "@ticketViewOnGithubWithId": {
+    "description": "Button opening the linked GitHub issue, with its number.",
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketViewOnGithub": "View on GitHub",
+  "@ticketViewOnGithub": {
+    "description": "Button opening the linked GitHub issue."
+  },
+  "ticketRetryGithubSync": "Retry GitHub sync",
+  "@ticketRetryGithubSync": {
+    "description": "Button to retry a failed GitHub sync."
+  },
+  "ticketAssignedSuccess": "Ticket assigned successfully",
+  "@ticketAssignedSuccess": {
+    "description": "Snackbar after a ticket is assigned."
+  },
+  "ticketAssignFailed": "Failed to assign ticket: {error}",
+  "@ticketAssignFailed": {
+    "description": "Snackbar when assigning a ticket fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketErrorAssigning": "Error assigning ticket: {error}",
+  "@ticketErrorAssigning": {
+    "description": "Snackbar when assigning a ticket throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketAssignTitle": "Assign Ticket",
+  "@ticketAssignTitle": {
+    "description": "Title of the assign-ticket dialog."
+  },
+  "ticketErrorLoadingTeamMembers": "Error loading team members",
+  "@ticketErrorLoadingTeamMembers": {
+    "description": "Shown in the assign dialog when team members fail to load."
+  },
+  "ticketNoTeamMembers": "No team members found",
+  "@ticketNoTeamMembers": {
+    "description": "Shown in the assign dialog when the team has no members."
+  },
+  "ticketRoleAdmin": "Admin",
+  "@ticketRoleAdmin": {
+    "description": "Role label for an admin team member."
+  },
+  "ticketRoleTeamMember": "Team Member",
+  "@ticketRoleTeamMember": {
+    "description": "Role label for a regular team member."
+  },
+  "ticketDetailsTitle": "Ticket Details",
+  "@ticketDetailsTitle": {
+    "description": "App bar title of the ticket detail screen."
+  },
+  "ticketNotFound": "Ticket not found",
+  "@ticketNotFound": {
+    "description": "Title shown when a ticket cannot be found."
+  },
+  "ticketNotFoundMessage": "The ticket may have been deleted or you do not have access to it.",
+  "@ticketNotFoundMessage": {
+    "description": "Explanation shown when a ticket cannot be found."
+  },
+  "ticketChangeStatus": "Change Status",
+  "@ticketChangeStatus": {
+    "description": "Menu section header for changing ticket status."
+  },
+  "ticketChangePriority": "Change Priority",
+  "@ticketChangePriority": {
+    "description": "Menu section header for changing ticket priority."
+  },
+  "ticketPriorityHigh": "High",
+  "@ticketPriorityHigh": {
+    "description": "Label for 'high' priority."
+  },
+  "ticketPriorityMedium": "Medium",
+  "@ticketPriorityMedium": {
+    "description": "Label for 'medium' priority."
+  },
+  "ticketPriorityLow": "Low",
+  "@ticketPriorityLow": {
+    "description": "Label for 'low' priority."
+  },
+  "ticketCategoryBug": "Bug",
+  "@ticketCategoryBug": {
+    "description": "Display label for the 'Bug' ticket category."
+  },
+  "ticketCategoryFeatureRequest": "Feature Request",
+  "@ticketCategoryFeatureRequest": {
+    "description": "Display label for the 'Feature Request' ticket category."
+  },
+  "ticketCategoryUiUx": "UI/UX",
+  "@ticketCategoryUiUx": {
+    "description": "Display label for the 'UI/UX' ticket category."
+  },
+  "ticketCategoryPerformance": "Performance",
+  "@ticketCategoryPerformance": {
+    "description": "Display label for the 'Performance' ticket category."
+  },
+  "ticketCategoryDocumentation": "Documentation",
+  "@ticketCategoryDocumentation": {
+    "description": "Display label for the 'Documentation' ticket category."
+  },
+  "ticketCategorySecurity": "Security",
+  "@ticketCategorySecurity": {
+    "description": "Display label for the 'Security' ticket category."
+  },
+  "ticketCategoryOther": "Other",
+  "@ticketCategoryOther": {
+    "description": "Display label for the 'Other' ticket category."
+  },
+  "ticketNoDescriptionProvided": "No description provided.",
+  "@ticketNoDescriptionProvided": {
+    "description": "Fallback description on the ticket detail screen."
+  },
+  "ticketAssignedTo": "Assigned to",
+  "@ticketAssignedTo": {
+    "description": "Label above the ticket assignee's name."
+  },
+  "ticketAssign": "Assign",
+  "@ticketAssign": {
+    "description": "Button to assign an unassigned ticket."
+  },
+  "ticketCommentsCount": "Comments ({count})",
+  "@ticketCommentsCount": {
+    "description": "Comments section heading with the number of comments.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ticketNoComments": "No comments yet",
+  "@ticketNoComments": {
+    "description": "Empty state of the comments section."
+  },
+  "ticketBeFirstComment": "Be the first to add a comment",
+  "@ticketBeFirstComment": {
+    "description": "Empty-state hint of the comments section."
+  },
+  "ticketAddCommentHint": "Add a comment...",
+  "@ticketAddCommentHint": {
+    "description": "Hint of the comment input field."
+  },
+  "ticketSendComment": "Send comment",
+  "@ticketSendComment": {
+    "description": "Tooltip of the send-comment button."
+  },
+  "ticketCreateFailed": "Failed to create ticket: {error}",
+  "@ticketCreateFailed": {
+    "description": "Snackbar when creating a ticket fails.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketErrorCreating": "Error creating ticket: {error}",
+  "@ticketErrorCreating": {
+    "description": "Snackbar when creating a ticket throws.",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketCreateTitle": "Create Ticket",
+  "@ticketCreateTitle": {
+    "description": "Create-ticket screen title, tooltip and submit button."
+  },
+  "ticketTitleHint": "Enter ticket title",
+  "@ticketTitleHint": {
+    "description": "Hint of the ticket title field."
+  },
+  "ticketTitleRequired": "Please enter a title",
+  "@ticketTitleRequired": {
+    "description": "Validation error when the ticket title is empty."
+  },
+  "ticketDescription": "Description",
+  "@ticketDescription": {
+    "description": "Label of the ticket description field."
+  },
+  "ticketDescriptionHint": "Enter ticket description (max 75 words recommended)",
+  "@ticketDescriptionHint": {
+    "description": "Hint of the ticket description field."
+  },
+  "ticketDescriptionRequired": "Please enter a description",
+  "@ticketDescriptionRequired": {
+    "description": "Validation error when the ticket description is empty."
+  },
+  "ticketAssignToOptional": "Assign To (Optional)",
+  "@ticketAssignToOptional": {
+    "description": "Label of the assignee picker on the create-ticket form."
+  },
+  "ticketSelectTeamMember": "Select team member",
+  "@ticketSelectTeamMember": {
+    "description": "Hint of the assignee dropdown."
+  },
+  "ticketUnassigned": "Unassigned",
+  "@ticketUnassigned": {
+    "description": "Dropdown option for no assignee."
+  },
+  "ticketCreateGithubIssue": "Create GitHub issue",
+  "@ticketCreateGithubIssue": {
+    "description": "Switch title to also create a GitHub issue."
+  },
+  "ticketCreateGithubIssueSubtitle": "Sync this ticket to the configured GitHub repository",
+  "@ticketCreateGithubIssueSubtitle": {
+    "description": "Subtitle of the create-GitHub-issue switch."
+  },
+  "shellSupportUs": "Support Us",
+  "@shellSupportUs": {
+    "description": "Desktop sidebar action that opens the AOSSIE support panel."
+  },
+  "profileMembersLoadFailed": "Couldn't load team members",
+  "@profileMembersLoadFailed": {
+    "description": "Team members screen error state when the members request fails."
+  },
+  "profileMembersLoadFailedHint": "Check your connection and try again.",
+  "@profileMembersLoadFailedHint": {
+    "description": "Hint under the team members load error."
+  },
+  "profileRetry": "Retry",
+  "@profileRetry": {
+    "description": "Button that reloads the team members after a failure."
+  },
+  "meetingBotCalled": "Bot called",
+  "@meetingBotCalled": {
+    "description": "Snackbar after the transcription bot is dispatched to a meeting."
+  },
+  "meetingCallBotFailed": "Couldn't call the bot. Please try again.",
+  "@meetingCallBotFailed": {
+    "description": "Snackbar when dispatching the transcription bot fails."
+  },
+  "meetingCallBot": "Call Bot",
+  "@meetingCallBot": {
+    "description": "Button that sends the transcription bot to the meeting."
+  },
+  "meetingCallingBot": "Calling bot…",
+  "@meetingCallingBot": {
+    "description": "Call Bot button label while the request is running."
+  },
+  "meetingSummaryReady": "Summary ready",
+  "@meetingSummaryReady": {
+    "description": "Snackbar after the meeting transcript was summarized."
+  },
+  "chatReplyError": "Sorry, I encountered an error. Please try again later.",
+  "@chatReplyError": {
+    "description": "Chat reply shown when sending a message fails."
+  },
+  "chatRequestError": "Sorry, I encountered an error while processing your request.",
+  "@chatRequestError": {
+    "description": "Chat reply shown when Ell-ena could not answer or could not complete a requested action."
+  },
+  "chatRequestDone": "Done! Your request has been completed.",
+  "@chatRequestDone": {
+    "description": "Chat reply confirming a completed action when no AI summary is available."
+  },
+  "meetingFetchSummaryFailed": "Couldn't fetch the summary. The transcript may not be ready yet, so try again later.",
+  "@meetingFetchSummaryFailed": {
+    "description": "Snackbar when fetching or summarizing the meeting transcript fails."
+  },
+  "meetingFetchSummary": "Fetch Summary",
+  "@meetingFetchSummary": {
+    "description": "Button that fetches and summarizes the meeting transcript."
+  },
+  "meetingFetchingSummary": "Fetching summary…",
+  "@meetingFetchingSummary": {
+    "description": "Fetch Summary button label while the request is running."
+  },
+  "ticketGithubSyncPending": "GitHub sync in progress",
+  "@ticketGithubSyncPending": {
+    "description": "Ticket GitHub sync status chip while the sync is running."
+  },
+  "ticketGithubSynced": "Synced to GitHub",
+  "@ticketGithubSynced": {
+    "description": "Ticket GitHub sync status chip after a successful sync."
+  },
+  "ticketGithubNotSynced": "Not synced to GitHub",
+  "@ticketGithubNotSynced": {
+    "description": "Ticket GitHub sync status chip when no sync was requested."
+  },
+  "ticketGithubSyncStatusFailed": "GitHub sync failed",
+  "@ticketGithubSyncStatusFailed": {
+    "description": "Ticket GitHub sync status chip after a failed sync."
+  }
+}

@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import '../tasks/task_screen.dart';
-import '../tasks/create_task_screen.dart';
 import '../tickets/ticket_screen.dart';
-import '../tickets/create_ticket_screen.dart';
+import '../../l10n/app_localizations.dart';
 import '../meetings/meeting_screen.dart';
-import '../meetings/create_meeting_screen.dart';
-import '../chat/chat_screen.dart';
-import '../../services/supabase_service.dart';
-import '../../widgets/custom_widgets.dart';
 
 class WorkspaceScreen extends StatefulWidget {
-  const WorkspaceScreen({super.key});
+  final int initialTabIndex;
+  final ValueChanged<int>? onTabSelected;
+
+  const WorkspaceScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.onTabSelected,
+  });
 
   @override
   State<WorkspaceScreen> createState() => _WorkspaceScreenState();
@@ -19,25 +21,16 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-  String? _selectedPriority;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2),
+    );
     _tabController.addListener(_handleTabChange);
-
-    // Simulate loading delay
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    });
   }
 
   @override
@@ -47,111 +40,30 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(WorkspaceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTabIndex != widget.initialTabIndex &&
+        _tabController.index != widget.initialTabIndex) {
+      _tabController.animateTo(widget.initialTabIndex.clamp(0, 2));
+    }
+  }
+
   void _handleTabChange() {
     if (_tabController.indexIsChanging) {
       setState(() {});
+      return;
     }
-  }
 
-  void _showCreateDialog() {
-    final currentTab = _tabController.index;
-    if (currentTab == 0) {
-      _showCreateTaskDialog();
-    } else if (currentTab == 1) {
-      _showCreateTicketDialog();
-    } else if (currentTab == 2) {
-      _showCreateMeetingDialog();
-    }
-  }
-
-  void _showCreateTaskDialog() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CreateTaskScreen()),
-    ).then((result) async {
-      if (result == true) {
-        // Reload team members cache first
-        final supabaseService = SupabaseService();
-        final userProfile = await supabaseService.getCurrentUserProfile();
-        if (userProfile != null && userProfile['team_id'] != null) {
-          await supabaseService.loadTeamMembers(userProfile['team_id']);
-        }
-
-        // Force refresh of the task screen
-        TaskScreen.refreshTasks();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Task created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    });
-  }
-
-  void _showCreateTicketDialog() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CreateTicketScreen()),
-    ).then((result) async {
-      if (result == true) {
-        // Reload team members cache first
-        final supabaseService = SupabaseService();
-        final userProfile = await supabaseService.getCurrentUserProfile();
-        if (userProfile != null && userProfile['team_id'] != null) {
-          await supabaseService.loadTeamMembers(userProfile['team_id']);
-        }
-
-        // Force refresh of the ticket screen
-        TicketScreen.refreshTickets();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ticket created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    });
-  }
-
-  void _showCreateMeetingDialog() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) =>  CreateMeetingScreen()),
-    ).then((result) async {
-      if (result == true) {
-        // Reload team members cache first
-        final supabaseService = SupabaseService();
-        final userProfile = await supabaseService.getCurrentUserProfile();
-        if (userProfile != null && userProfile['team_id'] != null) {
-          await supabaseService.loadTeamMembers(userProfile['team_id']);
-        }
-
-        // Force refresh of the meeting screen
-        MeetingScreen.refreshMeetings();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Meeting created successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    });
+    // Route-driven moves (see didUpdateWidget) are already in the route.
+    if (_tabController.index == widget.initialTabIndex.clamp(0, 2)) return;
+    widget.onTabSelected?.call(_tabController.index);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const WorkspaceLoadingSkeleton(),
-      );
-    }
-
     final statusBarHeight = MediaQuery.of(context).padding.top;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -170,10 +82,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               labelColor: Colors.green,
               unselectedLabelColor:
                   Theme.of(context).colorScheme.onSurfaceVariant,
-              tabs: const [
-                Tab(icon: Icon(Icons.task), text: 'Tasks'),
-                Tab(icon: Icon(Icons.confirmation_number), text: 'Tickets'),
-                Tab(icon: Icon(Icons.group), text: 'Meetings'),
+              tabs: [
+                Tab(icon: const Icon(Icons.task), text: l10n.tasks),
+                Tab(
+                  icon: const Icon(Icons.confirmation_number),
+                  text: l10n.tickets,
+                ),
+                Tab(icon: const Icon(Icons.group), text: l10n.meetings),
               ],
             ),
           ),
@@ -182,16 +97,34 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          TaskScreen(key: TaskScreen.globalKey),
-          TicketScreen(key: TicketScreen.globalKey),
-          MeetingScreen(key: MeetingScreen.globalKey),
+          _KeepAlive(child: TaskScreen(key: TaskScreen.globalKey)),
+          _KeepAlive(child: TicketScreen(key: TicketScreen.globalKey)),
+          _KeepAlive(child: MeetingScreen(key: MeetingScreen.globalKey)),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateDialog,
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add),
-      ),
     );
+  }
+}
+
+/// Keeps a tab's page alive while another tab is shown, so switching back
+/// doesn't reload the list or reset its filter.
+class _KeepAlive extends StatefulWidget {
+  final Widget child;
+
+  const _KeepAlive({required this.child});
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

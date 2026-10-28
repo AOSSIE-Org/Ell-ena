@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/app_localizations.dart';
+import '../../widgets/adaptive_create_flow.dart';
+import '../../shell/app_shell.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/meeting_status.dart';
 import '../../widgets/custom_widgets.dart';
+import '../../widgets/detail_side_panel.dart';
 import 'create_meeting_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'meeting_insights_screen.dart';
 
 class MeetingScreen extends StatefulWidget {
-  static final GlobalKey<_MeetingScreenState> globalKey =
+  static final GlobalKey<State<MeetingScreen>> globalKey =
       GlobalKey<_MeetingScreenState>();
 
-  const MeetingScreen({Key? key}) : super(key: key);
+  const MeetingScreen({super.key});
 
   static void refreshMeetings() {
-    globalKey.currentState?._loadInitialData();
+    (globalKey.currentState as _MeetingScreenState?)?._loadInitialData();
+  }
+
+  /// Opens the create-meeting screen; used by the wide shell's top bar.
+  static void openCreateMeeting() {
+    (globalKey.currentState as _MeetingScreenState?)?._openCreateMeeting();
   }
 
   @override
@@ -24,6 +34,9 @@ class MeetingScreen extends StatefulWidget {
 class _MeetingScreenState extends State<MeetingScreen> {
   final _supabaseService = SupabaseService();
   bool _isLoading = true;
+
+  /// Meeting shown in the side panel on wide screens.
+  String? _selectedMeetingId;
   bool _isAdmin = false;
   String _selectedFilter = 'upcoming';
   List<Map<String, dynamic>> _meetings = [];
@@ -34,10 +47,14 @@ class _MeetingScreenState extends State<MeetingScreen> {
     _loadInitialData();
   }
 
-  Future<void> _loadInitialData() async {
-    setState(() {
-      _isLoading = true;
-    });
+  /// [showLoading] false reloads behind the current list instead of
+  /// replacing it with a spinner, e.g. when the side panel closes.
+  Future<void> _loadInitialData({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       // Check if user is admin
@@ -70,13 +87,15 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   Future<void> _deleteMeeting(String meetingId) async {
+    if (!await confirmMeetingDelete(context) || !mounted) return;
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await _supabaseService.deleteMeeting(meetingId);
 
       if (mounted && !result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting meeting: ${result['error']}'),
+            content: Text(l10n.meetingErrorDeleting('${result['error']}')),
             backgroundColor: Colors.red,
           ),
         );
@@ -88,7 +107,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting meeting: $e'),
+            content: Text(l10n.meetingErrorDeleting('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -99,6 +118,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
   Future<void> _launchMeetingUrl(String? url) async {
     if (url == null || url.isEmpty) return;
 
+    final l10n = AppLocalizations.of(context);
     try {
       final Uri uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
@@ -106,8 +126,8 @@ class _MeetingScreenState extends State<MeetingScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not launch meeting URL'),
+            SnackBar(
+              content: Text(l10n.meetingCouldNotLaunchUrl),
               backgroundColor: Colors.red,
             ),
           );
@@ -118,11 +138,28 @@ class _MeetingScreenState extends State<MeetingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error launching URL: $e'),
+            content: Text(l10n.meetingErrorLaunchingUrl('$e')),
             backgroundColor: Colors.red,
           ),
         );
       }
+    }
+  }
+
+  Future<void> _openCreateMeeting() async {
+    final l10n = AppLocalizations.of(context);
+    final result = await openCreateFlow(context, CreateMeetingScreen());
+
+    if (result == true) {
+      // Meeting was created, refresh meetings
+      _loadInitialData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.workspaceMeetingCreated),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -146,41 +183,30 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
     // Filter meetings based on selected filter
     final filteredMeetings = _meetings.where((meeting) {
-      final meetingDate = DateTime.parse(meeting['meeting_date']);
+      final isPast = isPastMeeting(meeting, now);
       if (_selectedFilter == 'upcoming') {
-        return meetingDate.isAfter(now);
-      } else {
-        return meetingDate.isBefore(now);
+        return !isPast;
       }
+      return isPast;
     }).toList();
 
-    final upcomingCount = _meetings
-        .where((m) => DateTime.parse(m['meeting_date']).isAfter(now))
-        .length;
-    final pastCount = _meetings
-        .where((m) => DateTime.parse(m['meeting_date']).isBefore(now))
-        .length;
+    final pastCount =
+        _meetings.where((meeting) => isPastMeeting(meeting, now)).length;
+    final upcomingCount = _meetings.length - pastCount;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>  CreateMeetingScreen(),
+      // Wide screens create from the shell's top bar instead.
+      floatingActionButton: AppShell.isDesktop(context)
+          ? null
+          : FloatingActionButton(
+              heroTag: 'meetings-add-button',
+              onPressed: _openCreateMeeting,
+              tooltip: AppLocalizations.of(context).newMeeting,
+              backgroundColor: Colors.green.shade700,
+              child: const Icon(Icons.add, color: Colors.white),
             ),
-          );
-
-          if (result == true) {
-            // Meeting was created, refresh meetings
-            _loadInitialData();
-          }
-        },
-        backgroundColor: Colors.green.shade700,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      body: Column(
+      body: _withMeetingPanel(Column(
         children: [
           _buildHeader(
             upcomingCount: upcomingCount,
@@ -189,11 +215,53 @@ class _MeetingScreenState extends State<MeetingScreen> {
           const SizedBox(height: 12),
           _buildFilterTabs(),
           Expanded(
-            child: _buildMeetingList(filteredMeetings),
+            child: RefreshIndicator(
+              onRefresh: () => _loadInitialData(showLoading: false),
+              child: _buildMeetingList(filteredMeetings),
+            ),
           ),
         ],
+      )),
+    );
+  }
+
+  Widget _withMeetingPanel(Widget content) {
+    final meetingId = _selectedMeetingId;
+    return DetailPanelLayout(
+      content: content,
+      panel: meetingId == null || !AppShell.isDesktop(context)
+          ? null
+          : DetailSidePanel(
+              itemKey: meetingId,
+              onClose: _closeMeetingPanel,
+              child: MeetingDetailScreen(meetingId: meetingId),
+            ),
+    );
+  }
+
+  /// Phones open the meeting as a page; wide screens show it in the side
+  /// panel.
+  Future<void> _openMeeting(Map<String, dynamic> meeting) async {
+    if (AppShell.isDesktop(context)) {
+      setState(() => _selectedMeetingId = meeting['id'] as String?);
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MeetingDetailScreen(meetingId: meeting['id']),
       ),
     );
+
+    // Reload even when the page closes without a result, so a finished
+    // summary shows up in the list.
+    _loadInitialData(showLoading: false);
+  }
+
+  void _closeMeetingPanel() {
+    setState(() => _selectedMeetingId = null);
+    // The panel may have changed or deleted the meeting.
+    _loadInitialData(showLoading: false);
   }
 
   Widget _buildHeader({
@@ -213,13 +281,13 @@ class _MeetingScreenState extends State<MeetingScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildMeetingStat(
-            label: 'Upcoming',
+            label: AppLocalizations.of(context).meetingUpcoming,
             value: upcomingCount,
             icon: Icons.calendar_today,
             color: Colors.blue.shade400,
           ),
           _buildMeetingStat(
-            label: 'Past',
+            label: AppLocalizations.of(context).meetingPast,
             value: pastCount,
             icon: Icons.history,
             color: Colors.purple.shade400,
@@ -240,7 +308,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
       children: [
         CircleAvatar(
           radius: 22,
-          backgroundColor: color.withOpacity(0.2),
+          backgroundColor: color.withValues(alpha: 0.2),
           child: Icon(
             icon,
             color: color,
@@ -268,9 +336,10 @@ class _MeetingScreenState extends State<MeetingScreen> {
   }
 
   Widget _buildFilterTabs() {
+    final l10n = AppLocalizations.of(context);
     final filterOptions = [
-      {'id': 'upcoming', 'label': 'Upcoming', 'color': Colors.blue},
-      {'id': 'past', 'label': 'Past', 'color': Colors.purple},
+      {'id': 'upcoming', 'label': l10n.meetingUpcoming, 'color': Colors.blue},
+      {'id': 'past', 'label': l10n.meetingPast, 'color': Colors.purple},
     ];
 
     return Container(
@@ -288,8 +357,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
               child: Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? color.withOpacity(0.2) : Colors.transparent,
+                  color: isSelected
+                      ? color.withValues(alpha: 0.2)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isSelected ? color : Colors.transparent,
@@ -317,49 +387,62 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
   Widget _buildMeetingList(List<Map<String, dynamic>> filteredMeetings) {
     if (filteredMeetings.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _selectedFilter == 'upcoming'
-                  ? Icons.calendar_today
-                  : Icons.history,
-              size: 70,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+      final l10n = AppLocalizations.of(context);
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.45,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  _selectedFilter == 'upcoming'
+                      ? Icons.calendar_today
+                      : Icons.history,
+                  size: 70,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _selectedFilter == 'upcoming'
+                      ? l10n.meetingNoUpcoming
+                      : l10n.meetingNoPast,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _selectedFilter == 'upcoming'
+                      ? l10n.meetingEmptyUpcomingHint
+                      : l10n.meetingEmptyPastHint,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No ${_selectedFilter == 'upcoming' ? 'upcoming' : 'past'} meetings',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedFilter == 'upcoming'
-                  ? 'Create new meetings to get started'
-                  : 'Past meetings will appear here',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
+    if (AppShell.isDesktop(context)) {
+      return _buildMeetingGrid(filteredMeetings);
+    }
+
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: filteredMeetings.length,
       itemBuilder: (context, index) {
         final meeting = filteredMeetings[index];
-        final meetingDate = DateTime.parse(meeting['meeting_date']);
-        final isUpcoming = meetingDate.isAfter(DateTime.now());
+        final isUpcoming = !isPastMeeting(meeting, DateTime.now());
 
         return _MeetingCard(
           meeting: meeting,
@@ -367,22 +450,66 @@ class _MeetingScreenState extends State<MeetingScreen> {
           isUpcoming: isUpcoming,
           onDelete: _deleteMeeting,
           onJoin: _launchMeetingUrl,
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    MeetingDetailScreen(meetingId: meeting['id']),
-              ),
-            );
-
-            if (result == true) {
-              // Meeting was updated in detail screen, refresh meetings
-              _loadInitialData();
-            }
-          },
+          onTap: () => _openMeeting(meeting),
         );
       },
+    );
+  }
+
+  /// Wide screens: the same cards in rows of up to three, capped at 1440px
+  /// and centered. Each row takes its tallest card's height.
+  Widget _buildMeetingGrid(List<Map<String, dynamic>> meetings) {
+    const gap = 16.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = width >= 1100
+            ? 3
+            : width >= 700
+                ? 2
+                : 1;
+        final rowCount = (meetings.length / columns).ceil();
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1440),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(24),
+              itemCount: rowCount,
+              itemBuilder: (context, row) {
+                final start = row * columns;
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < columns; i++) ...[
+                        if (i > 0) const SizedBox(width: gap),
+                        Expanded(
+                          child: start + i < meetings.length
+                              ? _buildGridCard(meetings[start + i])
+                              : const SizedBox(),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGridCard(Map<String, dynamic> meeting) {
+    return _MeetingCard(
+      meeting: meeting,
+      isAdmin: _isAdmin,
+      isUpcoming: !isPastMeeting(meeting, DateTime.now()),
+      selected: meeting['id'] == _selectedMeetingId,
+      onDelete: _deleteMeeting,
+      onJoin: _launchMeetingUrl,
+      onTap: () => _openMeeting(meeting),
     );
   }
 }
@@ -395,6 +522,9 @@ class _MeetingCard extends StatelessWidget {
   final Function(String?) onJoin;
   final VoidCallback onTap;
 
+  /// Outlines the card whose meeting is open in the wide-screen side panel.
+  final bool selected;
+
   const _MeetingCard({
     required this.meeting,
     required this.isAdmin,
@@ -402,9 +532,10 @@ class _MeetingCard extends StatelessWidget {
     required this.onDelete,
     required this.onJoin,
     required this.onTap,
+    this.selected = false,
   });
 
-  String _getRelativeDate(DateTime date) {
+  String _getRelativeDate(DateTime date, AppLocalizations l10n) {
     // Ensure the date is converted to local time before making midnight comparisons
     final localDate = date.toLocal();
     final now = DateTime.now();
@@ -414,17 +545,17 @@ class _MeetingCard extends StatelessWidget {
     final dateOnly = DateTime(localDate.year, localDate.month, localDate.day);
 
     if (dateOnly == today) {
-      return 'Today';
+      return l10n.meetingToday;
     } else if (dateOnly == tomorrow) {
-      return 'Tomorrow';
+      return l10n.meetingTomorrow;
     } else if (dateOnly == yesterday) {
-      return 'Yesterday';
+      return l10n.meetingYesterday;
     } else if (isUpcoming) {
       return DateFormat('E, MMM d, yyyy').format(localDate);
     } else {
       final difference = today.difference(dateOnly).inDays;
       if (difference > 0 && difference < 30) {
-        return '$difference ${difference == 1 ? 'day' : 'days'} ago';
+        return l10n.meetingDaysAgo(difference);
       } else {
         return DateFormat('MMM d, yyyy').format(localDate);
       }
@@ -433,6 +564,7 @@ class _MeetingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     // Parse the date and force it into the local timezone for rendering
     final meetingDate = DateTime.parse(meeting['meeting_date']).toLocal();
     final timeFormat = DateFormat('h:mm a');
@@ -444,12 +576,12 @@ class _MeetingCard extends StatelessWidget {
     final canCancel = isUpcoming && (isAdmin || isCreator);
 
     // Limit title to 25 characters
-    final title = (meeting['title'] ?? 'Untitled Meeting').length > 25
-        ? '${(meeting['title'] ?? 'Untitled Meeting').substring(0, 25)}...'
-        : (meeting['title'] ?? 'Untitled Meeting');
+    final title = (meeting['title'] ?? l10n.meetingUntitled).length > 25
+        ? '${(meeting['title'] ?? l10n.meetingUntitled).substring(0, 25)}...'
+        : (meeting['title'] ?? l10n.meetingUntitled);
 
     // Get creator name
-    String creatorName = 'Unknown';
+    String creatorName = l10n.meetingUnknownUser;
     if (meeting['creator'] != null && meeting['creator']['full_name'] != null) {
       creatorName = meeting['creator']['full_name'];
     }
@@ -459,6 +591,9 @@ class _MeetingCard extends StatelessWidget {
       color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: selected
+            ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
+            : BorderSide.none,
       ),
       child: InkWell(
         onTap: onTap,
@@ -470,7 +605,7 @@ class _MeetingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade400.withOpacity(0.2),
+                color: Colors.green.shade400.withValues(alpha: 0.2),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -502,7 +637,7 @@ class _MeetingCard extends StatelessWidget {
                       onPressed: () => onDelete(meeting['id']),
                       icon:
                           const Icon(Icons.delete, color: Colors.red, size: 18),
-                      tooltip: 'Cancel Meeting',
+                      tooltip: l10n.meetingCancelMeetingTooltip,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
@@ -526,7 +661,7 @@ class _MeetingCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${_getRelativeDate(meetingDate)}, ${timeFormat.format(meetingDate)}',
+                        '${_getRelativeDate(meetingDate, l10n)}, ${timeFormat.format(meetingDate)}',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 13,
@@ -543,7 +678,7 @@ class _MeetingCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${meeting['duration']} min',
+                              l10n.meetingDurationMin('${meeting['duration']}'),
                               style: TextStyle(
                                 color: Colors.orange.shade400,
                                 fontSize: 13,
@@ -575,7 +710,7 @@ class _MeetingCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Created by $creatorName',
+                        l10n.meetingCreatedBy(creatorName),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
@@ -594,9 +729,9 @@ class _MeetingCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Text(
-                            'Join',
-                            style: TextStyle(fontSize: 13),
+                          child: Text(
+                            l10n.meetingJoin,
+                            style: const TextStyle(fontSize: 13),
                           ),
                         ),
                     ],
@@ -628,7 +763,7 @@ class _MeetingCard extends StatelessWidget {
                                 size: 14,
                               ),
                               label: Text(
-                                'Transcription',
+                                l10n.meetingTranscription,
                                 style: TextStyle(
                                   color: Colors.green.shade400,
                                   fontSize: 12,
@@ -664,7 +799,7 @@ class _MeetingCard extends StatelessWidget {
                                 size: 14,
                               ),
                               label: Text(
-                                'AI Summary',
+                                l10n.meetingAiSummary,
                                 style: TextStyle(
                                   color: Colors.blue.shade400,
                                   fontSize: 12,

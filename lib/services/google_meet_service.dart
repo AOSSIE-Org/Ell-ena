@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as cal;
 import 'package:googleapis_auth/auth_io.dart';
@@ -11,11 +14,24 @@ class GoogleMeetService {
     ],
   );
 
+  /// A new Calendar event id (base32hex, as the Calendar API requires) to
+  /// pass as `eventId` so repeated [createMeetLink] calls reuse one event.
+  static String newEventId() {
+    const chars = '0123456789abcdefghijklmnopqrstuv';
+    final random = Random.secure();
+    return List.generate(26, (_) => chars[random.nextInt(chars.length)])
+        .join();
+  }
+
+  /// Creates a Calendar event with a Meet link and returns the link. With an
+  /// [eventId], a repeat call (Generate again or Retry) updates that event
+  /// instead of adding another one.
   Future<String?> createMeetLink({
     required DateTime start,
     required int durationMinutes,
     required String title,
     String? description,
+    String? eventId,
   }) async {
     try {
       // Sign in with Google
@@ -27,7 +43,7 @@ class GoogleMeetService {
       final accessToken = authentication.accessToken;
       
       if (accessToken == null) {
-        print('No access token available');
+        debugPrint('No access token available');
         return null;
       }
 
@@ -44,6 +60,7 @@ class GoogleMeetService {
         final calendarApi = cal.CalendarApi(authClient);
 
         final event = cal.Event(
+          id: eventId,
           summary: title,
           description: description,
           start: cal.EventDateTime(dateTime: start.toUtc()),
@@ -60,11 +77,28 @@ class GoogleMeetService {
           ),
         );
 
-        final createdEvent = await calendarApi.events.insert(
-          event,
-          'primary',
-          conferenceDataVersion: 1,
-        );
+        cal.Event createdEvent;
+        try {
+          createdEvent = await calendarApi.events.insert(
+            event,
+            'primary',
+            conferenceDataVersion: 1,
+          );
+        } on cal.DetailedApiRequestError catch (e) {
+          // 409: an earlier call already created this event; update it.
+          if (eventId == null || e.status != 409) rethrow;
+          createdEvent = await calendarApi.events.patch(
+            cal.Event(
+              summary: event.summary,
+              description: event.description,
+              start: event.start,
+              end: event.end,
+            ),
+            'primary',
+            eventId,
+            conferenceDataVersion: 1,
+          );
+        }
 
         // Return the meet link
         return createdEvent.hangoutLink ??
@@ -78,7 +112,7 @@ class GoogleMeetService {
         authClient.close();
       }
     } catch (e) {
-      print('Error creating Google Meet link: $e');
+      debugPrint('Error creating Google Meet link: $e');
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
 
 class TeamMembersScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class TeamMembersScreen extends StatefulWidget {
 class _TeamMembersScreenState extends State<TeamMembersScreen> {
   final _supabaseService = SupabaseService();
   bool _isLoading = true;
+  bool _loadFailed = false;
   List<Map<String, dynamic>> _teamMembers = [];
 
   @override
@@ -29,10 +31,14 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
   Future<void> _loadTeamMembers() async {
     setState(() {
       _isLoading = true;
+      _loadFailed = false;
     });
 
     try {
-      final members = await _supabaseService.getTeamMembers(widget.teamId);
+      final members = await _supabaseService.getTeamMembers(
+        widget.teamId,
+        throwOnError: true,
+      );
 
       if (mounted) {
         setState(() {
@@ -45,13 +51,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _loadFailed = true;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading team members: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     }
   }
@@ -78,19 +79,23 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('${widget.teamName} Members'),
+        title: Text(AppLocalizations.of(context)
+            .profileTeamMembersTitle(widget.teamName)),
         backgroundColor: Colors.green.shade800,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _teamMembers.isEmpty
-              ? _buildEmptyState()
-              : _buildMembersList(),
+          : _loadFailed
+              ? _buildErrorState()
+              : _teamMembers.isEmpty
+                  ? _buildEmptyState()
+                  : _buildMembersList(),
     );
   }
 
   Widget _buildEmptyState() {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -102,7 +107,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No team members found',
+            l10n.profileNoMembersFound,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -111,7 +116,7 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Your team doesn\'t have any members yet',
+            l10n.profileNoMembersYet,
             style: TextStyle(
               fontSize: 14,
               color: colorScheme.onSurfaceVariant,
@@ -122,13 +127,54 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
     );
   }
 
+  Widget _buildErrorState() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.cloud_off,
+            size: 80,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.profileMembersLoadFailed,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.profileMembersLoadFailedHint,
+            style: TextStyle(
+              fontSize: 14,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _loadTeamMembers,
+            icon: const Icon(Icons.refresh),
+            label: Text(l10n.profileRetry),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMembersList() {
+    final l10n = AppLocalizations.of(context);
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _teamMembers.length,
       itemBuilder: (context, index) {
         final member = _teamMembers[index];
-        final name = member['full_name'] ?? 'Unknown';
+        final name = member['full_name'] ?? l10n.profileUnknownMember;
         final email = member['email'] ?? '';
         final role = member['role'] ?? 'member';
         final firstLetter = name.isNotEmpty ? name[0].toUpperCase() : '?';
@@ -180,12 +226,14 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: role == 'admin'
-                        ? Colors.orange.shade400.withOpacity(0.2)
-                        : Colors.blue.shade400.withOpacity(0.2),
+                        ? Colors.orange.shade400.withValues(alpha: 0.2)
+                        : Colors.blue.shade400.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    role == 'admin' ? 'Admin' : 'Member',
+                    role == 'admin'
+                        ? l10n.profileRoleAdmin
+                        : l10n.profileRoleMember,
                     style: TextStyle(
                       color: role == 'admin'
                           ? Colors.orange.shade400
