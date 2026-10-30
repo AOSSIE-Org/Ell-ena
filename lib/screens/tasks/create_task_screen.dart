@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/task_ticket_link.dart';
 
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({super.key});
+  const CreateTaskScreen({super.key, this.initialDueDate});
+
+  /// Prefills the due date, e.g. with the day picked on the Calendar.
+  final DateTime? initialDueDate;
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -16,11 +21,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
   bool _isLoading = false;
   DateTime? _selectedDueDate;
   String? _selectedAssigneeId;
+  String? _selectedTicketId;
   List<Map<String, dynamic>> _teamMembers = [];
+  List<Map<String, dynamic>> _tickets = [];
 
   @override
   void initState() {
     super.initState();
+    _selectedDueDate = widget.initialDueDate;
     _loadTeamMembers();
   }
 
@@ -37,6 +45,13 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     });
 
     try {
+      final tickets = await _supabaseService.getTickets();
+      if (mounted) {
+        setState(() {
+          _tickets = tickets;
+        });
+      }
+
       final userProfile = await _supabaseService.getCurrentUserProfile();
       if (userProfile != null &&
           userProfile['teams'] != null &&
@@ -84,6 +99,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   Future<void> _createTask() async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() {
       _isLoading = true;
@@ -95,6 +111,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         description: _descriptionController.text.trim(),
         dueDate: _selectedDueDate,
         assignedToUserId: _selectedAssigneeId,
+        ticketId: TaskTicketLink.normalizeId(_selectedTicketId),
       );
 
       if (result['success'] && mounted) {
@@ -106,7 +123,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating task: ${result['error']}'),
+            content: Text(l10n.taskErrorCreating('${result['error']}')),
             backgroundColor: Colors.red,
           ),
         );
@@ -120,7 +137,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating task: $e'),
+            content: Text(l10n.taskErrorCreating(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -130,10 +147,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Create New Task'),
+        title: Text(l10n.taskCreateNewTitle),
         backgroundColor: Colors.green.shade800,
       ),
       body: _isLoading
@@ -147,7 +165,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   children: [
                     // Task title
                     Text(
-                      'Task Title',
+                      l10n.taskTitleLabel,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -159,7 +177,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
-                        hintText: 'Enter task title',
+                        hintText: l10n.taskTitleHint,
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: Theme.of(context).colorScheme.surface,
@@ -174,7 +192,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a task title';
+                          return l10n.taskTitleRequired;
                         }
                         return null;
                       },
@@ -183,7 +201,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                     // Task description
                     Text(
-                      'Description',
+                      l10n.taskDescriptionLabel,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -195,7 +213,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface),
                       decoration: InputDecoration(
-                        hintText: 'Enter task description',
+                        hintText: l10n.taskDescriptionHint,
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: Theme.of(context).colorScheme.surface,
@@ -214,7 +232,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                     // Due date
                     Text(
-                      'Due Date',
+                      l10n.taskDueDateLabel,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -245,7 +263,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                             const SizedBox(width: 12),
                             Text(
                               _selectedDueDate == null
-                                  ? 'Select due date'
+                                  ? l10n.taskSelectDueDate
                                   : '${_selectedDueDate!.day}/${_selectedDueDate!.month}/${_selectedDueDate!.year}',
                               style: TextStyle(
                                 color: _selectedDueDate == null
@@ -263,7 +281,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
 
                     // Assign to
                     Text(
-                      'Assign To',
+                      l10n.taskAssignToLabel,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -284,7 +302,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                         child: DropdownButton<String>(
                           value: _selectedAssigneeId,
                           hint: Text(
-                            'Select team member',
+                            l10n.taskSelectTeamMember,
                             style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -300,9 +318,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface),
                           items: [
-                            const DropdownMenuItem<String>(
+                            DropdownMenuItem<String>(
                               value: null,
-                              child: Text('Unassigned'),
+                              child: Text(l10n.taskUnassigned),
                             ),
                             ..._teamMembers.map((member) {
                               return DropdownMenuItem<String>(
@@ -330,7 +348,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(member['full_name']?.toString() ??
-                                        'Unknown'),
+                                        l10n.taskUnknown),
                                     if (member['role'] == 'admin')
                                       Container(
                                         margin: const EdgeInsets.only(left: 8),
@@ -340,12 +358,12 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: Colors.orange.shade400
-                                              .withOpacity(0.2),
+                                              .withValues(alpha: 0.2),
                                           borderRadius:
                                               BorderRadius.circular(8),
                                         ),
                                         child: Text(
-                                          'Admin',
+                                          l10n.taskAdminBadge,
                                           style: TextStyle(
                                             color: Colors.orange.shade400,
                                             fontSize: 10,
@@ -356,11 +374,58 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                   ],
                                 ),
                               );
-                            }).toList(),
+                            }),
                           ],
                           onChanged: (value) {
                             setState(() {
                               _selectedAssigneeId = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Text(
+                      l10n.taskLinkedTicket,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String?>(
+                          isExpanded: true,
+                          value: _selectedTicketId,
+                          hint: Text(l10n.taskNoLinkedTicket),
+                          items: [
+                            DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text(l10n.taskNoLinkedTicket),
+                            ),
+                            ..._tickets.map((ticket) {
+                              return DropdownMenuItem<String?>(
+                                value: ticket['id']?.toString(),
+                                child: Text(
+                                  TaskTicketLink.labelFor(ticket),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedTicketId = value;
                             });
                           },
                         ),
@@ -390,9 +455,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'Create Task',
-                                style: TextStyle(
+                            : Text(
+                                l10n.taskCreateButton,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

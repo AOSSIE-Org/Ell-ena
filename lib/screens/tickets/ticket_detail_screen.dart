@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/github_sync_ui.dart';
 import '../../widgets/custom_widgets.dart';
 
 class TicketDetailScreen extends StatefulWidget {
@@ -17,6 +20,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   bool _isLoading = true;
   bool _isAdmin = false;
+  bool _isGithubSyncing = false;
   Map<String, dynamic>? _ticket;
   List<Map<String, dynamic>> _comments = [];
 
@@ -65,8 +69,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load ticket details'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).ticketLoadDetailsFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -79,7 +83,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading ticket details: $e'),
+            content: Text(
+                AppLocalizations.of(context).ticketErrorLoadingDetails('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -88,6 +93,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _deleteTicket() async {
+    final l10n = AppLocalizations.of(context);
     // Show confirmation dialog
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -95,25 +101,25 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Delete Ticket',
+            l10n.ticketDeleteTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Text(
-            'Are you sure you want to delete this ticket? This action cannot be undone.',
+            l10n.ticketDeleteConfirm,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
-              child: const Text('Delete'),
+              child: Text(l10n.ticketDelete),
             ),
           ],
         );
@@ -129,7 +135,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (result['success']) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Ticket deleted successfully'),
+              content: Text(l10n.ticketDeletedSuccess),
               backgroundColor: Colors.green,
             ),
           );
@@ -137,7 +143,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting ticket: ${result['error']}'),
+              content: Text(l10n.ticketErrorDeleting('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -148,7 +154,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error deleting ticket: $e'),
+            content: Text(l10n.ticketErrorDeleting('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -159,6 +165,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Future<void> _addComment() async {
     if (_commentController.text.trim().isEmpty) return;
 
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await _supabaseService.addTicketComment(
         ticketId: widget.ticketId,
@@ -174,7 +181,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to add comment: ${result['error']}'),
+              content: Text(l10n.ticketAddCommentFailed('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -185,7 +192,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding comment: $e'),
+            content: Text(l10n.ticketErrorAddingComment('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -194,6 +201,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _updateTicketStatus(String status) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await _supabaseService.updateTicketStatus(
         ticketId: widget.ticketId,
@@ -209,8 +217,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ticket status updated successfully'),
+            SnackBar(
+              content: Text(l10n.ticketStatusUpdated),
               backgroundColor: Colors.green,
             ),
           );
@@ -220,7 +228,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content:
-                  Text('Failed to update ticket status: ${result['error']}'),
+                  Text(l10n.ticketUpdateStatusFailed('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -231,7 +239,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating ticket status: $e'),
+            content: Text(l10n.ticketErrorUpdatingStatus('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -240,6 +248,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   }
 
   Future<void> _updateTicketPriority(String priority) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await _supabaseService.updateTicketPriority(
         ticketId: widget.ticketId,
@@ -255,8 +264,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ticket priority updated successfully'),
+            SnackBar(
+              content: Text(l10n.ticketPriorityUpdated),
               backgroundColor: Colors.green,
             ),
           );
@@ -266,7 +275,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content:
-                  Text('Failed to update ticket priority: ${result['error']}'),
+                  Text(l10n.ticketUpdatePriorityFailed('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -277,7 +286,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating ticket priority: $e'),
+            content: Text(l10n.ticketErrorUpdatingPriority('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -285,7 +294,196 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     }
   }
 
+  Future<void> _openGithubIssue(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final l10n = AppLocalizations.of(context);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error opening GitHub issue: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.ticketCouldNotOpenGithubIssue),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _retryGithubSync() async {
+    if (_isGithubSyncing) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _isGithubSyncing = true;
+    });
+
+    try {
+      final result = await _supabaseService.syncTicketToGithub(widget.ticketId);
+      if (result['ticket'] is Map) {
+        setState(() {
+          // The synced row has no joined creator/assignee, so keep the
+          // ones already loaded.
+          _ticket = {
+            ...?_ticket,
+            ...Map<String, dynamic>.from(result['ticket'] as Map),
+          };
+        });
+      } else {
+        await _loadTicketDetails();
+      }
+
+      if (!mounted) return;
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.ticketGithubSyncUpdated),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['error']?.toString() ?? l10n.ticketGithubSyncFailed,
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error retrying GitHub sync: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.ticketErrorSyncingGithub('$e')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGithubSyncing = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildGithubSyncSection() {
+    final l10n = AppLocalizations.of(context);
+    final syncToGithub = _ticket!['sync_to_github'] == true;
+    final status = _ticket!['github_sync_status'] as String?;
+    final issueUrl = _ticket!['gh_issue_url'] as String?;
+    final issueId = _ticket!['gh_issue_id'];
+    final errorText =
+        GithubSyncUi.userErrorMessage(_ticket!['github_sync_error'] as String?);
+    final rawError = _ticket!['github_sync_error'] as String?;
+    final ambiguous =
+        rawError != null && rawError.contains('[ambiguous_create]');
+
+    if (!GithubSyncUi.shouldShowSection(
+      syncToGithub: syncToGithub,
+      status: status,
+      issueUrl: issueUrl,
+    )) {
+      return const SizedBox.shrink();
+    }
+
+    Color chipColor;
+    switch (status) {
+      case 'synced':
+        chipColor = Colors.green.shade400;
+        break;
+      case 'pending':
+        chipColor = Colors.orange.shade400;
+        break;
+      case 'failed':
+        chipColor = Colors.red.shade400;
+        break;
+      default:
+        chipColor = Colors.grey.shade400;
+    }
+
+    final canRetry =
+        syncToGithub && issueId == null && status == 'failed' && !ambiguous;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Divider(color: Theme.of(context).dividerColor),
+        const SizedBox(height: 12),
+        Text(
+          'GitHub',
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: chipColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            GithubSyncUi.statusLabel(l10n, status),
+            style: TextStyle(
+              color: chipColor,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        if (status == 'synced' && issueUrl != null && issueUrl.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => _openGithubIssue(issueUrl),
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: Text(
+              issueId != null
+                  ? l10n.ticketViewOnGithubWithId('$issueId')
+                  : l10n.ticketViewOnGithub,
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.green.shade300,
+            ),
+          ),
+        ],
+        if (status == 'failed' && errorText != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            errorText,
+            style: TextStyle(
+              color: Colors.red.shade200,
+              fontSize: 13,
+            ),
+          ),
+        ],
+        if (canRetry) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _isGithubSyncing ? null : _retryGithubSync,
+            child: _isGithubSyncing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(l10n.ticketRetryGithubSync),
+          ),
+        ],
+      ],
+    );
+  }
+
   Future<void> _assignTicket(String userId) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await _supabaseService.assignTicket(
         ticketId: widget.ticketId,
@@ -298,8 +496,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ticket assigned successfully'),
+            SnackBar(
+              content: Text(l10n.ticketAssignedSuccess),
               backgroundColor: Colors.green,
             ),
           );
@@ -308,7 +506,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to assign ticket: ${result['error']}'),
+              content: Text(l10n.ticketAssignFailed('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -319,7 +517,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error assigning ticket: $e'),
+            content: Text(l10n.ticketErrorAssigning('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -329,13 +527,14 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   // Show team members dialog for assignment
   void _showAssignDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Assign Ticket',
+            l10n.ticketAssignTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: SizedBox(
@@ -349,7 +548,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
                 if (snapshot.hasError) {
                   return Text(
-                    'Error loading team members',
+                    l10n.ticketErrorLoadingTeamMembers,
                     style: TextStyle(color: Colors.red.shade400),
                   );
                 }
@@ -357,7 +556,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 final teamMembers = snapshot.data ?? [];
                 if (teamMembers.isEmpty) {
                   return Text(
-                    'No team members found',
+                    l10n.ticketNoTeamMembers,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface),
                   );
@@ -368,7 +567,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   itemCount: teamMembers.length,
                   itemBuilder: (context, index) {
                     final member = teamMembers[index];
-                    final fullName = member['full_name'] ?? 'Unknown';
+                    final fullName = member['full_name'] ?? l10n.ticketUnknown;
                     final isAdmin = member['role'] == 'admin';
 
                     return ListTile(
@@ -390,7 +589,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             color: Theme.of(context).colorScheme.onSurface),
                       ),
                       subtitle: Text(
-                        isAdmin ? 'Admin' : 'Team Member',
+                        isAdmin
+                            ? l10n.ticketRoleAdmin
+                            : l10n.ticketRoleTeamMember,
                         style: TextStyle(
                           color: isAdmin
                               ? Colors.orange.shade400
@@ -411,7 +612,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Cancel',
+                l10n.cancel,
                 style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ),
@@ -436,12 +637,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          title: const Text('Ticket Details'),
+          title: Text(l10n.ticketDetailsTitle),
         ),
         body: const Center(child: CustomLoading()),
       );
@@ -452,7 +654,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          title: const Text('Ticket Details'),
+          title: Text(l10n.ticketDetailsTitle),
         ),
         body: Center(
           child: Column(
@@ -465,7 +667,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Ticket not found',
+                l10n.ticketNotFound,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -474,7 +676,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'The ticket may have been deleted or you do not have access to it.',
+                l10n.ticketNotFoundMessage,
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -542,7 +744,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(_ticket!['ticket_number'] ?? 'Ticket Details'),
+        title: Text(_ticket!['ticket_number'] ?? l10n.ticketDetailsTitle),
         actions: [
           if (_isAdmin ||
               _ticket!['created_by'] == _supabaseService.currentUser?.id)
@@ -559,50 +761,50 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               },
               itemBuilder: (context) => [
                 if (_isAdmin) ...[
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'header_status',
                     enabled: false,
                     child: Text(
-                      'Change Status',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      l10n.ticketChangeStatus,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'status:open',
-                    child: Text('Open'),
+                    child: Text(l10n.ticketStatusOpen),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'status:in_progress',
-                    child: Text('In Progress'),
+                    child: Text(l10n.ticketStatusInProgress),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'status:resolved',
-                    child: Text('Resolved'),
+                    child: Text(l10n.ticketStatusResolved),
                   ),
                   const PopupMenuItem(
                     value: 'divider1',
                     enabled: false,
                     child: Divider(),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'header_priority',
                     enabled: false,
                     child: Text(
-                      'Change Priority',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      l10n.ticketChangePriority,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'priority:high',
-                    child: Text('High'),
+                    child: Text(l10n.ticketPriorityHigh),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'priority:medium',
-                    child: Text('Medium'),
+                    child: Text(l10n.ticketPriorityMedium),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'priority:low',
-                    child: Text('Low'),
+                    child: Text(l10n.ticketPriorityLow),
                   ),
                   const PopupMenuItem(
                     value: 'divider2',
@@ -610,14 +812,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     child: Divider(),
                   ),
                 ],
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text('Delete Ticket',
-                          style: TextStyle(color: Colors.red)),
+                      const Icon(Icons.delete_outline,
+                          color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      Text(l10n.ticketDeleteTitle,
+                          style: const TextStyle(color: Colors.red)),
                     ],
                   ),
                 ),
@@ -648,7 +851,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: priorityColor.withOpacity(0.2),
+                                color: priorityColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -676,7 +879,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.2),
+                                color: statusColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -693,7 +896,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: approvalColor.withOpacity(0.2),
+                                color: approvalColor.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
@@ -721,11 +924,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.purple.withOpacity(0.2),
+                                color: Colors.purple.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                _ticket!['category'] ?? 'Other',
+                                _ticket!['category'] ??
+                                    l10n.ticketCategoryOther,
                                 style: TextStyle(
                                   color: Colors.purple.shade300,
                                   fontSize: 12,
@@ -737,7 +941,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _ticket!['title'] ?? 'Untitled Ticket',
+                          _ticket!['title'] ?? l10n.ticketUntitled,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 20,
@@ -746,13 +950,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _ticket!['description'] ?? 'No description provided.',
+                          _ticket!['description'] ??
+                              l10n.ticketNoDescriptionProvided,
                           style: TextStyle(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                           ),
                         ),
+                        _buildGithubSyncSection(),
                         const SizedBox(height: 16),
                         Divider(color: Theme.of(context).dividerColor),
                         const SizedBox(height: 16),
@@ -781,7 +987,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Created by',
+                                    l10n.ticketCreatedByLabel,
                                     style: TextStyle(
                                       color: Theme.of(context)
                                           .colorScheme
@@ -791,7 +997,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   ),
                                   Text(
                                     _ticket!['creator']['full_name'] ??
-                                        'Unknown',
+                                        l10n.ticketUnknown,
                                     style: TextStyle(
                                       color: Theme.of(context)
                                           .colorScheme
@@ -809,7 +1015,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    'Assigned to',
+                                    l10n.ticketAssignedTo,
                                     style: TextStyle(
                                       color: Theme.of(context)
                                           .colorScheme
@@ -819,7 +1025,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                   ),
                                   Text(
                                     _ticket!['assignee']['full_name'] ??
-                                        'Unknown',
+                                        l10n.ticketUnknown,
                                     style: TextStyle(
                                       color: Theme.of(context)
                                           .colorScheme
@@ -852,7 +1058,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               ElevatedButton.icon(
                                 onPressed: _showAssignDialog,
                                 icon: const Icon(Icons.person_add, size: 16),
-                                label: const Text('Assign'),
+                                label: Text(l10n.ticketAssign),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue.shade700,
                                   foregroundColor: Colors.white,
@@ -872,7 +1078,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
                 // Comments section
                 Text(
-                  'Comments (${_comments.length})',
+                  l10n.ticketCommentsCount(_comments.length),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -894,7 +1100,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No comments yet',
+                            l10n.ticketNoComments,
                             style: TextStyle(
                               color: Colors.grey.shade400,
                               fontSize: 16,
@@ -902,7 +1108,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Be the first to add a comment',
+                            l10n.ticketBeFirstComment,
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 14,
@@ -948,7 +1154,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  comment['user']['full_name'] ?? 'Unknown',
+                                  comment['user']['full_name'] ??
+                                      l10n.ticketUnknown,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -1002,7 +1209,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   child: TextField(
                     controller: _commentController,
                     decoration: InputDecoration(
-                      hintText: 'Add a comment...',
+                      hintText: l10n.ticketAddCommentHint,
                       filled: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -1021,6 +1228,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _addComment,
+                  tooltip: l10n.ticketSendComment,
                   icon: const Icon(Icons.send_rounded),
                   color: Colors.green.shade400,
                   iconSize: 28,

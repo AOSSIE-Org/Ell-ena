@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Preview deploys are not separate public pages.
+Disallow: /pr-preview/
+
+# Replace PROJECT_HOST with the public origin, including a base path and
+# without a trailing slash, then publish this file with the site.
+Sitemap: https://PROJECT_HOST/sitemap.xml

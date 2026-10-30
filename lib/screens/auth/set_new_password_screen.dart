@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/custom_widgets.dart';
 import '../../services/navigation_service.dart';
 import '../../services/supabase_service.dart';
@@ -7,7 +8,7 @@ import 'login_screen.dart';
 
 class SetNewPasswordScreen extends StatefulWidget {
   final String email;
-  
+
   const SetNewPasswordScreen({
     super.key,
     required this.email,
@@ -34,6 +35,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
 
   Future<void> _handleSetNewPassword() async {
     if (_formKey.currentState!.validate()) {
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _isLoading = true;
         _errorMessage = null;
@@ -48,21 +50,23 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
         );
 
         if (response.user != null) {
+          // The reset session would otherwise reopen the app signed in.
+          await _supabaseService.signOut();
           if (mounted) {
             // Show success message
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Password updated successfully'),
+              SnackBar(
+                content: Text(l10n.authPasswordUpdated),
                 backgroundColor: Colors.green,
               ),
             );
-            
+
             // Navigate to login screen
             NavigationService().navigateToReplacement(const LoginScreen());
           }
         } else {
           setState(() {
-            _errorMessage = 'Failed to update password';
+            _errorMessage = l10n.authPasswordUpdateFailed;
           });
         }
       } catch (e) {
@@ -81,9 +85,10 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AuthScreenWrapper(
-      title: 'Set New Password',
-      subtitle: 'Create a new password for your account',
+      title: l10n.authSetNewPasswordTitle,
+      subtitle: l10n.authSetNewPasswordSubtitle,
       children: [
         if (_errorMessage != null)
           Padding(
@@ -99,47 +104,48 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
           child: Column(
             children: [
               CustomTextField(
-                label: 'New Password',
+                label: l10n.authNewPasswordLabel,
                 icon: Icons.lock_outline,
                 controller: _passwordController,
                 isPassword: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a password';
+                    return l10n.authEnterNewPassword;
                   }
                   if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
+                    return l10n.authPasswordTooShort;
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               CustomTextField(
-                label: 'Confirm Password',
+                label: l10n.authConfirmPasswordLabel,
                 icon: Icons.lock_outline,
                 controller: _confirmPasswordController,
                 isPassword: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please confirm your password';
+                    return l10n.authConfirmPasswordPrompt;
                   }
                   if (value != _passwordController.text) {
-                    return 'Passwords do not match';
+                    return l10n.authPasswordsDoNotMatch;
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 24),
               CustomButton(
-                text: 'Update Password',
+                text: l10n.authUpdatePassword,
                 onPressed: _isLoading ? null : _handleSetNewPassword,
                 isLoading: _isLoading,
               ),
               const SizedBox(height: 16),
               CustomButton(
-                text: 'Back to Login',
+                text: l10n.authBackToLogin,
                 onPressed: () {
-                  NavigationService().navigateToReplacement(const LoginScreen());
+                  NavigationService()
+                      .navigateToReplacement(const LoginScreen());
                 },
                 isOutlined: true,
               ),
@@ -149,4 +155,4 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
       ],
     );
   }
-} 
+}

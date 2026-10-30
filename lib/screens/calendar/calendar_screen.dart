@@ -7,12 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../tasks/create_task_screen.dart';
 import '../tickets/create_ticket_screen.dart';
 import '../meetings/create_meeting_screen.dart';
+import '../../widgets/adaptive_create_flow.dart';
 import '../../services/supabase_service.dart';
+import '../../shell/shell_refreshable.dart';
 import '../../widgets/custom_widgets.dart';
 import '../meetings/meeting_detail_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../chat/chat_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -21,11 +24,11 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    implements ShellRefreshable {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  TimeOfDay? _selectedTime;
   final Map<DateTime, List<CalendarEvent>> _events = {};
   final _supabaseService = SupabaseService();
   bool _isLoading = true;
@@ -111,6 +114,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   // Load events from cache or network
+  /// Skips the 5-minute cache: an explicit refresh should show fresh data.
+  @override
+  Future<void> refreshFromShell() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _events.clear();
+    });
+    try {
+      await _loadEventsFromNetwork();
+      await _saveEventsToCache();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _loadEventsWithCache() async {
     try {
       if (!mounted) return;
@@ -204,7 +227,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Future<void> _loadEventsFromNetwork() async {
     try {
       // Load tasks, tickets, and meetings in parallel
-      final results = await Future.wait([
+      await Future.wait([
         _loadTasks(),
         _loadTickets(),
         _loadMeetings(),
@@ -254,7 +277,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         _events[dateOnly]!.add(CalendarEvent(
-          title: task['title'] ?? 'Untitled Task',
+          title: task['title'],
           startTime: const TimeOfDay(hour: 23, minute: 0),
           endTime: const TimeOfDay(hour: 23, minute: 59),
           type: EventType.task,
@@ -303,7 +326,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         }
 
         _events[dateOnly]!.add(CalendarEvent(
-          title: ticket['title'] ?? 'Untitled Ticket',
+          title: ticket['title'],
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
           endTime:
               TimeOfDay.fromDateTime(createdAt.add(const Duration(hours: 1))),
@@ -344,7 +367,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         // For meetings, assume 1 hour duration
         _events[dateOnly]!.add(CalendarEvent(
-          title: meeting['title'] ?? 'Untitled Meeting',
+          title: meeting['title'],
           startTime: TimeOfDay.fromDateTime(meetingDate),
           endTime:
               TimeOfDay.fromDateTime(meetingDate.add(const Duration(hours: 1))),
@@ -427,7 +450,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   height: 16,
                   width: events.length > 3 ? 35 : (events.length * 8 + 10),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(markerOpacity),
+                    color: Colors.green.withValues(alpha: markerOpacity),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
@@ -450,13 +473,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             selectedTextStyle: TextStyle(color: colorScheme.onPrimary),
             todayTextStyle: TextStyle(color: colorScheme.onSurface),
             outsideTextStyle:
-                TextStyle(color: colorScheme.onSurface.withOpacity(0.38)),
+                TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.38)),
             selectedDecoration: const BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
             ),
             todayDecoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.8),
+              color: Colors.green.withValues(alpha: 0.8),
               shape: BoxShape.circle,
             ),
             markersMaxCount: 0,
@@ -502,7 +525,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
         return InkWell(
           onTap: () {
-            setState(() => _selectedTime = time);
             _showCreateDialog(time);
           },
           child: Container(
@@ -513,7 +535,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 SizedBox(
                   width: 50,
                   child: Text(
-                    '${time.format(context).toLowerCase()}',
+                    time.format(context).toLowerCase(),
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12),
@@ -562,7 +584,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         margin: const EdgeInsets.only(top: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: event.type.color.withOpacity(0.2),
+          color: event.type.color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: event.type.color, width: 1),
         ),
@@ -573,7 +595,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(width: 4),
             Expanded(
               child: Text(
-                event.title,
+                event.title ?? _untitledLabel(event.type),
                 style: TextStyle(
                   color: event.type.color,
                   fontSize: 12,
@@ -596,6 +618,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
     );
+  }
+
+  String _untitledLabel(EventType type) {
+    final l10n = AppLocalizations.of(context);
+    switch (type) {
+      case EventType.meeting:
+        return l10n.calendarUntitledMeeting;
+      case EventType.task:
+        return l10n.calendarUntitledTask;
+      case EventType.ticket:
+        return l10n.calendarUntitledTicket;
+    }
   }
 
   Future<void> _handleEventTap(CalendarEvent event) async {
@@ -631,9 +665,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         break;
     }
 
-    // Refresh events if something was updated
+    // Bypass the cache so the edit shows up straight away
     if (result == true) {
-      await _loadEventsWithCache(); // Use cache loading
+      await refreshFromShell();
     }
   }
 
@@ -646,7 +680,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
-          'Create at ${selectedTime.format(context)}',
+          AppLocalizations.of(context)
+              .calendarCreateAt(selectedTime.format(context)),
           style: Theme.of(context)
               .textTheme
               .titleLarge
@@ -656,28 +691,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildDialogOption(
-              'Schedule a Meeting',
+              AppLocalizations.of(context).calendarScheduleMeeting,
               Icons.people,
               Colors.blue,
               () => _handleCreate(EventType.meeting, selectedTime),
             ),
             const SizedBox(height: 8),
             _buildDialogOption(
-              'Create a Task',
+              AppLocalizations.of(context).calendarCreateTask,
               Icons.task,
               Colors.green,
               () => _handleCreate(EventType.task, selectedTime),
             ),
             const SizedBox(height: 8),
             _buildDialogOption(
-              'Create a Ticket',
+              AppLocalizations.of(context).calendarCreateTicket,
               Icons.confirmation_number,
               Colors.orange,
               () => _handleCreate(EventType.ticket, selectedTime),
             ),
             const SizedBox(height: 8),
             _buildDialogOption(
-              'Create with Ell-ena AI',
+              AppLocalizations.of(context).calendarCreateWithAi,
               Icons.smart_toy,
               Colors.purple,
               () => _handleCreateWithAI(selectedTime),
@@ -699,7 +734,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -725,49 +760,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (_selectedDay == null) return;
 
-    final selectedDateTime = DateTime(
-      _selectedDay!.year,
-      _selectedDay!.month,
-      _selectedDay!.day,
-      selectedTime.hour,
-      selectedTime.minute,
-    );
-
     dynamic result;
 
     switch (type) {
       case EventType.meeting:
-        result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CreateMeetingScreen(),
-          ),
-        );
+        result = await openCreateFlow(context, CreateMeetingScreen());
         break;
       case EventType.task:
-        result = await Navigator.push(
+        // Due dates can't be in the past, so only prefill today or later.
+        final today = DateUtils.dateOnly(DateTime.now());
+        final day = DateUtils.dateOnly(_selectedDay!);
+        result = await openCreateFlow(
           context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CreateTaskScreen(),
-          ),
+          CreateTaskScreen(initialDueDate: day.isBefore(today) ? null : day),
         );
         break;
       case EventType.ticket:
-        result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CreateTicketScreen(),
-          ),
-        );
+        result = await openCreateFlow(context, CreateTicketScreen());
         break;
     }
 
-    // Refresh events if something was created
+    // Bypass the cache so the new item shows up straight away
     if (result == true) {
-      await _loadEventsWithCache(); // Use cache loading
+      await refreshFromShell();
     }
   }
 
@@ -803,7 +818,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 }
 
 class CalendarEvent {
-  final String title;
+  final String? title;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final EventType type;

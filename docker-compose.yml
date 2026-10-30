@@ -1,0 +1,204 @@
+version: '3.8'
+
+services:
+  # =========================================================================
+  # 1. DATABASE & INITIALIZATION (Supabase PostgreSQL 17 + pgvector)
+  # =========================================================================
+  db:
+    image: supabase/postgres:17.6.1.136
+    container_name: ellena-supabase-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase_admin -d postgres || pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ellena-net
+
+  db-init:
+    image: postgres:17-alpine
+    container_name: ellena-db-init
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+    volumes:
+      - ./sqls:/sqls:ro
+      - ./deploy/init-ellena-db.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    networks:
+      - ellena-net
+
+  # =========================================================================
+  # 2. SUPABASE BACKEND SERVICES (Auth, REST, Functions, Gateway)
+  # =========================================================================
+  auth:
+    image: supabase/gotrue:v2.189.0
+    container_name: ellena-supabase-auth
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-postgres}?sslmode=disable
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}/auth/v1
+    networks:
+      - ellena-net
+
+  rest:
+    image: postgrest/postgrest:v12.2.0
+    container_name: ellena-supabase-rest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - ellena-net
+
+  functions:
+    image: supabase/edge-runtime:v1.65.2
+    container_name: ellena-edge-functions
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_DB_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-postgres}
+      VEXA_API_URL: http://vexa-lite:8080
+      VEXA_BOT_API_KEY: ${VEXA_BOT_API_KEY:-local-dev-vexa-token-32-chars-long}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    volumes:
+      - ./supabase/functions:/home/deno/functions:ro
+    command: ["start", "--main-service", "/home/deno/functions/main"]
+    networks:
+      - ellena-net
+
+  kong:
+    image: kong:2.8.1
+    container_name: ellena-supabase-kong
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth
+    volumes:
+      - ./deploy/kong.yml:/var/lib/kong/kong.yml:ro
+    depends_on:
+      - auth
+      - rest
+      - functions
+    networks:
+      - ellena-net
+
+  # =========================================================================
+  # 3. SELF-HOSTED VEXA-LITE & FUNASR STT ENGINE
+  # =========================================================================
+  vexa-db:
+    image: postgres:15-alpine
+    container_name: ellena-vexa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vexa
+      POSTGRES_USER: vexa_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+    volumes:
+      - vexa-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vexa_user -d vexa"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ellena-net
+
+  stt-engine:
+    image: ghcr.io/aossie-org/funasr-stt:latest
+    container_name: ellena-stt-engine
+    restart: unless-stopped
+    environment:
+      MODEL_NAME: "iic/SenseVoiceSmall"
+      PORT: 8000
+    volumes:
+      - stt-models-data:/root/.cache/modelscope
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ellena-net
+
+  vexa-lite:
+    image: ghcr.io/vexa-ai/vexa-lite:latest
+    container_name: ellena-vexa-lite
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      VEXA_API_KEY: ${VEXA_BOT_API_KEY:-local-dev-vexa-token-32-chars-long}
+      TRANSCRIPTION_SERVICE_URL: http://stt-engine:8000/v1/transcribe
+      DATABASE_URL: postgres://vexa_user:${POSTGRES_PASSWORD:-postgrespassword}@vexa-db:5432/vexa
+    depends_on:
+      vexa-db:
+        condition: service_healthy
+      stt-engine:
+        condition: service_healthy
+    networks:
+      - ellena-net
+
+  # =========================================================================
+  # 4. FRONTEND (Flutter Web served via Nginx)
+  # =========================================================================
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        SUPABASE_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+        SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        GEMINI_API_KEY: ${GEMINI_API_KEY}
+        OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL:-http://localhost}
+    container_name: ellena-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - kong
+    networks:
+      - ellena-net
+
+# =========================================================================
+# VOLUMES & NETWORKS
+# =========================================================================
+volumes:
+  supabase-db-data:
+  vexa-db-data:
+  stt-models-data:
+
+networks:
+  ellena-net:
+    name: ellena-net
+    driver: bridge

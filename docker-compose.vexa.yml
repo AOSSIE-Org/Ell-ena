@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  vexa-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - vexa-db-data:/var/lib/postgresql/data
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Local SenseVoice STT Engine running on CPU
+  stt-engine:
+    image: python:3.11-slim
+    restart: unless-stopped
+    command: >
+      bash -c "apt-get update && apt-get install -y --no-install-recommends ffmpeg &&
+               pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu &&
+               pip install --no-cache-dir funasr modelscope fastapi uvicorn python-multipart &&
+               python -m funasr.bin.server --model sensevoice --device cpu --host 0.0.0.0 --port 8000"
+    volumes:
+      - funasr-cache:/root/.cache/modelscope
+    networks:
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 4096M
+
+  # Vexa Lite meeting bot orchestrator
+  vexa-lite:
+    image: vexaai/vexa-lite:latest
+    restart: unless-stopped
+    depends_on:
+      vexa-postgres:
+        condition: service_healthy
+      stt-engine:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@vexa-postgres:5432/${POSTGRES_DB}?ssl=disable
+      - ADMIN_API_TOKEN=${ADMIN_API_TOKEN}
+      - TRANSCRIPTION_SERVICE_URL=http://stt-engine:8000
+      - TRANSCRIPTION_SERVICE_TOKEN=${TRANSCRIPTION_SERVICE_TOKEN}
+      - TRANSCRIPTION_MODEL=sensevoice
+    networks:
+      - dokploy-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+
+volumes:
+  vexa-db-data:
+  funasr-cache:
+
+networks:
+  dokploy-network:
+    external: true

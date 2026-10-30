@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
 
 class CreateTicketScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   String _selectedCategory = 'Bug';
   List<Map<String, dynamic>> _teamMembers = [];
   String? _selectedAssignee;
+  bool _syncToGithub = false;
   bool _isLoading = true;
 
   @override
@@ -71,6 +73,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   Future<void> _createTicket() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context);
+
     setState(() {
       _isLoading = true;
     });
@@ -82,6 +86,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
         priority: _selectedPriority,
         category: _selectedCategory,
         assignedToUserId: _selectedAssignee,
+        syncToGithub: _syncToGithub,
       );
 
       if (result['success']) {
@@ -96,7 +101,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to create ticket: ${result['error']}'),
+              content: Text(l10n.ticketCreateFailed('${result['error']}')),
               backgroundColor: Colors.red,
             ),
           );
@@ -111,7 +116,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating ticket: $e'),
+            content: Text(l10n.ticketErrorCreating('$e')),
             backgroundColor: Colors.red,
           ),
         );
@@ -121,13 +126,14 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final ticketCategories = _supabaseService.getTicketCategories();
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: const Text('Create Ticket'),
+        title: Text(l10n.ticketCreateTitle),
         actions: [
           if (_isLoading)
             const Padding(
@@ -145,7 +151,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
             IconButton(
               onPressed: _createTicket,
               icon: const Icon(Icons.check),
-              tooltip: 'Create Ticket',
+              tooltip: l10n.ticketCreateTitle,
             ),
         ],
       ),
@@ -160,9 +166,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                   TextFormField(
                     controller: _titleController,
                     decoration: InputDecoration(
-                      labelText: 'Title',
+                      labelText: l10n.ticketTitle,
                       labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText: 'Enter ticket title',
+                      hintText: l10n.ticketTitleHint,
                       hintStyle: TextStyle(color: Colors.grey.shade600),
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
@@ -175,7 +181,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     style: const TextStyle(color: Colors.white),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a title';
+                        return l10n.ticketTitleRequired;
                       }
                       return null;
                     },
@@ -186,10 +192,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                   TextFormField(
                     controller: _descriptionController,
                     decoration: InputDecoration(
-                      labelText: 'Description',
+                      labelText: l10n.ticketDescription,
                       labelStyle: TextStyle(color: Colors.grey.shade400),
-                      hintText:
-                          'Enter ticket description (max 75 words recommended)',
+                      hintText: l10n.ticketDescriptionHint,
                       hintStyle: TextStyle(color: Colors.grey.shade600),
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
@@ -206,7 +211,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                     maxLines: 5,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a description';
+                        return l10n.ticketDescriptionRequired;
                       }
                       return null;
                     },
@@ -215,7 +220,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
                   // Priority
                   Text(
-                    'Priority',
+                    l10n.ticketPriority,
                     style: TextStyle(
                       color: Colors.grey.shade400,
                       fontSize: 16,
@@ -224,19 +229,21 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildPriorityOption('low', 'Low', Colors.green.shade400),
+                      _buildPriorityOption(
+                          'low', l10n.ticketPriorityLow, Colors.green.shade400),
+                      const SizedBox(width: 8),
+                      _buildPriorityOption('medium', l10n.ticketPriorityMedium,
+                          Colors.orange.shade400),
                       const SizedBox(width: 8),
                       _buildPriorityOption(
-                          'medium', 'Medium', Colors.orange.shade400),
-                      const SizedBox(width: 8),
-                      _buildPriorityOption('high', 'High', Colors.red.shade400),
+                          'high', l10n.ticketPriorityHigh, Colors.red.shade400),
                     ],
                   ),
                   const SizedBox(height: 24),
 
                   // Category
                   Text(
-                    'Category',
+                    l10n.ticketCategory,
                     style: TextStyle(
                       color: Colors.grey.shade400,
                       fontSize: 16,
@@ -262,7 +269,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                         items: ticketCategories.map((category) {
                           return DropdownMenuItem<String>(
                             value: category,
-                            child: Text(category),
+                            child: Text(_categoryLabel(l10n, category)),
                           );
                         }).toList(),
                         dropdownColor: Theme.of(context).colorScheme.surface,
@@ -276,7 +283,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
                   // Assignee
                   Text(
-                    'Assign To (Optional)',
+                    l10n.ticketAssignToOptional,
                     style: TextStyle(
                       color: Colors.grey.shade400,
                       fontSize: 16,
@@ -293,7 +300,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                       child: DropdownButton<String?>(
                         value: _selectedAssignee,
                         hint: Text(
-                          'Select team member',
+                          l10n.ticketSelectTeamMember,
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                         onChanged: (value) {
@@ -302,9 +309,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                           });
                         },
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('Unassigned'),
+                            child: Text(l10n.ticketUnassigned),
                           ),
                           ..._teamMembers.map((member) {
                             return DropdownMenuItem<String?>(
@@ -327,7 +334,8 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(member['full_name'] ?? 'Unknown'),
+                                  Text(member['full_name'] ??
+                                      l10n.ticketUnknown),
                                   if (member['role'] == 'admin')
                                     Container(
                                       margin: const EdgeInsets.only(left: 8),
@@ -337,11 +345,11 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: Colors.orange.shade400
-                                            .withOpacity(0.2),
+                                            .withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        'Admin',
+                                        l10n.ticketRoleAdmin,
                                         style: TextStyle(
                                           color: Colors.orange.shade400,
                                           fontSize: 10,
@@ -352,7 +360,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                                 ],
                               ),
                             );
-                          }).toList(),
+                          }),
                         ],
                         dropdownColor: Theme.of(context).colorScheme.surface,
                         style: TextStyle(
@@ -360,6 +368,29 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                         isExpanded: true,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      l10n.ticketCreateGithubIssue,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      l10n.ticketCreateGithubIssueSubtitle,
+                      style: TextStyle(color: Colors.grey.shade400),
+                    ),
+                    value: _syncToGithub,
+                    activeThumbColor: Colors.green.shade400,
+                    onChanged: (value) {
+                      setState(() {
+                        _syncToGithub = value;
+                      });
+                    },
                   ),
                   const SizedBox(height: 32),
 
@@ -384,9 +415,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : const Text(
-                            'Create Ticket',
-                            style: TextStyle(
+                        : Text(
+                            l10n.ticketCreateTitle,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -397,6 +428,28 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
               ),
             ),
     );
+  }
+
+  /// Display label for a stored category value; unknown values show as-is.
+  String _categoryLabel(AppLocalizations l10n, String category) {
+    switch (category) {
+      case 'Bug':
+        return l10n.ticketCategoryBug;
+      case 'Feature Request':
+        return l10n.ticketCategoryFeatureRequest;
+      case 'UI/UX':
+        return l10n.ticketCategoryUiUx;
+      case 'Performance':
+        return l10n.ticketCategoryPerformance;
+      case 'Documentation':
+        return l10n.ticketCategoryDocumentation;
+      case 'Security':
+        return l10n.ticketCategorySecurity;
+      case 'Other':
+        return l10n.ticketCategoryOther;
+      default:
+        return category;
+    }
   }
 
   Widget _buildPriorityOption(String value, String label, Color color) {
@@ -413,7 +466,7 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withOpacity(0.2)
+                ? color.withValues(alpha: 0.2)
                 : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(

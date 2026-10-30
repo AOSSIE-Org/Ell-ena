@@ -181,6 +181,19 @@ flutter analyze
 flutter test
 ```
 
+### Testing policy
+
+New functionality must include tests in the automated test suite, and bug
+fixes should include a test that fails without the fix.
+
+- Flutter code: add tests under `test/`, mirroring the `lib/` path. CI fails
+  if line coverage drops below 90%.
+- Edge Functions: add `*_test.ts` files next to the function and run
+  `deno test` from `supabase/functions/`.
+
+Pull requests that add behaviour without tests will be asked to add them
+before review.
+
 ## References
 
 - `BACKEND.md` (Supabase CLI, secrets, migrations, Edge Functions)
@@ -252,5 +265,6 @@ Before submitting your PR, ensure:
 * [ ] The project runs successfully after your changes
 * [ ] No new errors or warnings are introduced
 * [ ] Code follows project conventions
+* [ ] New functionality includes tests (see [Testing policy](#testing-policy))
 * [ ] Relevant documentation is updated
 * [ ] PR is linked to an issue (e.g., `Closes #123`)
