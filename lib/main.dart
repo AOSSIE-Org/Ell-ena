@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'
-    hide ChangeNotifierProvider;
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/chat/chat_screen.dart';
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
+import 'providers/shared_preferences_provider.dart';
 import 'providers/theme_provider.dart';
-import 'theme/theme_controller.dart';
+import 'theme/app_theme_mode.dart';
 import 'theme/app_themes.dart';
 
 void main() async {
@@ -22,18 +22,15 @@ void main() async {
     debugPrint('Error initializing services: $e');
   }
   
-  final themeController = await ThemeController.create();
+  final prefs = await SharedPreferences.getInstance();
 
 runApp(
   WidgetsBindingObserverWidget(
     child: ProviderScope(
       overrides: [
-        themeControllerProvider.overrideWith((ref) => themeController),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: ChangeNotifierProvider<ThemeController>.value(
-        value: themeController,
-        child: const MyApp(),
-      ),
+      child: const MyApp(),
     ),
   ),
 );
@@ -44,7 +41,7 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeController = ref.watch(themeControllerProvider);
+    final themeMode = ref.watch(themeControllerProvider);
     return MaterialApp(
       title: 'Ell-ena',
       debugShowCheckedModeBanner: false,
@@ -52,7 +49,7 @@ class MyApp extends ConsumerWidget {
       navigatorObservers: <NavigatorObserver>[AppRouteObserver.instance],
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: themeController.flutterThemeMode,
+      themeMode: themeMode.flutterThemeMode,
       home: const SplashScreen(),
       onGenerateRoute: (settings) {
         if (settings.name == '/') {

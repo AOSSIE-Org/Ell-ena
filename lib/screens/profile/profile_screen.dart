@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
 import '../../theme/app_theme_mode.dart';
-import '../../theme/theme_controller.dart';
 import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
@@ -740,13 +740,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showModalBottomSheet<void>(
       context: context,
       builder: (context) {
-        return Consumer<ThemeController>(
-          builder: (context, controller, _) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final themeMode = ref.watch(themeControllerProvider);
             return SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: AppThemeMode.values.map((mode) {
-                  final isSelected = controller.themeMode == mode;
+                  final isSelected = themeMode == mode;
                   return ListTile(
                     leading: Icon(
                       mode == AppThemeMode.light
@@ -758,7 +759,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: Text(_themeModeLabel(mode)),
                     trailing: isSelected ? const Icon(Icons.check) : null,
                     onTap: () {
-                      controller.setThemeMode(mode);
+                      ref
+                          .read(themeControllerProvider.notifier)
+                          .setThemeMode(mode);
                       Navigator.pop(context);
                     },
                   );
@@ -772,8 +775,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPreferencesSection() {
-    return Consumer<ThemeController>(
-      builder: (context, themeController, _) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final themeMode = ref.watch(themeControllerProvider);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -794,7 +798,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   _buildThemePreferenceItem(
-                    themeController: themeController,
+                    themeMode: themeMode,
                   ),
                   Divider(color: Theme.of(context).colorScheme.outlineVariant),
                   _buildPreferenceItem(
@@ -820,7 +824,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildThemePreferenceItem({
-    required ThemeController themeController,
+    required AppThemeMode themeMode,
   }) {
     return ListTile(
       leading: Container(
@@ -839,7 +843,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       subtitle: Text(
-        _themeModeLabel(themeController.themeMode),
+        _themeModeLabel(themeMode),
         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       trailing: Icon(
