@@ -72,7 +72,6 @@ serve(async (req) => {
       );
     }
   
-    // Validate if URL is Google Meet
     if (!meeting_url.includes("meet.google.com")) {
       console.error("Only Google Meet URLs are supported");
       return new Response(
@@ -80,9 +79,18 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-  
-    // Extract meeting ID from Google Meet URL
-    const meetId = meeting_url.split('/').pop().split('?')[0];
+
+    const match = meeting_url.trim().match(/meet\.google\.com\/([a-zA-Z0-9_-]+)/i);
+    const meetId = match ? match[1] : null;
+
+    if (!meetId) {
+      console.error("Invalid Google Meet URL or unable to extract meeting ID");
+      return new Response(
+        JSON.stringify({ error: "Invalid Google Meet URL or unable to extract meeting ID" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Extracted Google Meet ID:", meetId);
   
     // Start bot

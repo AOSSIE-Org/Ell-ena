@@ -72,8 +72,25 @@ serve(async (req) => {
       );
     }
   
-    // Extract meeting ID from Google Meet URL
-    const meetId = meeting_url.split('/').pop().split('?')[0];
+    if (!meeting_url.includes("meet.google.com")) {
+      console.error("Only Google Meet URLs are supported");
+      return new Response(
+        JSON.stringify({ error: "Only Google Meet URLs are supported" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const match = meeting_url.trim().match(/meet\.google\.com\/([a-zA-Z0-9_-]+)/i);
+    const meetId = match ? match[1] : null;
+
+    if (!meetId) {
+      console.error("Invalid Google Meet URL or unable to extract meeting ID");
+      return new Response(
+        JSON.stringify({ error: "Invalid Google Meet URL or unable to extract meeting ID" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Extracted Google Meet ID:", meetId);
     
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
