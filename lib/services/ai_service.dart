@@ -63,20 +63,14 @@ class AIService {
       await initialize();
     }
     
-    // Check if the message is asking about meetings
-    bool isMeetingQuery = _isMeetingRelatedQuery(userMessage);
-    String meetingContext = "";
-    
-    // If it's a meeting query, retrieve relevant meeting summaries
-    if (isMeetingQuery) {
-      final meetingSummaries = await getRelevantMeetingSummaries(userMessage);
-      
-      if (meetingSummaries.isNotEmpty) {
-        meetingContext = "\nRelevant meeting information:\n\n";
-        meetingContext += MeetingFormatter.formatMeetingSummaries(meetingSummaries);
-      }
+    // Semantic retrieval across meetings, tasks, and tickets (rag_search)
+    String ragContext = "";
+    final ragResults = await getRelevantRagResults(userMessage);
+    if (ragResults.isNotEmpty) {
+      ragContext = "\nRelevant workspace context:\n\n";
+      ragContext += MeetingFormatter.formatRagResults(ragResults);
     }
-    
+
     try {
       // Define function declarations for the model
       final List<Map<String, dynamic>> functionDeclarations = [
@@ -276,31 +270,6 @@ class AIService {
         teamMemberContext += "- ${member['full_name']} (${member['role']}): ${member['id']}\n";
       }
       
-      // Create task context if available
-      String taskContext = "";
-      if (userTasks.isNotEmpty) {
-        taskContext = "\nCurrent user's tasks:\n";
-        for (var task in userTasks) {
-          String dueDate = task['due_date'] != null 
-              ? DateFormat('yyyy-MM-dd').format(DateTime.parse(task['due_date']))
-              : "No due date";
-          
-          String status = task['status'] ?? 'todo';
-          taskContext += "- ${task['title']} (Status: $status, Due: $dueDate, ID: ${task['id']})\n";
-        }
-      }
-      
-      // Create ticket context if available
-      String ticketContext = "";
-      if (userTickets.isNotEmpty) {
-        ticketContext = "\nCurrent user's tickets:\n";
-        for (var ticket in userTickets) {
-          String priority = ticket['priority'] ?? 'medium';
-          String status = ticket['status'] ?? 'open';
-          ticketContext += "- ${ticket['title']} (Status: $status, Priority: $priority, ID: ${ticket['id']})\n";
-        }
-      }
-      
       // Add system message as the first message with role "model"
       contents.add({
         "role": "model",
@@ -309,9 +278,7 @@ class AIService {
             "text": "You are a helpful assistant for a team collaboration app called Ell-ena. You can help users create and manage tasks, tickets, and schedule meetings. When appropriate, call the relevant function to help users.\n\n" +
                     "Current date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n\n" +
                     "$teamMemberContext\n" +
-                    "$taskContext" +
-                    "$ticketContext\n" +
-                    "$meetingContext\n" +
+                    "$ragContext\n" +
                     "Guidelines for tasks, tickets, and meetings:\n" +
                     "1. Create descriptive, clear titles that summarize the purpose - be specific and professional (e.g., 'Bug Fixes Discussion' instead of just 'Meeting')\n" +
                     "2. Always provide detailed descriptions with all relevant information, even if the user doesn't explicitly provide it\n" +
@@ -543,77 +510,120 @@ class AIService {
     }
   }
   
-// Function to get relevant meeting summaries for a query (vector search only)
-Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) async {
-  if (!_isInitialized) {
-    await initialize();
-  }
+  // Function to get relevant meeting summaries for a query (vector search only)
+  Future<List<Map<String, dynamic>>> getRelevantMeetingSummaries(String query) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
 
-  print("👉 getRelevantMeetingSummaries() called with query: $query");
+    print("👉 getRelevantMeetingSummaries() called with query: $query");
 
-  try {
-    // Step 1: Queue the embedding request and get the response ID
-    final respIdResponse = await _supabaseService.client.rpc(
-      'queue_embedding',
-      params: {
-        'query_text': query,
-      },
-    );
+    try {
+      // Step 1: Queue the embedding request and get the response ID
+      final respIdResponse = await _supabaseService.client.rpc(
+        'queue_embedding',
+        params: {
+          'query_text': query,
+        },
+      );
 
-    final respId = respIdResponse as int;
-    print("👉 Embedding queued with response ID: $respId");
+      final respId = respIdResponse as int;
+      print("👉 Embedding queued with response ID: $respId");
 
-    // Step 2: Fetch meetings using the resp_id
-    final response = await _supabaseService.client.rpc(
-      'search_meeting_summaries_by_resp_id',
-      params: {
-        'resp_id': respId,
-        'match_count': 2,
-      },
-    );
+      // Step 2: Fetch meetings using the resp_id
+      final response = await _supabaseService.client.rpc(
+        'search_meeting_summaries_by_resp_id',
+        params: {
+          'resp_id': respId,
+          'match_count': 2,
+        },
+      );
 
-    print("👉 Got search results using response ID: $respId");
+      print("👉 Got search results using response ID: $respId");
 
-    if (response is List) {
-      final meetings = List<Map<String, dynamic>>.from(response);
+      if (response is List) {
+        final meetings = List<Map<String, dynamic>>.from(response);
 
-      for (var meeting in meetings) {
-        print("Meeting: ${meeting['title']} - Date: ${meeting['meeting_date']}");
-        if (meeting.containsKey('similarity')) {
-          print("Similarity: ${meeting['similarity']}");
+        for (var meeting in meetings) {
+          print("Meeting: ${meeting['title']} - Date: ${meeting['meeting_date']}");
+          if (meeting.containsKey('similarity')) {
+            print("Similarity: ${meeting['similarity']}");
+          }
+          if (meeting.containsKey('debug_info')) {
+            print("Debug info: ${meeting['debug_info']}");
+          }
         }
-        if (meeting.containsKey('debug_info')) {
-          print("Debug info: ${meeting['debug_info']}");
-        }
+
+        return meetings;
+      } else {
+        print("👉 No relevant meetings found or invalid response format");
+        return [];
       }
-
-      return meetings;
-    } else {
-      print("👉 No relevant meetings found or invalid response format");
+    } catch (e, st) {
+      debugPrint('Error getting relevant meeting summaries: $e\n$st');
       return [];
     }
-  } catch (e, st) {
-    debugPrint('Error getting relevant meeting summaries: $e\n$st');
-    return [];
   }
-}
+
+  /// Unified semantic retrieval via queue_embedding → search_rag_by_resp_id.
+  Future<List<Map<String, dynamic>>> getRelevantRagResults(String query) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    print("👉 getRelevantRagResults() called with query: $query");
+
+    try {
+      final respIdResponse = await _supabaseService.client.rpc(
+        'queue_embedding',
+        params: {
+          'query_text': query,
+        },
+      );
+
+      final respId = respIdResponse as int;
+      print("👉 Embedding queued with response ID: $respId");
+
+      final response = await _supabaseService.client.rpc(
+        'search_rag_by_resp_id',
+        params: {
+          'resp_id': respId,
+          'match_count': 5,
+        },
+      );
+
+      print("👉 Got rag search results using response ID: $respId");
+
+      if (response is List) {
+        final results = List<Map<String, dynamic>>.from(response);
+
+        for (var result in results) {
+          print(
+            "RAG: ${result['entity_type']} - ${result['title']} "
+            "(similarity: ${result['similarity']})",
+          );
+        }
+
+        return results;
+      }
+
+      print("👉 No relevant rag results found or invalid response format");
+      return [];
+    } catch (e, st) {
+      debugPrint('Error getting relevant rag results: $e\n$st');
+      return [];
+    }
+  }
 
   // Helper method to detect if a query is meeting-related
+  // Kept for compatibility; chat context now uses getRelevantRagResults.
   bool _isMeetingRelatedQuery(String query) {
     final meetingKeywords = [
-      'meeting', 'meetings', 'call', 'discussion', 'talked about', 
+      'meeting', 'meetings', 'call', 'discussion', 'talked about',
       'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
-      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed','meeting', 'meet', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
-      'last call', 'previous call', 'last discussion', 'previous discussion', 'last talked about', 'previous talked about',
-      'last mentioned in', 'previous mentioned in', 'last spoke about', 'previous spoke about', 'last discussed', 'previous discussed','meeting', 'meet', 'call', 'discussion', 'talked about', 
-      'said in', 'mentioned in', 'last meeting', 'previous meeting',
-      'summary', 'minutes', 'transcript', 'recording', 'spoke about', 'last meet', 'previous meeting',
+      'summary', 'minutes', 'transcript', 'recording', 'spoke about',
     ];
-    
+
     final queryLower = query.toLowerCase();
     return meetingKeywords.any((keyword) => queryLower.contains(keyword));
   }
