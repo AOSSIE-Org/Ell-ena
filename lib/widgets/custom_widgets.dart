@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'dart:math';
@@ -652,7 +653,7 @@ class WorkspaceLoadingSkeleton extends StatelessWidget {
                       Icon(Icons.search, color: subTextColor),
                       const SizedBox(width: 8),
                       Text(
-                        'Search',
+                        AppLocalizations.of(context).search,
                         style: TextStyle(
                           color: subTextColor,
                         ),

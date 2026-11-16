@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/supabase_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -120,6 +121,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -136,9 +138,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         strokeWidth: 2, color: Colors.white))
                 : Icon(Icons.save,
                     color: Theme.of(context).colorScheme.onSurface),
-            label: Text('Save',
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            label: Text(
+              l10n.save,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
           ),
         ],
       ),

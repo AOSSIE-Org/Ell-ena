@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    hide Consumer;
 import 'package:provider/provider.dart';
+import '../../l10n/app_localizations.dart';
+import '../../providers/locale_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../services/navigation_service.dart';
 import '../../theme/app_theme_mode.dart';
@@ -8,14 +12,14 @@ import '../auth/login_screen.dart';
 import 'team_members_screen.dart';
 import 'edit_profile_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _supabaseService = SupabaseService();
   bool _isLoading = true;
   Map<String, dynamic>? _userProfile;
@@ -72,6 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleLogout() async {
+    final l10n = AppLocalizations.of(context);
     //Confirmation dialog
     final shouldLogout = await showDialog<bool>(
       context: context,
@@ -81,15 +86,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text('Log out?'),
-        content: const Text(
-          'You will need to log in again to access your account.',
-        ),
+        title: Text(l10n.logoutTitle),
+        content: Text(l10n.logoutMessage),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -99,9 +102,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text(
-              'Logout',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            child: Text(
+              l10n.logout,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -142,9 +145,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      final l10n = AppLocalizations.of(context);
       return Scaffold(
-        body: const Center(
-          child: CircularProgressIndicator(),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(l10n.loading),
+            ],
+          ),
         ),
       );
     }
@@ -168,7 +179,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 IconButton(
                   icon: const Icon(Icons.logout, color: Colors.white),
                   onPressed: _handleLogout,
-                  tooltip: 'Logout',
+                  tooltip: AppLocalizations.of(context).logout,
                 ),
               ],
               flexibleSpace: FlexibleSpaceBar(
@@ -295,6 +306,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showLanguagePicker() {
+    final l10n = AppLocalizations.of(context);
+    final selectedLocale = ref.watch(localeControllerProvider);
+    final localeController = ref.read(localeControllerProvider.notifier);
+
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  l10n.selectLanguage,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+              ...AppLocalizations.supportedLocales.map((locale) {
+                final isSelected =
+                    locale.languageCode == selectedLocale.languageCode;
+                return ListTile(
+                  leading: Icon(
+                    Icons.language,
+                    color: isSelected ? Colors.green.shade400 : null,
+                  ),
+                  title: Text(l10n.languageName(locale.languageCode)),
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: Colors.green.shade400)
+                      : null,
+                  onTap: () async {
+                    await localeController.setLocale(locale);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageSettingItem() {
+    final l10n = AppLocalizations.of(context);
+    final selectedLocale = ref.watch(localeControllerProvider);
+
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade400.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.language_outlined, color: Colors.blue.shade400),
+      ),
+      title: Text(
+        l10n.language,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      subtitle: Text(
+        l10n.languageName(selectedLocale.languageCode),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onTap: _showLanguagePicker,
+    );
+  }
+
   void _showTeamSwitcher() {
     showDialog(
       context: context,
@@ -360,7 +453,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
           ],
         );
@@ -638,7 +731,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Settings',
+          AppLocalizations.of(context).settings,
           style: TextStyle(
             color: colorScheme.onSurface,
             fontSize: 20,
@@ -686,6 +779,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 subtitle: 'Configure security settings',
                 iconColor: Colors.green.shade400,
               ),
+              const Divider(color: Colors.grey),
+              _buildLanguageSettingItem(),
               // Team Switcher option for users with multiple teams
               if (_userTeams.length > 1) ...[
                 const Divider(color: Colors.grey),
@@ -802,13 +897,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'Push Notifications',
                     isSwitch: true,
                     iconColor: Colors.red.shade400,
-                  ),
-                  Divider(color: Theme.of(context).colorScheme.outlineVariant),
-                  _buildPreferenceItem(
-                    icon: Icons.language_outlined,
-                    title: 'Language',
-                    subtitle: 'English (US)',
-                    iconColor: Colors.blue.shade400,
                   ),
                 ],
               ),

@@ -3,6 +3,7 @@ import '../tasks/task_screen.dart';
 import '../tasks/create_task_screen.dart';
 import '../tickets/ticket_screen.dart';
 import '../tickets/create_ticket_screen.dart';
+import '../../l10n/app_localizations.dart';
 import '../meetings/meeting_screen.dart';
 import '../meetings/create_meeting_screen.dart';
 import '../chat/chat_screen.dart';
@@ -152,6 +153,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
     }
 
     final statusBarHeight = MediaQuery.of(context).padding.top;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -170,10 +172,13 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
               labelColor: Colors.green,
               unselectedLabelColor:
                   Theme.of(context).colorScheme.onSurfaceVariant,
-              tabs: const [
-                Tab(icon: Icon(Icons.task), text: 'Tasks'),
-                Tab(icon: Icon(Icons.confirmation_number), text: 'Tickets'),
-                Tab(icon: Icon(Icons.group), text: 'Meetings'),
+              tabs: [
+                Tab(icon: const Icon(Icons.task), text: l10n.tasks),
+                Tab(
+                  icon: const Icon(Icons.confirmation_number),
+                  text: l10n.tickets,
+                ),
+                Tab(icon: const Icon(Icons.group), text: l10n.meetings),
               ],
             ),
           ),
