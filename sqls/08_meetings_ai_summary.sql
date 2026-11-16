@@ -13,7 +13,9 @@ BEGIN
         FROM meetings
         WHERE final_transcription IS NOT NULL
           AND meeting_summary_json IS NULL
-          AND created_at > NOW() - INTERVAL '1 day'
+        -- Booking age does not indicate when the transcript became available.
+        ORDER BY created_at, id
+        LIMIT 50
     LOOP
         RAISE LOG 'Processing meeting_id=%', meeting_record.id;
 
