@@ -1,0 +1,80 @@
+{
+  "@@locale": "en",
+  "appTitle": "Ell-ena",
+  "@appTitle": {
+    "description": "The application title shown in the task switcher and browser tab."
+  },
+  "login": "Sign In",
+  "@login": {
+    "description": "Primary authentication action on the login screen."
+  },
+  "signUp": "Sign Up",
+  "@signUp": {
+    "description": "Registration action on the authentication screens."
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout action label."
+  },
+  "logoutTitle": "Log out?",
+  "@logoutTitle": {
+    "description": "Title for the logout confirmation dialog."
+  },
+  "logoutMessage": "You will need to log in again to access your account.",
+  "@logoutMessage": {
+    "description": "Body text for the logout confirmation dialog."
+  },
+  "dashboard": "Dashboard",
+  "@dashboard": {
+    "description": "Dashboard navigation label."
+  },
+  "tasks": "Tasks",
+  "@tasks": {
+    "description": "Tasks section label."
+  },
+  "tickets": "Tickets",
+  "@tickets": {
+    "description": "Tickets section label."
+  },
+  "meetings": "Meetings",
+  "@meetings": {
+    "description": "Meetings section label."
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings section label."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Generic cancel action."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Generic save action."
+  },
+  "loading": "Loading...",
+  "@loading": {
+    "description": "Generic loading indicator label."
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Generic search placeholder label."
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Language preference setting label."
+  },
+  "languageName": "{localeCode, select, en{English} hi{हिन्दी} other{{localeCode}}}",
+  "@languageName": {
+    "description": "Display name for a language identified by locale code.",
+    "placeholders": {
+      "localeCode": {
+        "type": "String"
+      }
+    }
+  },
+  "selectLanguage": "Select Language",
+  "@selectLanguage": {
+    "description": "Title for the language selection sheet."
+  }
+}

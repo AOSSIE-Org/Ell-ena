@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     hide ChangeNotifierProvider;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/chat/chat_screen.dart';
 import 'services/navigation_service.dart';
 import 'services/supabase_service.dart';
 import 'services/ai_service.dart';
+import 'providers/locale_provider.dart';
+import 'providers/shared_preferences_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'theme/theme_controller.dart';
@@ -23,43 +28,54 @@ void main() async {
     debugPrint('Error initializing services: $e');
   }
 
+  final prefs = await SharedPreferences.getInstance();
   final themeController = await ThemeController.create();
   final userProfileController = UserProfileController();
 
-runApp(
-  WidgetsBindingObserverWidget(
-    child: ProviderScope(
-      overrides: [
-        themeControllerProvider.overrideWith((ref) => themeController),
-        userProfileControllerProvider.overrideWith(
-          (ref) => userProfileController,
-        ),
-      ],
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ThemeController>.value(
-            value: themeController,
-          ),
-          ChangeNotifierProvider<UserProfileController>.value(
-            value: userProfileController,
+  runApp(
+    WidgetsBindingObserverWidget(
+      child: ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          themeControllerProvider.overrideWith((ref) => themeController),
+          userProfileControllerProvider.overrideWith(
+            (ref) => userProfileController,
           ),
         ],
-        child: const MyApp(),
+        child: MultiProvider(
+          providers: [
+            ChangeNotifierProvider<ThemeController>.value(
+              value: themeController,
+            ),
+            ChangeNotifierProvider<UserProfileController>.value(
+              value: userProfileController,
+            ),
+          ],
+          child: const MyApp(),
+        ),
       ),
     ),
-  ),
-);
-
+  );
 }
+
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeController = ref.watch(themeControllerProvider);
+    final locale = ref.watch(localeControllerProvider);
     return MaterialApp(
-      title: 'Ell-ena',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       navigatorKey: NavigationService().navigatorKey,
       navigatorObservers: <NavigatorObserver>[AppRouteObserver.instance],
       theme: lightTheme,
@@ -73,19 +89,19 @@ class MyApp extends ConsumerWidget {
             settings: settings,
           );
         } else if (settings.name == '/home') {
-          final args = (settings.arguments is Map<String, dynamic>) 
-              ? settings.arguments as Map<String, dynamic> 
+          final args = (settings.arguments is Map<String, dynamic>)
+              ? settings.arguments as Map<String, dynamic>
               : null;
-              
+
           return MaterialPageRoute(
             builder: (context) => HomeScreen(arguments: args),
             settings: settings,
           );
         } else if (settings.name == '/chat') {
-          final args = (settings.arguments is Map<String, dynamic>) 
-              ? settings.arguments as Map<String, dynamic> 
+          final args = (settings.arguments is Map<String, dynamic>)
+              ? settings.arguments as Map<String, dynamic>
               : null;
-              
+
           return MaterialPageRoute(
             builder: (context) => ChatScreen(arguments: args),
             settings: settings,
@@ -98,50 +114,47 @@ class MyApp extends ConsumerWidget {
 }
 
 class WidgetsBindingObserverWidget extends StatefulWidget {
-    final Widget child;
+  final Widget child;
 
-    const WidgetsBindingObserverWidget({
-      super.key,
-      required this.child,
-    });
+  const WidgetsBindingObserverWidget({
+    super.key,
+    required this.child,
+  });
 
-    @override
-    State<WidgetsBindingObserverWidget> createState() =>
-        _WidgetsBindingObserverWidgetState();
+  @override
+  State<WidgetsBindingObserverWidget> createState() =>
+      _WidgetsBindingObserverWidgetState();
+}
+
+class _WidgetsBindingObserverWidgetState
+    extends State<WidgetsBindingObserverWidget> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
   }
 
-  class _WidgetsBindingObserverWidgetState
-      extends State<WidgetsBindingObserverWidget>
-      with WidgetsBindingObserver {
-
-    @override
-    void initState() {
-      super.initState();
-      WidgetsBinding.instance.addObserver(this);
-    }
-
-    @override
-    void didChangeAppLifecycleState(AppLifecycleState state) {
-      if (state == AppLifecycleState.detached) {
-        SupabaseService().dispose(); // ✅ ONLY IMPORTANT LINE
-      }
-    }
-
-    @override
-    void dispose() {
-      WidgetsBinding.instance.removeObserver(this);
-      super.dispose();
-    }
-
-    @override
-    Widget build(BuildContext context) {
-      return widget.child;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      SupabaseService().dispose();
     }
   }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
+}
 
 // Simple singleton RouteObserver to allow screens to refresh on focus
 class AppRouteObserver extends RouteObserver<ModalRoute<void>> {
   AppRouteObserver._();
   static final AppRouteObserver instance = AppRouteObserver._();
 }
-

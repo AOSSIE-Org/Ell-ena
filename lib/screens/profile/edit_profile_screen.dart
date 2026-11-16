@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../widgets/custom_widgets.dart';
@@ -382,6 +383,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -398,9 +400,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         strokeWidth: 2, color: Colors.white))
                 : Icon(Icons.save,
                     color: Theme.of(context).colorScheme.onSurface),
-            label: Text('Save',
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            label: Text(
+              l10n.save,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
           ),
         ],
       ),
