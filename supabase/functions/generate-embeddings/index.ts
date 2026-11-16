@@ -17,68 +17,114 @@ console.log("GEMINI_API_KEY:", GEMINI_API_KEY ? "Loaded" : "Missing");
 console.log("SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "Missing");
 console.log("SUPABASE_SERVICE_ROLE_KEY:", SUPABASE_SERVICE_ROLE_KEY ? "Loaded" : "Missing");
 
+async function generateEmbedding(text: string): Promise<number[]> {
+  // Generate embedding using Gemini
+  const embeddingResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=" + GEMINI_API_KEY, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "models/gemini-embedding-001",
+      content: {
+        parts: [
+          {
+            text: text
+          }
+        ]
+      },
+      taskType: "RETRIEVAL_DOCUMENT",
+      outputDimensionality: 768,
+    }),
+  });
+
+  if (!embeddingResponse.ok) {
+    const error = await embeddingResponse.json();
+    throw new Error(`Error generating embedding: ${error.error?.message || "Unknown error"}`);
+  }
+
+  const embeddingData = await embeddingResponse.json();
+  return embeddingData.embedding.values;
+}
+
+function buildSearchableText(title: unknown, description: unknown): string {
+  const parts: string[] = [];
+  if (typeof title === "string" && title.trim()) parts.push(title.trim());
+  if (typeof description === "string" && description.trim()) parts.push(description.trim());
+  return parts.join("\n\n");
+}
+
 serve(async (req) => {
   const preflight = handleCorsPreflight(req);
   if (preflight) return preflight;
 
   try {
-    const { meeting_id } = await req.json();
-    
+    const body = await req.json();
+    const meeting_id = body.meeting_id as string | undefined;
+    const entity_type = body.entity_type as string | undefined;
+    const id = body.id as string | undefined;
+
     // Initialize Supabase client with service role key
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Fetch meeting data
-    const { data: meeting, error: meetingError } = await supabaseClient
-      .from("meetings")
-      .select("meeting_summary_json")
-      .eq("id", meeting_id)
-      .single();
+    if (meeting_id) {
+      // Fetch meeting data
+      const { data: meeting, error: meetingError } = await supabaseClient
+        .from("meetings")
+        .select("meeting_summary_json")
+        .eq("id", meeting_id)
+        .single();
 
-    if (meetingError || !meeting?.meeting_summary_json) {
-      throw new Error(`Error fetching meeting: ${meetingError?.message || "No summary found"}`);
-    }
+      if (meetingError || !meeting?.meeting_summary_json) {
+        throw new Error(`Error fetching meeting: ${meetingError?.message || "No summary found"}`);
+      }
 
-    // Convert summary to string for embedding
-    const summaryText = JSON.stringify(meeting.meeting_summary_json);
+      // Convert summary to string for embedding
+      const summaryText = JSON.stringify(meeting.meeting_summary_json);
 
-    // Generate embedding using Gemini
-    const embeddingResponse = await fetch("https://generativelanguage.googleapis.com/v1/models/embedding-001:embedContent?key=" + GEMINI_API_KEY, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "embedding-001",
-        content: {
-          parts: [
-            {
-              text: summaryText
-            }
-          ]
-        },
-        taskType: "RETRIEVAL_DOCUMENT"
-      }),
-    });
+      const embedding = await generateEmbedding(summaryText);
 
-    if (!embeddingResponse.ok) {
-      const error = await embeddingResponse.json();
-      throw new Error(`Error generating embedding: ${error.error?.message || "Unknown error"}`);
-    }
+      // Update meeting with embedding
+      const { error: updateError } = await supabaseClient
+        .from("meetings")
+        .update({ summary_embedding: embedding })
+        .eq("id", meeting_id);
 
-    const embeddingData = await embeddingResponse.json();
-    const embedding = embeddingData.embedding.values;
+      if (updateError) {
+        throw new Error(`Error updating meeting with embedding: ${updateError.message}`);
+      }
+    } else if ((entity_type === "task" || entity_type === "ticket") && id) {
+      const table = entity_type === "task" ? "tasks" : "tickets";
+      const { data: row, error: fetchError } = await supabaseClient
+        .from(table)
+        .select("title, description")
+        .eq("id", id)
+        .single();
 
-    // Update meeting with embedding
-    const { error: updateError } = await supabaseClient
-      .from("meetings")
-      .update({ summary_embedding: embedding })
-      .eq("id", meeting_id);
+      if (fetchError) {
+        throw new Error(`Error fetching ${entity_type}: ${fetchError.message}`);
+      }
 
-    if (updateError) {
-      throw new Error(`Error updating meeting with embedding: ${updateError.message}`);
+      const searchableText = buildSearchableText(row?.title, row?.description);
+      if (!searchableText) {
+        throw new Error(`No searchable text found for ${entity_type} ${id}`);
+      }
+
+      const embedding = await generateEmbedding(searchableText);
+
+      const { error: updateError } = await supabaseClient
+        .from(table)
+        .update({ description_embedding: embedding })
+        .eq("id", id);
+
+      if (updateError) {
+        throw new Error(`Error updating ${entity_type} with embedding: ${updateError.message}`);
+      }
+    } else {
+      throw new Error('Provide meeting_id or { entity_type: "task"|"ticket", id }');
     }
 
     return new Response(
