@@ -42,6 +42,42 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
   final _supabaseService = SupabaseService();
 
   @override
+  void initState() {
+    super.initState();
+    // Gap B: the onChanged-based fix above only catches backspace when a
+    // box's value actually transitions from non-empty to empty. It can't
+    // catch backspace pressed on a box that's ALREADY empty (e.g. "1234"
+    // typed, focus naturally lands on empty box 5, backspace pressed
+    // there) -- no text change occurs, so onChanged never fires. Catch
+    // that case here via a raw key-event listener instead.
+    //
+    // FocusNode.onKeyEvent relies on hardware key events and is not
+    // guaranteed to fire for backspace-on-an-already-empty-field when
+    // using a mobile on-screen/soft keyboard. Verified working on
+    // web/desktop with a physical keyboard; mobile soft-keyboard
+    // behavior for this specific case is unverified and may need a
+    // sentinel-character workaround as a follow-up.
+    for (var i = 0; i < _focusNodes.length; i++) {
+      _focusNodes[i].onKeyEvent = (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.backspace) {
+          if (_controllers[i].text.isEmpty && i > 0) {
+            _controllers[i - 1].clear();
+            _focusNodes[i - 1].requestFocus();
+            _checkotpcomplete();
+            return KeyEventResult.handled;
+          }
+          // Box has content -- let normal TextField deletion plus the
+          // onChanged-based Gap A fix above handle it; don't duplicate
+          // that logic here.
+          return KeyEventResult.ignored;
+        }
+        return KeyEventResult.ignored;
+      };
+    }
+  }
+
+  @override
   void dispose() {
     _resendTimer?.cancel();
     for (var controller in _controllers) {
@@ -372,6 +408,7 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 keyboardType: TextInputType.number,
                 maxLength: 1,
                 textAlign: TextAlign.center,
+                textAlignVertical: TextAlignVertical.center,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -380,6 +417,11 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                 decoration: InputDecoration(
                   counterText: '',
                   filled: true,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 4,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -392,6 +434,8 @@ class _VerifyOTPScreenState extends State<VerifyOTPScreen> {
                       _focusNodes[index].unfocus();
                       // _handleVerification();
                     }
+                  } else if (index > 0) {
+                    FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
                   }
                   _checkotpcomplete();
                 },
