@@ -1,20 +1,15 @@
 // supabase/functions/get-embedding/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/std@0.192.0/dotenv/load.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, handleCorsPreflight } from "../_shared/cors.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
 console.log("GEMINI_API_KEY:", GEMINI_API_KEY ? "Loaded" : "Missing");
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  const preflight = handleCorsPreflight(req);
+  if (preflight) return preflight;
 
   try {
     const { text } = await req.json();
@@ -61,4 +56,3 @@ serve(async (req) => {
     );
   }
 });
-

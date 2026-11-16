@@ -1,5 +1,8 @@
 # Ell-ena
 
+<p align="center">
+  <img src="ELL-ena-logo/svg/ell-ena%20black.svg" alt="Ell-ena logo" width="180"/>
+</p>
 
 **Ell-ena** is your AI-powered teammate that makes managing work effortless. From automatically creating tickets to capturing every detail in meeting transcriptions, Ell-ena keeps the full context of your projects at its fingertips—so nothing ever falls through the cracks.  
 
@@ -241,6 +244,12 @@ Ell-ena is an open-source project under AOSSIE for GSoC'25. We welcome contribut
 5. Open a Pull Request
 
 Please read our [Contributing Guidelines](CONTRIBUTING.md) for more details.
+
+## 💬 Community
+
+Join the AOSSIE Discord and discuss Ell-ena in our project channel:
+
+- [Ell-ena Discord channel](https://discord.com/channels/1022871757289422898/1349032611267477586)
 
 ## 📚 Documentation
 
