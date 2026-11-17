@@ -427,11 +427,13 @@ class _SignupScreenState extends State<SignupScreen>
             onPressed: _isLoading ? null : _handleGoogleSignIn,
             icon: const FaIcon(
               FontAwesomeIcons.google,
+              color: Colors.white,
               size: 20,
             ),
             label: const Text(
               'Sign up with Google',
               style: TextStyle(
+                color: Colors.grey,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),

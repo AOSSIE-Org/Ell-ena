@@ -119,7 +119,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen>
   void _showCreateMeetingDialog() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CreateMeetingScreen()),
+      MaterialPageRoute(builder: (context) =>  CreateMeetingScreen()),
     ).then((result) async {
       if (result == true) {
         // Reload team members cache first

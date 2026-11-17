@@ -13,6 +13,7 @@ import '../meetings/meeting_detail_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../chat/chat_screen.dart';
+import '../../services/meeting_duration.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -41,10 +42,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // Cache duration (5 minutes)
   static const Duration _cacheDuration = Duration(minutes: 5);
 
+  DateTime _getFirstBoundedDay(DateTime anchor) {
+    return DateTime.utc(anchor.year - 1, anchor.month, anchor.day);
+  }
+
+  DateTime _getLastBoundedDay(DateTime anchor) {
+    return DateTime.utc(anchor.year + 3, anchor.month, anchor.day);
+  }
+
+  DateTime _clampDay(DateTime day, DateTime first, DateTime last) {
+    if (day.isBefore(first)) return first;
+    if (day.isAfter(last)) return last;
+    return day;
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedDay = _focusedDay;
+    // Safety clamp for initial dates in case system clock is off bounds
+    final now = DateTime.now();
+    final first = _getFirstBoundedDay(now);
+    final last = _getLastBoundedDay(now);
+    final safeDay = _clampDay(now, first, last);
+
+    _focusedDay = safeDay;
+    _selectedDay = safeDay;
     _loadCurrentUserInfo();
   }
 
@@ -285,7 +307,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           title: ticket['title'] ?? 'Untitled Ticket',
           startTime: TimeOfDay(hour: createdAt.hour, minute: createdAt.minute),
           endTime:
-              TimeOfDay(hour: createdAt.hour + 1, minute: createdAt.minute),
+              TimeOfDay.fromDateTime(createdAt.add(const Duration(hours: 1))),
           type: EventType.ticket,
           id: ticket['id'],
         ));
@@ -321,18 +343,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
           _events[dateOnly] = [];
         }
 
-        // Get duration from meeting data, default to 60 minutes
-        final durationMinutes = meeting['duration_minutes'] as int? ?? 60;
+        final durationMinutes = meetingDurationMinutes(meeting);
         final endDateTime = meetingDate.add(Duration(minutes: durationMinutes));
+        final endOnStartDay = endDateTime.day == meetingDate.day &&
+            endDateTime.month == meetingDate.month &&
+            endDateTime.year == meetingDate.year;
+        final displayEndTime = endOnStartDay
+            ? TimeOfDay.fromDateTime(endDateTime)
+            : const TimeOfDay(hour: 23, minute: 59);
+
         _events[dateOnly]!.add(CalendarEvent(
           title: meeting['title'] ?? 'Untitled Meeting',
-          startTime:
-              TimeOfDay(hour: meetingDate.hour, minute: meetingDate.minute),
-          endTime:
-              TimeOfDay(hour: endDateTime.hour, minute: endDateTime.minute),
+          startTime: TimeOfDay.fromDateTime(meetingDate),
+          endTime: displayEndTime,
           type: EventType.meeting,
           id: meeting['id'],
         ));
+
+        if (!endOnStartDay) {
+          final nextDay = DateTime(
+            endDateTime.year,
+            endDateTime.month,
+            endDateTime.day,
+          );
+          _events.putIfAbsent(nextDay, () => []).add(CalendarEvent(
+            title: '${meeting['title'] ?? 'Untitled Meeting'} (continued)',
+            startTime: const TimeOfDay(hour: 0, minute: 0),
+            endTime: TimeOfDay.fromDateTime(endDateTime),
+            type: EventType.meeting,
+            id: '${meeting['id']}-continued',
+          ));
+        }
       }
     }
   }
@@ -363,6 +404,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendar() {
     final colorScheme = Theme.of(context).colorScheme;
+
+    // Create a dynamic rolling window to avoid unbounded memory growth
+    final now = DateTime.now();
+    final first = _getFirstBoundedDay(now);
+    final last = _getLastBoundedDay(now);
+
+    // Safely clamp focused day to mathematically prevent table_calendar runtime crashes
+    final safeFocusedDay = _clampDay(_focusedDay, first, last);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -372,9 +422,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar(
-          firstDay: DateTime.utc(2024, 1, 1),
-          lastDay: DateTime.utc(2025, 12, 31),
-          focusedDay: _focusedDay,
+          firstDay: first,
+          lastDay: last,
+          focusedDay: safeFocusedDay,
           calendarFormat: _calendarFormat,
           selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
           eventLoader: _getEventsForDay,
@@ -713,7 +763,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateMeetingScreen(),
+            builder: (context) =>
+                CreateMeetingScreen(),
           ),
         );
         break;
@@ -721,7 +772,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTaskScreen(),
+            builder: (context) =>
+                CreateTaskScreen(),
           ),
         );
         break;
@@ -729,7 +781,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const CreateTicketScreen(),
+            builder: (context) =>
+                CreateTicketScreen(),
           ),
         );
         break;

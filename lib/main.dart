@@ -30,7 +30,7 @@ runApp(
   ),
 );
 
-
+}
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -124,3 +124,4 @@ class AppRouteObserver extends RouteObserver<ModalRoute<void>> {
   AppRouteObserver._();
   static final AppRouteObserver instance = AppRouteObserver._();
 }
+
