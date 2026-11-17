@@ -13,6 +13,7 @@ import '../meetings/meeting_detail_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tickets/ticket_detail_screen.dart';
 import '../chat/chat_screen.dart';
+import '../../services/meeting_duration.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -342,15 +343,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
           _events[dateOnly] = [];
         }
 
-        // For meetings, assume 1 hour duration
+        final durationMinutes = meetingDurationMinutes(meeting);
+        final endDateTime = meetingDate.add(Duration(minutes: durationMinutes));
+        final endOnStartDay = endDateTime.day == meetingDate.day &&
+            endDateTime.month == meetingDate.month &&
+            endDateTime.year == meetingDate.year;
+        final displayEndTime = endOnStartDay
+            ? TimeOfDay.fromDateTime(endDateTime)
+            : const TimeOfDay(hour: 23, minute: 59);
+
         _events[dateOnly]!.add(CalendarEvent(
           title: meeting['title'] ?? 'Untitled Meeting',
           startTime: TimeOfDay.fromDateTime(meetingDate),
-          endTime:
-              TimeOfDay.fromDateTime(meetingDate.add(const Duration(hours: 1))),
+          endTime: displayEndTime,
           type: EventType.meeting,
           id: meeting['id'],
         ));
+
+        if (!endOnStartDay) {
+          final nextDay = DateTime(
+            endDateTime.year,
+            endDateTime.month,
+            endDateTime.day,
+          );
+          _events.putIfAbsent(nextDay, () => []).add(CalendarEvent(
+            title: '${meeting['title'] ?? 'Untitled Meeting'} (continued)',
+            startTime: const TimeOfDay(hour: 0, minute: 0),
+            endTime: TimeOfDay.fromDateTime(endDateTime),
+            type: EventType.meeting,
+            id: '${meeting['id']}-continued',
+          ));
+        }
       }
     }
   }
